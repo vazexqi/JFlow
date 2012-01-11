@@ -23,7 +23,15 @@ public class PipelineCase0 {
 			}.call(item);
 			int a = channel1.getVal();
 
-			int b = method1(a);
+			final DataflowQueue<Integer> channel2 = new DataflowQueue<Integer>();
+			new DataflowMessagingRunnable(1) {
+
+				@Override
+				protected void doRun(Object[] arguments) {
+					channel2.bind(method1((Integer) arguments[0]));
+				}
+			}.call(a);
+			int b = channel2.getVal();
 
 			int c = method2(b);
 
