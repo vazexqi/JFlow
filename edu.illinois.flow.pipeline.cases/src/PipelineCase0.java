@@ -1,8 +1,11 @@
 import groovyx.gpars.DataflowMessagingRunnable;
+import groovyx.gpars.dataflow.Dataflow;
 import groovyx.gpars.dataflow.DataflowQueue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PipelineCase0 {
 	List<Item<Integer>> items = new ArrayList<Item<Integer>>();
@@ -11,58 +14,70 @@ public class PipelineCase0 {
 	void pipeline() throws InterruptedException {
 		System.out.println("Prologue");
 
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		final DataflowQueue<Token> channel0 = new DataflowQueue<Token>();
+		final DataflowQueue<Token> channel1 = new DataflowQueue<Token>();
+		final DataflowQueue<Token> channel2 = new DataflowQueue<Token>();
+		final DataflowQueue<Token> channel3 = new DataflowQueue<Token>();
+
+		Dataflow.operator(channel0, channel1, new DataflowMessagingRunnable(1) {
+
+			@Override
+			protected void doRun(Object[] arguments) {
+				Token token = (Token) arguments[0];
+				int method0 = method0(token.getItem());
+				token.setA(method0);
+				channel1.bind(token);
+			}
+		});
+
+		Dataflow.operator(channel1, channel2, new DataflowMessagingRunnable(1) {
+
+			@Override
+			protected void doRun(Object[] arguments) {
+				Token token = (Token) arguments[0];
+				Integer method1 = method1(token.getA());
+				token.setB(method1);
+				channel2.bind(token);
+			}
+		});
+
+		Dataflow.operator(channel2, channel3, new DataflowMessagingRunnable(1) {
+
+			@Override
+			protected void doRun(Object[] arguments) {
+				Token token = (Token) arguments[0];
+				Integer method2 = method2(token.getB());
+				token.setC(method2);
+				channel3.bind(token);
+			}
+		});
+
+		Dataflow.operator(channel3, null, new DataflowMessagingRunnable(1) {
+
+			AtomicInteger counter = new AtomicInteger(100);
+
+			@Override
+			protected void doRun(Object[] arguments) {
+				Token token = (Token) arguments[0];
+				method3(token.getC());
+				counter.getAndDecrement();
+				if (counter.get() == 0)
+					latch.countDown();
+
+			}
+		});
+
 		for (Item<Integer> item : items) {
 
 			Token token = new Token();
 			token.setItem(item);
-
-			final DataflowQueue<Token> channel1 = new DataflowQueue<Token>();
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					Token token = (Token) arguments[0];
-					int method0 = method0(token.getItem());
-					token.setA(method0);
-					channel1.bind(token);
-				}
-			}.call(token);
-
-			final DataflowQueue<Token> channel2 = new DataflowQueue<Token>();
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					Token token = (Token) arguments[0];
-					Integer method1 = method1(token.getA());
-					token.setB(method1);
-					channel2.bind(token);
-				}
-			}.call(channel1.getVal());
-
-			final DataflowQueue<Token> channel3 = new DataflowQueue<Token>();
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					Token token = (Token) arguments[0];
-					Integer method2 = method2(token.getB());
-					token.setC(method2);
-					channel3.bind(token);
-				}
-			}.call(channel2.getVal());
-
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					Token token = (Token) arguments[0];
-					method3(token.getC());
-
-				}
-			}.call(channel3.getVal());
+			channel0.bind(token);
 
 		}
+
+		latch.await();
 
 		System.out.println("Epilogue");
 	}
