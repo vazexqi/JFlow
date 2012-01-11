@@ -16,22 +16,32 @@ public class PipelineCase1 {
 
 			int c = method2(b);
 
-			int d = method3(a, b, c);
+			method3(a, b, c);
 
 		}
 
 		System.out.println("Epilogue");
 	}
 
-	private int method3(int value1, int value2, int value3) {
-		return value1 + value2 + value3;
+	private void method3(int value1, int value2, int value3) {
+		int i = value1 + value2 + value3;
+		System.out.println(i);
 	}
 
 	private int method2(int value) {
 		return value + 2;
 	}
 
-	private Integer method1(int value) {
+	private int method1(int value) {
 		return value + 1;
+	}
+
+	public static void main(String[] args) throws InterruptedException {
+		PipelineCase1 pipe = new PipelineCase1();
+
+		for (int i = 0; i < 100; i++)
+			pipe.items.add(new Item<Integer>(i));
+
+		pipe.pipeline();
 	}
 }
