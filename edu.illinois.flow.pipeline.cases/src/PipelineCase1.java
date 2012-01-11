@@ -8,9 +8,7 @@ public class PipelineCase1 {
 		System.out.println("Prologue");
 
 		for (Item<Integer> item : items) {
-			int temp1 = (Integer) item.getValue();
-			int temp2 = 2;
-			int a = temp1 + temp2;
+			int a = method0(item);
 
 			int b = method1(a);
 
@@ -21,6 +19,13 @@ public class PipelineCase1 {
 		}
 
 		System.out.println("Epilogue");
+	}
+
+	private int method0(Item<Integer> item) {
+		int temp1 = (Integer) item.getValue();
+		int temp2 = 2;
+		int a = temp1 + temp2;
+		return a;
 	}
 
 	private void method3(int value1, int value2, int value3) {
