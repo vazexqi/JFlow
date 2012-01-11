@@ -16,22 +16,31 @@ public class PipelineCase0 {
 
 			int c = method2(b);
 
-			int d = method3(c);
+			method3(c);
 
 		}
 
 		System.out.println("Epilogue");
 	}
 
-	private int method3(int value1) {
-		return value1;
+	private void method3(int value) {
+		System.out.println(value);
 	}
 
-	private int method2(int value) {
+	private Integer method2(int value) {
 		return value + 2;
 	}
 
 	private Integer method1(int value) {
 		return value + 1;
+	}
+
+	public static void main(String[] args) {
+		PipelineCase0 pipe = new PipelineCase0();
+
+		for (int i = 0; i < 100; i++)
+			pipe.items.add(new Item<Integer>(i));
+
+		pipe.pipeline();
 	}
 }
