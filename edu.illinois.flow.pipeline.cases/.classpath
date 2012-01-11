@@ -2,5 +2,11 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry kind="lib" path="lib/gpars-1.0-SNAPSHOT.jar" sourcepath="/Users/vazexqi/Development/JavaPipelineParallelism/JFlow/edu.illinois.flow.pipeline.cases/lib/gpars-1.0-SNAPSHOT-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/Users/vazexqi/Development/JavaPipelineParallelism/JFlow/edu.illinois.flow.pipeline.cases/lib/gpars-1.0-SNAPSHOT-javadoc.jar!/javadoc"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/groovy-all-1.8.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
