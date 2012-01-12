@@ -12,48 +12,53 @@ public class PipelineCase1 {
 		System.out.println("Prologue");
 
 		for (Item<Integer> item : items) {
-			final DataflowQueue<Integer> channel1 = new DataflowQueue<Integer>();
-			new DataflowMessagingRunnable(1) {
+			Token token = new Token();
+			token.setItem(item);
 
-				@SuppressWarnings("unchecked")
-				@Override
-				protected void doRun(Object[] arguments) {
-					channel1.bind(method0((Item<Integer>) arguments[0]));
-				}
-			}.call(item);
-
-			int a = channel1.getVal();
-
-			final DataflowQueue<Integer> channel2 = new DataflowQueue<Integer>();
+			final DataflowQueue<Token> channel1 = new DataflowQueue<Token>();
 			new DataflowMessagingRunnable(1) {
 
 				@Override
 				protected void doRun(Object[] arguments) {
-					channel2.bind(method1((Integer) arguments[0]));
+					Token token = (Token) arguments[0];
+					int method0 = method0(token.getItem());
+					token.setA(method0);
+					channel1.bind(token);
 				}
-			}.call(a);
+			}.call(token);
 
-			int b = channel2.getVal();
-
-			final DataflowQueue<Integer> channel3 = new DataflowQueue<Integer>();
+			final DataflowQueue<Token> channel2 = new DataflowQueue<Token>();
 			new DataflowMessagingRunnable(1) {
 
 				@Override
 				protected void doRun(Object[] arguments) {
-					channel3.bind(method2((Integer) arguments[0]));
+					Token token = (Token) arguments[0];
+					int method1 = method1(token.getA());
+					token.setB(method1);
+					channel2.bind(token);
 				}
-			}.call(b);
+			}.call(channel1.getVal());
 
-			int c = channel3.getVal();
-
-			new DataflowMessagingRunnable(3) {
+			final DataflowQueue<Token> channel3 = new DataflowQueue<Token>();
+			new DataflowMessagingRunnable(1) {
 
 				@Override
 				protected void doRun(Object[] arguments) {
-					method3((Integer) arguments[0], (Integer) arguments[1],
-							(Integer) arguments[2]);
+					Token token = (Token) arguments[0];
+					int method2 = method2(token.getB());
+					token.setC(method2);
+					channel3.bind(token);
 				}
-			}.call(new Object[] { a, b, c });
+			}.call(channel2.getVal());
+
+			new DataflowMessagingRunnable(1) {
+
+				@Override
+				protected void doRun(Object[] arguments) {
+					Token token = (Token) arguments[0];
+					method3(token.getA(), token.getB(), token.getC());
+				}
+			}.call(channel3.getVal());
 
 		}
 
