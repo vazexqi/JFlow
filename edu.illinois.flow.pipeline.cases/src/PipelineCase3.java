@@ -35,7 +35,16 @@ public class PipelineCase3 {
 			}.call(item);
 			int b = channel2.getVal();
 
-			int c = method2(item);
+			final DataflowQueue<Integer> channel3 = new DataflowQueue<Integer>();
+			new DataflowMessagingRunnable(1) {
+
+				@SuppressWarnings("unchecked")
+				@Override
+				protected void doRun(Object[] arguments) {
+					channel3.bind(method2((Item<Integer>) arguments[0]));
+				}
+			}.call(item);
+			int c = channel3.getVal();
 
 			method3(a, b, c);
 
