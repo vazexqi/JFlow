@@ -43,7 +43,14 @@ public class PipelineCase0_b {
 			}.call(b);
 			int c = channel3.getVal();
 
-			method3(c);
+			new DataflowMessagingRunnable(1) {
+
+				@Override
+				protected void doRun(Object[] arguments) {
+					method3((Integer) arguments[0]);
+
+				}
+			}.call(c);
 
 		}
 
