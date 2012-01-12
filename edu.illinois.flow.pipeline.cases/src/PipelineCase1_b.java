@@ -47,7 +47,15 @@ public class PipelineCase1_b {
 				}
 			}.call(channel2_a.getVal());
 
-			method3(channel1_b.getVal(), channel2_b.getVal(), channel3.getVal());
+			new DataflowMessagingRunnable(1) {
+
+				@Override
+				protected void doRun(Object[] arguments) {
+					method3((Integer) arguments[0], (Integer) arguments[1],
+							(Integer) arguments[2]);
+				}
+			}.call(new Object[] { channel1_b.getVal(), channel2_b.getVal(),
+					channel3.getVal() });
 
 		}
 
