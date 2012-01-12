@@ -1,69 +1,88 @@
 import groovyx.gpars.DataflowMessagingRunnable;
+import groovyx.gpars.dataflow.Dataflow;
 import groovyx.gpars.dataflow.DataflowQueue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PipelineCase1_b {
 	List<Item<Integer>> items = new ArrayList<Item<Integer>>();
 
-	@SuppressWarnings("serial")
+	@SuppressWarnings({ "serial", "unchecked" })
 	void pipeline() throws InterruptedException {
 		System.out.println("Prologue");
 
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		final DataflowQueue<Item<Integer>> channel0 = new DataflowQueue<Item<Integer>>();
+		final DataflowQueue<Integer> channel1_a = new DataflowQueue<Integer>();
+		final DataflowQueue<Integer> channel1_b = new DataflowQueue<Integer>();
+		final DataflowQueue<Integer> channel2_a = new DataflowQueue<Integer>();
+		final DataflowQueue<Integer> channel2_b = new DataflowQueue<Integer>();
+		final DataflowQueue<Integer> channel3 = new DataflowQueue<Integer>();
+
+		Dataflow.operator(Arrays.asList(channel0),
+				Arrays.asList(channel1_a, channel1_b),
+				new DataflowMessagingRunnable(1) {
+
+					@Override
+					protected void doRun(Object[] arguments) {
+						int method0 = method0((Item<Integer>) arguments[0]);
+						channel1_a.bind(method0);
+						channel1_b.bind(method0);
+					}
+				});
+
+		Dataflow.operator(Arrays.asList(channel1_a),
+				Arrays.asList(channel2_a, channel2_b),
+				new DataflowMessagingRunnable(1) {
+
+					@Override
+					protected void doRun(Object[] arguments) {
+						int method1 = method1((Integer) arguments[0]);
+						channel2_a.bind(method1);
+						channel2_b.bind(method1);
+					}
+				});
+
+		Dataflow.operator(channel2_a, channel3,
+				new DataflowMessagingRunnable(1) {
+
+					@Override
+					protected void doRun(Object[] arguments) {
+						int method2 = method2((Integer) arguments[0]);
+						channel3.bind(method2);
+					}
+				});
+
+		Dataflow.operator(Arrays.asList(channel1_b, channel2_b, channel3),
+				null, new DataflowMessagingRunnable(3) {
+
+					AtomicInteger counter = new AtomicInteger(100);
+
+					@Override
+					protected void doRun(Object[] arguments) {
+						method3((Integer) arguments[0], (Integer) arguments[1],
+								(Integer) arguments[2]);
+						counter.getAndDecrement();
+						if (counter.get() == 0)
+							latch.countDown();
+					}
+				});
 		for (Item<Integer> item : items) {
-			final DataflowQueue<Integer> channel1_a = new DataflowQueue<Integer>();
-			final DataflowQueue<Integer> channel1_b = new DataflowQueue<Integer>();
-			new DataflowMessagingRunnable(1) {
-
-				@SuppressWarnings("unchecked")
-				@Override
-				protected void doRun(Object[] arguments) {
-					int method0 = method0((Item<Integer>) arguments[0]);
-					channel1_a.bind(method0);
-					channel1_b.bind(method0);
-				}
-			}.call(item);
-
-			final DataflowQueue<Integer> channel2_a = new DataflowQueue<Integer>();
-			final DataflowQueue<Integer> channel2_b = new DataflowQueue<Integer>();
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					int method1 = method1((Integer) arguments[0]);
-					channel2_a.bind(method1);
-					channel2_b.bind(method1);
-				}
-			}.call(channel1_a.getVal());
-
-			final DataflowQueue<Integer> channel3 = new DataflowQueue<Integer>();
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					int method2 = method2((Integer) arguments[0]);
-					channel3.bind(method2);
-				}
-			}.call(channel2_a.getVal());
-
-			new DataflowMessagingRunnable(1) {
-
-				@Override
-				protected void doRun(Object[] arguments) {
-					method3((Integer) arguments[0], (Integer) arguments[1],
-							(Integer) arguments[2]);
-				}
-			}.call(new Object[] { channel1_b.getVal(), channel2_b.getVal(),
-					channel3.getVal() });
-
+			channel0.bind(item);
 		}
+
+		latch.await();
 
 		System.out.println("Epilogue");
 	}
 
 	private int method0(Item<Integer> item) {
-		int temp1 = (Integer) item.getValue();
+		int temp1 = item.getValue();
 		int temp2 = 2;
 		int a = temp1 + temp2;
 		return a;
