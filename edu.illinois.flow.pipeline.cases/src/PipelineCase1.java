@@ -1,14 +1,28 @@
+import groovyx.gpars.DataflowMessagingRunnable;
+import groovyx.gpars.dataflow.DataflowQueue;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class PipelineCase1 {
 	List<Item<Integer>> items = new ArrayList<Item<Integer>>();
 
-	void pipeline() {
+	@SuppressWarnings("serial")
+	void pipeline() throws InterruptedException {
 		System.out.println("Prologue");
 
 		for (Item<Integer> item : items) {
-			int a = method0(item);
+			final DataflowQueue<Integer> channel1 = new DataflowQueue<Integer>();
+			new DataflowMessagingRunnable(1) {
+
+				@SuppressWarnings("unchecked")
+				@Override
+				protected void doRun(Object[] arguments) {
+					channel1.bind(method0((Item<Integer>) arguments[0]));
+				}
+			}.call(item);
+
+			int a = channel1.getVal();
 
 			int b = method1(a);
 
