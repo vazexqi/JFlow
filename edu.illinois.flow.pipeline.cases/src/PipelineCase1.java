@@ -60,6 +60,46 @@ public class PipelineCase1 {
 		System.out.println("Epilogue");
 	}
 
+	class Token {
+		Item<Integer> item;
+		Integer a;
+		Integer b;
+		Integer c;
+
+		public Item<Integer> getItem() {
+			return item;
+		}
+
+		public void setItem(Item<Integer> item) {
+			this.item = item;
+		}
+
+		public Integer getA() {
+			return a;
+		}
+
+		public void setA(Integer a) {
+			this.a = a;
+		}
+
+		public Integer getB() {
+			return b;
+		}
+
+		public void setB(Integer b) {
+			this.b = b;
+		}
+
+		public Integer getC() {
+			return c;
+		}
+
+		public void setC(Integer c) {
+			this.c = c;
+		}
+
+	}
+
 	private int method0(Item<Integer> item) {
 		int temp1 = (Integer) item.getValue();
 		int temp2 = 2;
