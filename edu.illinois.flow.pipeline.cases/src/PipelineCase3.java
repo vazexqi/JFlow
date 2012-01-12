@@ -21,7 +21,6 @@ public class PipelineCase3 {
 					channel1.bind(method0((Item<Integer>) arguments[0]));
 				}
 			}.call(item);
-			int a = channel1.getVal();
 
 			final DataflowQueue<Integer> channel2 = new DataflowQueue<Integer>();
 			new DataflowMessagingRunnable(1) {
@@ -33,7 +32,6 @@ public class PipelineCase3 {
 				}
 
 			}.call(item);
-			int b = channel2.getVal();
 
 			final DataflowQueue<Integer> channel3 = new DataflowQueue<Integer>();
 			new DataflowMessagingRunnable(1) {
@@ -44,7 +42,6 @@ public class PipelineCase3 {
 					channel3.bind(method2((Item<Integer>) arguments[0]));
 				}
 			}.call(item);
-			int c = channel3.getVal();
 
 			new DataflowMessagingRunnable(3) {
 
@@ -53,7 +50,8 @@ public class PipelineCase3 {
 					method3((Integer) arguments[0], (Integer) arguments[1],
 							(Integer) arguments[2]);
 				}
-			}.call(new Object[] { a, b, c });
+			}.call(new Object[] { channel1.getVal(), channel2.getVal(),
+					channel3.getVal() });
 
 		}
 
