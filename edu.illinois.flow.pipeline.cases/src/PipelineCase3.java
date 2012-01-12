@@ -8,28 +8,41 @@ public class PipelineCase3 {
 		System.out.println("Prologue");
 
 		for (Item<Integer> item : items) {
-			int a = item.getValue();
+			int a = method0(item);
 
-			int b = method1(a);
+			int b = method1(item);
 
-			int c = method2(a);
+			int c = method2(item);
 
-			int d = method3(b, c);
+			method3(a, b, c);
 
 		}
 
 		System.out.println("Epilogue");
 	}
 
-	private int method3(int value1, int value2) {
-		return value1 + value2;
+	private void method3(int value1, int value2, int value3) {
+		System.out.println(value1 + value2 + value3);
 	}
 
-	private int method2(int value) {
-		return value + 2;
+	private int method2(Item<Integer> item) {
+		return item.getValue() + 2;
 	}
 
-	private Integer method1(int value) {
-		return value + 1;
+	private Integer method1(Item<Integer> item) {
+		return item.getValue() + 1;
+	}
+
+	private int method0(Item<Integer> item) {
+		return item.getValue() + 1;
+	}
+
+	public static void main(String[] args) throws InterruptedException {
+		PipelineCase3 pipe = new PipelineCase3();
+
+		for (int i = 0; i < 100; i++)
+			pipe.items.add(new Item<Integer>(i));
+
+		pipe.pipeline();
 	}
 }
