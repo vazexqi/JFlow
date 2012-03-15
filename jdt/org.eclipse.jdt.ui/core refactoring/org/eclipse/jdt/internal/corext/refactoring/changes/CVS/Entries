@@ -1,0 +1,29 @@
+/AbstractDeleteChange.java/1.24/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/ClasspathChange.java/1.7/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/CompilationUnitReorgChange.java/1.24/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/CopyCompilationUnitChange.java/1.25/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/CopyPackageChange.java/1.20/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/CopyPackageFragmentRootChange.java/1.18/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/CopyResourceChange.java/1.23/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/CreateCompilationUnitChange.java/1.14/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/CreatePackageChange.java/1.24/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/DeletePackageFragmentRootChange.java/1.24/Tue Mar  1 11:50:42 2011//Tr371_v20110824-0800
+/DeleteSourceManipulationChange.java/1.32/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/DynamicValidationRefactoringChange.java/1.6/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/DynamicValidationStateChange.java/1.16/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/MoveCompilationUnitChange.java/1.25/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/MovePackageChange.java/1.20/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/MovePackageFragmentRootChange.java/1.18/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/MultiStateCompilationUnitChange.java/1.5/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/PackageFragmentRootReorgChange.java/1.32/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/PackageReorgChange.java/1.27/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/RenameCompilationUnitChange.java/1.51/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/RenameJavaProjectChange.java/1.54/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/RenamePackageChange.java/1.37/Tue Mar  1 11:50:42 2011/-ko/Tr371_v20110824-0800
+/RenameSourceFolderChange.java/1.52/Wed Apr 27 07:53:45 2011/-ko/Tr371_v20110824-0800
+/TextChangeCompatibility.java/1.13/Wed Dec 31 21:13:20 2008//Tr371_v20110824-0800
+/UndoDeleteResourceChange.java/1.8/Wed Apr 27 07:53:45 2011//Tr371_v20110824-0800
+/UndoablePackageDeleteChange.java/1.6/Tue Mar  1 11:50:42 2011//Tr371_v20110824-0800
+/WorkspaceTracker.java/1.9/Wed Dec 31 21:13:20 2008//Tr371_v20110824-0800
+D/enhanced////
+D/undo////

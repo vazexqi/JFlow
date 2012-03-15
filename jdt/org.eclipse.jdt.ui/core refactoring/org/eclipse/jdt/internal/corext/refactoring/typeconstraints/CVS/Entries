@@ -1,0 +1,24 @@
+/ASTCreator.java/1.12/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/CompilationUnitRange.java/1.15/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/CompositeOrTypeConstraint.java/1.15/Tue Mar  1 11:50:31 2011//Tr371_v20110824-0800
+/ConstraintCollector.java/1.15/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/ConstraintCreator.java/1.9/Thu Aug 12 09:38:07 2010//Tr371_v20110824-0800
+/ConstraintOperator.java/1.11/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/ConstraintVariable.java/1.14/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/ConstraintVariableFactory.java/1.12/Tue Mar  1 11:50:31 2011//Tr371_v20110824-0800
+/DeclaringTypeVariable.java/1.14/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/ExpressionVariable.java/1.13/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/FullConstraintCreator.java/1.22.2.1/Thu Jul 28 20:26:55 2011//Tr371_v20110824-0800
+/IConstraintVariableFactory.java/1.6/Wed Dec 31 21:13:16 2008//Tr371_v20110824-0800
+/IContext.java/1.4/Fri Jun 17 15:51:52 2005//Tr371_v20110824-0800
+/ITypeConstraint.java/1.8/Wed Dec 31 21:13:17 2008//Tr371_v20110824-0800
+/ITypeConstraintFactory.java/1.6/Wed Dec 31 21:13:16 2008//Tr371_v20110824-0800
+/NullContext.java/1.6/Wed Dec 31 21:13:16 2008//Tr371_v20110824-0800
+/ParameterTypeVariable.java/1.14/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/RawBindingVariable.java/1.5/Fri Jun 17 15:51:52 2005//Tr371_v20110824-0800
+/ReturnTypeVariable.java/1.14/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/SimpleTypeConstraint.java/1.16/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/TypeConstraintFactory.java/1.9/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+/TypeVariable.java/1.15/Wed Apr 27 07:52:47 2011//Tr371_v20110824-0800
+D/types////
+D/typesets////
