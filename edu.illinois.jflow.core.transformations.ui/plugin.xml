@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.actionSets">
+      <actionSet
+            description="%JFlow.description"
+            id="edu.illinois.jflow.core.transformations.TransformationSet"
+            label="%JFlow.label"
+            visible="true">
+         <menu
+               label="%JFlow.menu.label"
+               id="edu.illinois.jflow.core.transformations.Menu">
+            <separator
+                  name="parallelizeGroup">
+            </separator>
+         </menu>
+         <action
+               label="%ExtractClosure.label"
+               class="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureTopLevelAction"
+               tooltip="%ExtractClosure.tooltip"
+               menubarPath="edu.illinois.jflow.core.transformations.Menu/parallelizeGroup"
+               id="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureTopLevelAction">
+         </action>
+      </actionSet>
+   </extension>
+
+</plugin>
