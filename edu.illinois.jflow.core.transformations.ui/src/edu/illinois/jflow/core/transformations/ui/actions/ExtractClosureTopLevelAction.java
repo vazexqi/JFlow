@@ -1,6 +1,7 @@
 package edu.illinois.jflow.core.transformations.ui.actions;
 
 import org.eclipse.jdt.internal.corext.refactoring.code.ExtractMethodRefactoring;
+import org.eclipse.jdt.internal.ui.actions.ActionUtil;
 import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.internal.ui.refactoring.RefactoringMessages;
@@ -30,6 +31,9 @@ public class ExtractClosureTopLevelAction implements IWorkbenchWindowActionDeleg
 
 		if (activeEditor instanceof JavaEditor) {
 			JavaEditor javaEditor= (JavaEditor)activeEditor;
+
+			if (!ActionUtil.isEditable(javaEditor))
+				return;
 
 			ISelectionService selectionService= window.getSelectionService();
 			ISelection selection= selectionService.getSelection();
