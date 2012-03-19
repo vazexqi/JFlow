@@ -102,7 +102,6 @@ import org.eclipse.jdt.internal.corext.refactoring.JDTRefactoringDescriptorComme
 import org.eclipse.jdt.internal.corext.refactoring.JavaRefactoringArguments;
 import org.eclipse.jdt.internal.corext.refactoring.JavaRefactoringDescriptorUtil;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
-import org.eclipse.jdt.internal.corext.refactoring.RefactoringCoreMessages;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
 import org.eclipse.jdt.internal.corext.refactoring.util.SelectionAwareSourceRangeComputer;
@@ -270,7 +269,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	/**
-	 * Creates a new extract method refactoring
+	 * Creates a new extract closure refactoring
 	 * 
 	 * @param unit the compilation unit, or <code>null</code> if invoked by scripting
 	 * @param selectionStart selection start
@@ -292,7 +291,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	/**
-	 * Creates a new extract method refactoring
+	 * Creates a new extract closure refactoring
 	 * 
 	 * @param astRoot the AST root of an AST created from a compilation unit
 	 * @param selectionStart start
@@ -309,7 +308,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	@Override
 	public String getName() {
-		return RefactoringCoreMessages.ExtractMethodRefactoring_name;
+		return JFlowRefactoringCoreMessages.ExtractClosureRefactoring_name;
 	}
 
 	/**
@@ -452,14 +451,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 				ParameterInfo other= others.next();
 				if (parameter != other && other.getNewName().equals(parameter.getNewName())) {
 					result.addError(Messages.format(
-							RefactoringCoreMessages.ExtractMethodRefactoring_error_sameParameter,
+							JFlowRefactoringCoreMessages.ExtractClosureRefactoring_error_sameParameter,
 							BasicElementLabels.getJavaElementName(other.getNewName())));
 					return result;
 				}
 			}
 			if (parameter.isRenamed() && fUsedNames.contains(parameter.getNewName())) {
 				result.addError(Messages.format(
-						RefactoringCoreMessages.ExtractMethodRefactoring_error_nameInUse,
+						JFlowRefactoringCoreMessages.ExtractClosureRefactoring_error_nameInUse,
 						BasicElementLabels.getJavaElementName(parameter.getNewName())));
 				return result;
 			}
@@ -477,7 +476,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			ParameterInfo info= iter.next();
 			if (info.isOldVarargs() && iter.hasNext()) {
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(
-						RefactoringCoreMessages.ExtractMethodRefactoring_error_vararg_ordering,
+						JFlowRefactoringCoreMessages.ExtractClosureRefactoring_error_vararg_ordering,
 						BasicElementLabels.getJavaElementName(info.getOldName())));
 			}
 		}
@@ -498,7 +497,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 */
 	@Override
 	public RefactoringStatus checkFinalConditions(IProgressMonitor pm) throws CoreException {
-		pm.beginTask(RefactoringCoreMessages.ExtractMethodRefactoring_checking_new_name, 2);
+		pm.beginTask(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_checking_new_name, 2);
 		pm.subTask(EMPTY);
 
 		RefactoringStatus result= checkMethodName();
@@ -530,7 +529,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
 			fRewriter= ASTRewrite.create(declaration.getAST());
 
-			final CompilationUnitChange result= new CompilationUnitChange(RefactoringCoreMessages.ExtractMethodRefactoring_change_name, fCUnit);
+			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
 			result.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
 			result.setDescriptor(new RefactoringChangeDescriptor(getRefactoringDescriptor()));
 
@@ -540,7 +539,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
 			fRewriter.setTargetSourceRangeComputer(new SelectionAwareSourceRangeComputer(selectedNodes, fCUnit.getBuffer(), fSelectionStart, fSelectionLength));
 
-			TextEditGroup substituteDesc= new TextEditGroup(Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_substitute_with_call, BasicElementLabels.getJavaElementName(fMethodName)));
+			TextEditGroup substituteDesc= new TextEditGroup(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_substitute_with_call,
+					BasicElementLabels.getJavaElementName(fMethodName)));
 			result.addTextEditGroup(substituteDesc);
 
 			MethodDeclaration mm= createNewMethod(selectedNodes, fCUnit.findRecommendedLineSeparator(), substituteDesc);
@@ -563,7 +563,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 				ModifierCorrectionSubProcessor.installLinkedVisibilityProposals(fLinkedProposalModel, fRewriter, mm.modifiers(), false);
 			}
 
-			TextEditGroup insertDesc= new TextEditGroup(Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_add_method, BasicElementLabels.getJavaElementName(fMethodName)));
+			TextEditGroup insertDesc= new TextEditGroup(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_add_method, BasicElementLabels.getJavaElementName(fMethodName)));
 			result.addTextEditGroup(insertDesc);
 
 			if (fDestination == fDestinations[0]) {
@@ -582,7 +582,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 				TextEdit edit= fImportRewriter.rewriteImports(null);
 				root.addChild(edit);
 				result.addTextEditGroup(new TextEditGroup(
-						RefactoringCoreMessages.ExtractMethodRefactoring_organize_imports,
+						JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports,
 						new TextEdit[] { edit }
 						));
 			}
@@ -660,7 +660,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 				public void endVisit(ContinueStatement node) {
 					final SimpleName label= node.getLabel();
 					if (fOpenLoopLabels.isEmpty() || (label != null && !fOpenLoopLabels.contains(label.getIdentifier()))) {
-						TextEditGroup description= new TextEditGroup(RefactoringCoreMessages.ExtractMethodRefactoring_replace_continue);
+						TextEditGroup description= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_replace_continue);
 						result.addTextEditGroup(description);
 
 						ReturnStatement rs= fAST.newReturnStatement();
@@ -697,23 +697,23 @@ public class ExtractClosureRefactoring extends Refactoring {
 			method= node.resolveBinding();
 		}
 		final int flags= RefactoringDescriptor.STRUCTURAL_CHANGE | JavaRefactoringDescriptor.JAR_REFACTORING | JavaRefactoringDescriptor.JAR_SOURCE_ATTACHMENT;
-		final String description= Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_descriptor_description_short, BasicElementLabels.getJavaElementName(fMethodName));
+		final String description= Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_descriptor_description_short, BasicElementLabels.getJavaElementName(fMethodName));
 		final String label= method != null ? BindingLabelProvider.getBindingLabel(method, JavaElementLabels.ALL_FULLY_QUALIFIED) : '{' + JavaElementLabels.ELLIPSIS_STRING + '}';
-		final String header= Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_descriptor_description, new String[] { BasicElementLabels.getJavaElementName(getSignature()), label,
+		final String header= Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_descriptor_description, new String[] { BasicElementLabels.getJavaElementName(getSignature()), label,
 				BindingLabelProvider.getBindingLabel(type, JavaElementLabels.ALL_FULLY_QUALIFIED) });
 		final JDTRefactoringDescriptorComment comment= new JDTRefactoringDescriptorComment(project, this, header);
-		comment.addSetting(Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_name_pattern, BasicElementLabels.getJavaElementName(fMethodName)));
-		comment.addSetting(Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_destination_pattern, BindingLabelProvider.getBindingLabel(type, JavaElementLabels.ALL_FULLY_QUALIFIED)));
+		comment.addSetting(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_name_pattern, BasicElementLabels.getJavaElementName(fMethodName)));
+		comment.addSetting(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_destination_pattern, BindingLabelProvider.getBindingLabel(type, JavaElementLabels.ALL_FULLY_QUALIFIED)));
 		String visibility= JdtFlags.getVisibilityString(fVisibility);
 		if ("".equals(visibility)) //$NON-NLS-1$
-			visibility= RefactoringCoreMessages.ExtractMethodRefactoring_default_visibility;
-		comment.addSetting(Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_visibility_pattern, visibility));
+			visibility= JFlowRefactoringCoreMessages.ExtractClosureRefactoring_default_visibility;
+		comment.addSetting(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_visibility_pattern, visibility));
 		if (fThrowRuntimeExceptions)
-			comment.addSetting(RefactoringCoreMessages.ExtractMethodRefactoring_declare_thrown_exceptions);
+			comment.addSetting(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_declare_thrown_exceptions);
 		if (fReplaceDuplicates)
-			comment.addSetting(RefactoringCoreMessages.ExtractMethodRefactoring_replace_occurrences);
+			comment.addSetting(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_replace_occurrences);
 		if (fGenerateJavadoc)
-			comment.addSetting(RefactoringCoreMessages.ExtractMethodRefactoring_generate_comment);
+			comment.addSetting(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_generate_comment);
 		final ExtractMethodDescriptor descriptor= RefactoringSignatureDescriptorFactory.createExtractMethodDescriptor(project, description, comment.asString(), arguments, flags);
 		arguments.put(JavaRefactoringDescriptorUtil.ATTRIBUTE_INPUT, JavaRefactoringDescriptorUtil.elementToHandle(project, fCUnit));
 		arguments.put(JavaRefactoringDescriptorUtil.ATTRIBUTE_NAME, fMethodName);
@@ -852,7 +852,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	private RefactoringStatus mergeTextSelectionStatus(RefactoringStatus status) {
-		status.addFatalError(RefactoringCoreMessages.ExtractMethodRefactoring_no_set_of_statements);
+		status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_no_set_of_statements);
 		return status;
 	}
 
@@ -961,9 +961,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return;
 		String label= null;
 		if (numberOf == 1)
-			label= Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_duplicates_single, BasicElementLabels.getJavaElementName(fMethodName));
+			label= Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_duplicates_single, BasicElementLabels.getJavaElementName(fMethodName));
 		else
-			label= Messages.format(RefactoringCoreMessages.ExtractMethodRefactoring_duplicates_multi, BasicElementLabels.getJavaElementName(fMethodName));
+			label= Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_duplicates_multi, BasicElementLabels.getJavaElementName(fMethodName));
 
 		TextEditGroup description= new TextEditGroup(label);
 		result.addTextEditGroup(description);
@@ -1195,7 +1195,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private RefactoringStatus initialize(JavaRefactoringArguments arguments) {
 		final String selection= arguments.getAttribute(JavaRefactoringDescriptorUtil.ATTRIBUTE_SELECTION);
 		if (selection == null)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JavaRefactoringDescriptorUtil.ATTRIBUTE_SELECTION));
+			return RefactoringStatus.createFatalErrorStatus(Messages
+					.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JavaRefactoringDescriptorUtil.ATTRIBUTE_SELECTION));
 
 		int offset= -1;
 		int length= -1;
@@ -1205,7 +1206,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		if (tokenizer.hasMoreTokens())
 			length= Integer.valueOf(tokenizer.nextToken()).intValue();
 		if (offset < 0 || length < 0)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_illegal_argument, new Object[] { selection,
+			return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_illegal_argument, new Object[] { selection,
 					JavaRefactoringDescriptorUtil.ATTRIBUTE_SELECTION }));
 
 		fSelectionStart= offset;
@@ -1213,7 +1214,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		final String handle= arguments.getAttribute(JavaRefactoringDescriptorUtil.ATTRIBUTE_INPUT);
 		if (handle == null)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JavaRefactoringDescriptorUtil.ATTRIBUTE_INPUT));
+			return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JavaRefactoringDescriptorUtil.ATTRIBUTE_INPUT));
 
 		IJavaElement element= JavaRefactoringDescriptorUtil.handleToElement(arguments.getProject(), handle, false);
 		if (element == null || !element.exists() || element.getElementType() != IJavaElement.COMPILATION_UNIT)
@@ -1226,13 +1227,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 			try {
 				flag= Integer.parseInt(visibility);
 			} catch (NumberFormatException exception) {
-				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_VISIBILITY));
+				return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_VISIBILITY));
 			}
 			fVisibility= flag;
 		}
 		final String name= arguments.getAttribute(JavaRefactoringDescriptorUtil.ATTRIBUTE_NAME);
 		if (name == null || name.length() == 0)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JavaRefactoringDescriptorUtil.ATTRIBUTE_NAME));
+			return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JavaRefactoringDescriptorUtil.ATTRIBUTE_NAME));
 
 		fMethodName= name;
 
@@ -1242,25 +1243,25 @@ public class ExtractClosureRefactoring extends Refactoring {
 			try {
 				index= Integer.parseInt(destination);
 			} catch (NumberFormatException exception) {
-				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_DESTINATION));
+				return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_DESTINATION));
 			}
 			fDestinationIndex= index;
 		}
 		final String replace= arguments.getAttribute(ATTRIBUTE_REPLACE);
 		if (replace == null)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_REPLACE));
+			return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_REPLACE));
 
 		fReplaceDuplicates= Boolean.valueOf(replace).booleanValue();
 
 		final String comments= arguments.getAttribute(ATTRIBUTE_COMMENTS);
 		if (comments == null)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_COMMENTS));
+			return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_COMMENTS));
 
 		fGenerateJavadoc= Boolean.valueOf(comments).booleanValue();
 
 		final String exceptions= arguments.getAttribute(ATTRIBUTE_EXCEPTIONS);
 		if (exceptions == null)
-			return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_EXCEPTIONS));
+			return RefactoringStatus.createFatalErrorStatus(Messages.format(JFlowRefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_EXCEPTIONS));
 
 		fThrowRuntimeExceptions= Boolean.valueOf(exceptions).booleanValue();
 

@@ -17,14 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.ibm.icu.text.MessageFormat;
-
 import org.eclipse.core.runtime.CoreException;
-
-import org.eclipse.jface.text.IRegion;
-
-import org.eclipse.ltk.core.refactoring.RefactoringStatus;
-
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.compiler.ITerminalSymbols;
 import org.eclipse.jdt.core.dom.AST;
@@ -70,7 +63,6 @@ import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.ImportRewriteContext;
-
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
@@ -78,7 +70,6 @@ import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.LocalVariableIndex;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
-import org.eclipse.jdt.internal.corext.refactoring.RefactoringCoreMessages;
 import org.eclipse.jdt.internal.corext.refactoring.base.JavaStatusContext;
 import org.eclipse.jdt.internal.corext.refactoring.code.flow.FlowContext;
 import org.eclipse.jdt.internal.corext.refactoring.code.flow.FlowInfo;
@@ -86,11 +77,13 @@ import org.eclipse.jdt.internal.corext.refactoring.code.flow.InOutFlowAnalyzer;
 import org.eclipse.jdt.internal.corext.refactoring.code.flow.InputFlowAnalyzer;
 import org.eclipse.jdt.internal.corext.refactoring.util.CodeAnalyzer;
 import org.eclipse.jdt.internal.corext.util.Messages;
-
-import org.eclipse.jdt.ui.JavaElementLabels;
-
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.jdt.internal.ui.viewsupport.BindingLabelProvider;
+import org.eclipse.jdt.ui.JavaElementLabels;
+import org.eclipse.jface.text.IRegion;
+import org.eclipse.ltk.core.refactoring.RefactoringStatus;
+
+import com.ibm.icu.text.MessageFormat;
 
 @SuppressWarnings("restriction")
 class ExtractClosureAnalyzer extends CodeAnalyzer {
@@ -239,7 +232,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 		}
 
 		if (returns > 1) {
-			result.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_ambiguous_return_value, JavaStatusContext.create(fCUnit, getSelection()));
+			result.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_ambiguous_return_value, JavaStatusContext.create(fCUnit, getSelection()));
 			fReturnKind= MULTIPLE;
 			return result;
 		}
@@ -252,11 +245,11 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 		if (nodes != null && nodes.length == 1) {
 			ASTNode node= nodes[0];
 			if (node instanceof Type) {
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_type_reference, JavaStatusContext.create(fCUnit, node));
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_type_reference, JavaStatusContext.create(fCUnit, node));
 			} else if (node.getLocationInParent() == SwitchCase.EXPRESSION_PROPERTY) {
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_switch_case, JavaStatusContext.create(fCUnit, node));
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_switch_case, JavaStatusContext.create(fCUnit, node));
 			} else if (node instanceof Annotation || ASTNodes.getParent(node, Annotation.class) != null) {
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_from_annotation, JavaStatusContext.create(fCUnit, node));
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_from_annotation, JavaStatusContext.create(fCUnit, node));
 			}
 		}
 	}
@@ -282,7 +275,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 				}
 				if (fExpressionBinding != null) {
 					if (fExpressionBinding.isNullType()) {
-						getStatus().addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_null_type, JavaStatusContext.create(fCUnit, expression));
+						getStatus().addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_null_type, JavaStatusContext.create(fCUnit, expression));
 					} else {
 						ITypeBinding normalizedBinding= Bindings.normalizeForDeclarationUse(fExpressionBinding, ast);
 						if (normalizedBinding != null) {
@@ -294,7 +287,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 				} else {
 					fReturnType= ast.newPrimitiveType(PrimitiveType.VOID);
 					fReturnTypeBinding= ast.resolveWellKnownType("void"); //$NON-NLS-1$
-					getStatus().addError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_determine_return_type, JavaStatusContext.create(fCUnit, expression));
+					getStatus().addError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_determine_return_type, JavaStatusContext.create(fCUnit, expression));
 				}
 				break;
 			case RETURN_STATEMENT_VALUE:
@@ -372,7 +365,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 		}
 
 		if (fReturnKind == UNDEFINED) {
-			status.addError(RefactoringCoreMessages.FlowAnalyzer_execution_flow, JavaStatusContext.create(fCUnit, getSelection()));
+			status.addError(JFlowRefactoringCoreMessages.FlowAnalyzer_execution_flow, JavaStatusContext.create(fCUnit, getSelection()));
 			fReturnKind= NO;
 		}
 		computeInput();
@@ -388,20 +381,20 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	private String canHandleBranches() {
 		if (fReturnValue != null)
-			return RefactoringCoreMessages.ExtractMethodAnalyzer_branch_mismatch;
+			return JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_branch_mismatch;
 
 		ASTNode[] selectedNodes= getSelectedNodes();
 		final ASTNode lastSelectedNode= selectedNodes[selectedNodes.length - 1];
 		Statement body= getParentLoopBody(lastSelectedNode.getParent());
 		if (!(body instanceof Block))
-			return RefactoringCoreMessages.ExtractMethodAnalyzer_branch_mismatch;
+			return JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_branch_mismatch;
 
 		if (body != lastSelectedNode) {
 			Block block= (Block)body;
 			List<Statement> statements= block.statements();
 			ASTNode lastStatementInLoop= statements.get(statements.size() - 1);
 			if (lastSelectedNode != lastStatementInLoop)
-				return RefactoringCoreMessages.ExtractMethodAnalyzer_branch_mismatch;
+				return JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_branch_mismatch;
 		}
 
 		final String continueMatchesLoopProblem[]= { null };
@@ -415,7 +408,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 					SimpleName label= node.getLabel();
 					if (label != null && !fLocalLoopLabels.contains(label.getIdentifier())) {
 						continueMatchesLoopProblem[0]= Messages.format(
-								RefactoringCoreMessages.ExtractMethodAnalyzer_branch_break_mismatch,
+								JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_branch_break_mismatch,
 								new Object[] { ("break " + label.getIdentifier()) }); //$NON-NLS-1$
 					}
 					return false;
@@ -435,7 +428,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 					if (label != null && !fLocalLoopLabels.contains(label.getIdentifier())) {
 						if (fEnclosingLoopLabel == null || !label.getIdentifier().equals(fEnclosingLoopLabel.getIdentifier())) {
 							continueMatchesLoopProblem[0]= Messages.format(
-									RefactoringCoreMessages.ExtractMethodAnalyzer_branch_continue_mismatch,
+									JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_branch_continue_mismatch,
 									new Object[] { "continue " + label.getIdentifier() }); //$NON-NLS-1$
 						}
 					}
@@ -588,7 +581,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 						affectedLocals.append('\n');
 					}
 				}
-				String message= MessageFormat.format(RefactoringCoreMessages.ExtractMethodAnalyzer_assignments_to_local, new Object[] { affectedLocals.toString() });
+				String message= MessageFormat.format(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_assignments_to_local, new Object[] { affectedLocals.toString() });
 				status.addFatalError(message, JavaStatusContext.create(fCUnit, getSelection()));
 				return;
 		}
@@ -683,7 +676,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	@Override
 	protected boolean handleSelectionEndsIn(ASTNode node) {
-		invalidSelection(RefactoringCoreMessages.StatementAnalyzer_doesNotCover, JavaStatusContext.create(fCUnit, node));
+		invalidSelection(JFlowRefactoringCoreMessages.StatementAnalyzer_doesNotCover, JavaStatusContext.create(fCUnit, node));
 		return super.handleSelectionEndsIn(node);
 	}
 
@@ -694,7 +687,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 			if (node == firstParent)
 				return;
 		} while (node != null);
-		invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_parent_mismatch);
+		invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_parent_mismatch);
 	}
 
 	@Override
@@ -710,12 +703,12 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 					Message[] messages= ASTNodes.getMessages(methodDecl, ASTNodes.NODE_ONLY);
 					if (messages.length > 0) {
 						status.addFatalError(Messages.format(
-								RefactoringCoreMessages.ExtractMethodAnalyzer_compile_errors,
+								JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_compile_errors,
 								BasicElementLabels.getJavaElementName(methodDecl.getName().getIdentifier())), JavaStatusContext.create(fCUnit, methodDecl));
 						break superCall;
 					}
 				}
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_only_method_body);
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_only_method_body);
 				break superCall;
 			}
 			fEnclosingBodyDeclaration= (BodyDeclaration)ASTNodes.getParent(getFirstSelectedNode(), BodyDeclaration.class);
@@ -723,16 +716,16 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 					(fEnclosingBodyDeclaration.getNodeType() != ASTNode.METHOD_DECLARATION &&
 							fEnclosingBodyDeclaration.getNodeType() != ASTNode.FIELD_DECLARATION &&
 					fEnclosingBodyDeclaration.getNodeType() != ASTNode.INITIALIZER)) {
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_only_method_body);
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_only_method_body);
 				break superCall;
 			} else if (ASTNodes.getEnclosingType(fEnclosingBodyDeclaration) == null) {
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_compile_errors_no_parent_binding);
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_compile_errors_no_parent_binding);
 				break superCall;
 			} else if (fEnclosingBodyDeclaration.getNodeType() == ASTNode.METHOD_DECLARATION) {
 				fEnclosingMethodBinding= ((MethodDeclaration)fEnclosingBodyDeclaration).resolveBinding();
 			}
 			if (!isSingleExpressionOrStatementSet()) {
-				status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_single_expression_or_set);
+				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_single_expression_or_set);
 				break superCall;
 			}
 			if (isExpressionSelected()) {
@@ -740,23 +733,23 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 				if (expression instanceof Name) {
 					Name name= (Name)expression;
 					if (name.resolveBinding() instanceof ITypeBinding) {
-						status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_type_reference);
+						status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_type_reference);
 						break superCall;
 					}
 					if (name.resolveBinding() instanceof IMethodBinding) {
-						status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_method_name_reference);
+						status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_method_name_reference);
 						break superCall;
 					}
 					if (name.resolveBinding() instanceof IVariableBinding) {
 						StructuralPropertyDescriptor locationInParent= name.getLocationInParent();
 						if (locationInParent == QualifiedName.NAME_PROPERTY
 								|| (locationInParent == FieldAccess.NAME_PROPERTY && !(((FieldAccess)name.getParent()).getExpression() instanceof ThisExpression))) {
-							status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_part_of_qualified_name);
+							status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_part_of_qualified_name);
 							break superCall;
 						}
 					}
 					if (name.isSimpleName() && ((SimpleName)name).isDeclaration()) {
-						status.addFatalError(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_name_in_declaration);
+						status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_name_in_declaration);
 						break superCall;
 					}
 				}
@@ -774,7 +767,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 	public boolean visit(AnonymousClassDeclaration node) {
 		boolean result= super.visit(node);
 		if (isFirstSelectedNode(node)) {
-			invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_anonymous_type, JavaStatusContext.create(fCUnit, node));
+			invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_anonymous_type, JavaStatusContext.create(fCUnit, node));
 			return false;
 		}
 		return result;
@@ -785,7 +778,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 		boolean result= super.visit(node);
 		if (getSelection().covers(node.getLeftHandSide()) || getSelection().coveredBy(node.getLeftHandSide())) {
 			invalidSelection(
-					RefactoringCoreMessages.ExtractMethodAnalyzer_leftHandSideOfAssignment,
+					JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_leftHandSideOfAssignment,
 					JavaStatusContext.create(fCUnit, node));
 			return false;
 		}
@@ -799,7 +792,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 		try {
 			int actionStart= getTokenScanner().getTokenEndOffset(ITerminalSymbols.TokenNamedo, node.getStartPosition());
 			if (getSelection().getOffset() == actionStart) {
-				invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_after_do_keyword, JavaStatusContext.create(fCUnit, getSelection()));
+				invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_after_do_keyword, JavaStatusContext.create(fCUnit, getSelection()));
 				return false;
 			}
 		} catch (CoreException e) {
@@ -835,7 +828,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	private boolean visitConstructorInvocation(ASTNode node, boolean superResult) {
 		if (getSelection().getVisitSelectionMode(node) == Selection.SELECTED) {
-			invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_super_or_this, JavaStatusContext.create(fCUnit, node));
+			invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_super_or_this, JavaStatusContext.create(fCUnit, node));
 			return false;
 		}
 		return superResult;
@@ -845,7 +838,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 	public boolean visit(VariableDeclarationFragment node) {
 		boolean result= super.visit(node);
 		if (isFirstSelectedNode(node)) {
-			invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_variable_declaration_fragment, JavaStatusContext.create(fCUnit, node));
+			invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_variable_declaration_fragment, JavaStatusContext.create(fCUnit, node));
 			return false;
 		}
 		return result;
@@ -855,9 +848,9 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 	public void endVisit(ForStatement node) {
 		if (getSelection().getEndVisitSelectionMode(node) == Selection.AFTER) {
 			if (node.initializers().contains(getFirstSelectedNode())) {
-				invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_for_initializer, JavaStatusContext.create(fCUnit, getSelection()));
+				invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_for_initializer, JavaStatusContext.create(fCUnit, getSelection()));
 			} else if (node.updaters().contains(getLastSelectedNode())) {
-				invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_for_updater, JavaStatusContext.create(fCUnit, getSelection()));
+				invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_for_updater, JavaStatusContext.create(fCUnit, getSelection()));
 			}
 		}
 		super.endVisit(node);
@@ -867,7 +860,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 	public void endVisit(VariableDeclarationExpression node) {
 		if (getSelection().getEndVisitSelectionMode(node) == Selection.SELECTED && getFirstSelectedNode() == node) {
 			if (node.getLocationInParent() == TryStatement.RESOURCES_PROPERTY) {
-				invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_resource_in_try_with_resources, JavaStatusContext.create(fCUnit, getSelection()));
+				invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_resource_in_try_with_resources, JavaStatusContext.create(fCUnit, getSelection()));
 			}
 		}
 		checkTypeInDeclaration(node.getType());
@@ -886,7 +879,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	private void checkTypeInDeclaration(Type node) {
 		if (getSelection().getEndVisitSelectionMode(node) == Selection.SELECTED && getFirstSelectedNode() == node) {
-			invalidSelection(RefactoringCoreMessages.ExtractMethodAnalyzer_cannot_extract_variable_declaration, JavaStatusContext.create(fCUnit, getSelection()));
+			invalidSelection(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_variable_declaration, JavaStatusContext.create(fCUnit, getSelection()));
 		}
 	}
 
