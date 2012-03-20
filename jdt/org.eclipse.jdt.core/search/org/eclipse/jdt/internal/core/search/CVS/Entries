@@ -1,0 +1,23 @@
+/AbstractJavaSearchScope.java/1.2/Fri Jun 27 16:04:09 2008/-kk/Tv_B76_R37x
+/AbstractSearchScope.java/1.15/Tue May 27 23:46:43 2008/-ko/Tv_B76_R37x
+/BasicSearchEngine.java/1.65/Wed May  5 16:09:42 2010//Tv_B76_R37x
+/HierarchyScope.java/1.50/Wed May  5 16:09:41 2010/-ko/Tv_B76_R37x
+/IRestrictedAccessConstructorRequestor.java/1.1/Fri Jan 16 14:29:29 2009//Tv_B76_R37x
+/IRestrictedAccessTypeRequestor.java/1.9/Sat Mar  7 01:08:10 2009//Tv_B76_R37x
+/IndexQueryRequestor.java/1.10/Sat Mar  7 01:08:10 2009//Tv_B76_R37x
+/IndexSelector.java/1.49.4.1/Thu Jul 28 17:52:29 2011/-ko/Tv_B76_R37x
+/JavaSearchDocument.java/1.18/Sat Mar  7 01:08:10 2009//Tv_B76_R37x
+/JavaSearchParticipant.java/1.18/Sat Mar  7 00:59:05 2009//Tv_B76_R37x
+/JavaSearchScope.java/1.79/Thu Jan  7 20:18:50 2010/-ko/Tv_B76_R37x
+/JavaSearchTypeNameMatch.java/1.5/Fri Dec  4 09:12:10 2009//Tv_B76_R37x
+/JavaWorkspaceScope.java/1.36/Fri Jun 27 16:04:09 2008/-ko/Tv_B76_R37x
+/PathCollector.java/1.16/Sat Mar  7 01:08:10 2009/-ko/Tv_B76_R37x
+/PatternSearchJob.java/1.54/Fri Jan  7 15:26:53 2011/-ko/Tv_B76_R37x
+/StringOperation.java/1.6/Tue Oct 26 17:24:15 2010//Tv_B76_R37x
+/SubTypeSearchJob.java/1.40/Fri Jun 27 16:04:09 2008/-ko/Tv_B76_R37x
+/TypeNameMatchRequestorWrapper.java/1.19/Fri Jan  7 15:26:53 2011//Tv_B76_R37x
+/TypeNameRequestorWrapper.java/1.12/Sat Mar  7 01:08:10 2009//Tv_B76_R37x
+D/indexing////
+D/matching////
+D/pattern////
+D/processing////
