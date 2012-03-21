@@ -27,7 +27,7 @@ public class ExtractClosureWizard extends RefactoringWizard {
 
 	public ExtractClosureWizard(ExtractClosureRefactoring ref) {
 		super(ref, DIALOG_BASED_USER_INTERFACE | PREVIEW_EXPAND_FIRST_NODE);
-		setDefaultPageTitle(JFlowRefactoringMessages.ExtractMethodWizard_extract_method);
+		setDefaultPageTitle(JFlowRefactoringMessages.ExtractClosureWizard_extract_method);
 		setDialogSettings(JavaPlugin.getDefault().getDialogSettings());
 	}
 

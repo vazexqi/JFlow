@@ -7,7 +7,7 @@ public class JFlowRefactoringMessages extends NLS {
 
 	public static String ExtractClosureAction_dialog_title;
 
-	public static String ExtractMethodWizard_extract_method;
+	public static String ExtractClosureWizard_extract_method;
 	static {
 		// initialize resource bundle
 		NLS.initializeMessages(BUNDLE_NAME, JFlowRefactoringMessages.class);

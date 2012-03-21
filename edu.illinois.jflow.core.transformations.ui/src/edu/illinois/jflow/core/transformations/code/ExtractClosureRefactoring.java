@@ -85,8 +85,6 @@ import org.eclipse.jdt.internal.corext.dom.BodyDeclarationRewrite;
 import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.dom.StatementRewrite;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalPositionGroup;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
@@ -94,7 +92,6 @@ import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
 import org.eclipse.jdt.internal.corext.refactoring.util.SelectionAwareSourceRangeComputer;
 import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.ui.text.correction.ASTResolving;
-import org.eclipse.jdt.internal.ui.text.correction.ModifierCorrectionSubProcessor;
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.jdt.ui.CodeGeneration;
 import org.eclipse.ltk.core.refactoring.Change;
@@ -151,8 +148,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	// either of type TypeDeclaration or AnonymousClassDeclaration
 	private ASTNode[] fDestinations;
-
-	private LinkedProposalModel fLinkedProposalModel;
 
 	private static final String EMPTY= ""; //$NON-NLS-1$
 
@@ -266,10 +261,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	public ExtractClosureRefactoring(CompilationUnit astRoot, int selectionStart, int selectionLength) {
 		this((ICompilationUnit)astRoot.getTypeRoot(), selectionStart, selectionLength);
 		fRoot= astRoot;
-	}
-
-	public void setLinkedProposalModel(LinkedProposalModel linkedProposalModel) {
-		fLinkedProposalModel= linkedProposalModel;
 	}
 
 	@Override
@@ -509,24 +500,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			result.addTextEditGroup(substituteDesc);
 
 			MethodDeclaration mm= createNewMethod(selectedNodes, fCUnit.findRecommendedLineSeparator(), substituteDesc);
-
-			if (fLinkedProposalModel != null) {
-				LinkedProposalPositionGroup typeGroup= fLinkedProposalModel.getPositionGroup(KEY_TYPE, true);
-				typeGroup.addPosition(fRewriter.track(mm.getReturnType2()), false);
-
-				ITypeBinding typeBinding= fAnalyzer.getReturnTypeBinding();
-				if (typeBinding != null) {
-					ITypeBinding[] relaxingTypes= ASTResolving.getNarrowingTypes(fAST, typeBinding);
-					for (int i= 0; i < relaxingTypes.length; i++) {
-						typeGroup.addProposal(relaxingTypes[i], fCUnit, relaxingTypes.length - i);
-					}
-				}
-
-				LinkedProposalPositionGroup nameGroup= fLinkedProposalModel.getPositionGroup(KEY_NAME, true);
-				nameGroup.addPosition(fRewriter.track(mm.getName()), false);
-
-				ModifierCorrectionSubProcessor.installLinkedVisibilityProposals(fLinkedProposalModel, fRewriter, mm.modifiers(), false);
-			}
 
 			TextEditGroup insertDesc= new TextEditGroup(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_add_method, BasicElementLabels.getJavaElementName(fMethodName)));
 			result.addTextEditGroup(insertDesc);
@@ -813,10 +786,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		for (int i= 0; i < fParameterInfos.size(); i++) {
 			ParameterInfo parameter= fParameterInfos.get(i);
 			arguments.add(ASTNodeFactory.newName(fAST, getMappedName(duplicate, parameter)));
-		}
-		if (fLinkedProposalModel != null) {
-			LinkedProposalPositionGroup nameGroup= fLinkedProposalModel.getPositionGroup(KEY_NAME, true);
-			nameGroup.addPosition(fRewriter.track(invocation.getName()), false);
 		}
 
 		ASTNode call;
