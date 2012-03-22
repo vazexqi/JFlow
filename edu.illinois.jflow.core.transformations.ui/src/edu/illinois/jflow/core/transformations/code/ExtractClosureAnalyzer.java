@@ -642,11 +642,6 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 		return result;
 	}
 
-	//---- Change creation ----------------------------------------------------------------------------------
-
-	public void aboutToCreateChange() {
-	}
-
 	//---- Exceptions -----------------------------------------------------------------------------------------
 
 	public ITypeBinding[] getExceptions(boolean includeRuntimeExceptions) {
