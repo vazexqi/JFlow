@@ -7,35 +7,17 @@ public class JFlowRefactoringCoreMessages extends NLS {
 
 	public static String ExtractClosureRefactoring_name;
 
-	public static String ExtractClosureRefactoring_add_method;
-
 	public static String ExtractClosureRefactoring_change_name;
-
-	public static String ExtractClosureRefactoring_checking_new_name;
-
-	public static String ExtractClosureRefactoring_declare_thrown_exceptions;
-
-	public static String ExtractClosureRefactoring_default_visibility;
 
 	public static String ExtractClosureRefactoring_descriptor_description;
 
 	public static String ExtractClosureRefactoring_descriptor_description_short;
-
-	public static String ExtractClosureRefactoring_destination_pattern;
-
-	public static String ExtractClosureRefactoring_duplicates_multi;
-
-	public static String ExtractClosureRefactoring_duplicates_single;
 
 	public static String ExtractClosureRefactoring_error_nameInUse;
 
 	public static String ExtractClosureRefactoring_error_sameParameter;
 
 	public static String ExtractClosureRefactoring_error_vararg_ordering;
-
-	public static String ExtractClosureRefactoring_generate_comment;
-
-	public static String ExtractClosureRefactoring_name_pattern;
 
 	public static String ExtractClosureRefactoring_no_set_of_statements;
 
@@ -110,6 +92,7 @@ public class JFlowRefactoringCoreMessages extends NLS {
 	public static String InitializableRefactoring_illegal_argument;
 
 	public static String StatementAnalyzer_doesNotCover;
+
 	static {
 		// initialize resource bundle
 		NLS.initializeMessages(BUNDLE_NAME, JFlowRefactoringCoreMessages.class);

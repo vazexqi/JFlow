@@ -15,10 +15,8 @@ package edu.illinois.jflow.core.transformations.code;
  *******************************************************************************/
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -34,39 +32,28 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ContinueStatement;
-import org.eclipse.jdt.core.dom.DoStatement;
-import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
-import org.eclipse.jdt.core.dom.ForStatement;
-import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.LabeledStatement;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
-import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.Statement;
-import org.eclipse.jdt.core.dom.ThisExpression;
-import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.eclipse.jdt.core.dom.TypeParameter;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
-import org.eclipse.jdt.core.dom.WhileStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.ImportRewriteContext;
@@ -76,16 +63,13 @@ import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRe
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
-import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
-import org.eclipse.jdt.internal.corext.refactoring.util.SelectionAwareSourceRangeComputer;
 import org.eclipse.jdt.internal.corext.util.Messages;
-import org.eclipse.jdt.internal.ui.text.correction.ASTResolving;
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
@@ -118,19 +102,21 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private ExtractClosureAnalyzer fAnalyzer;
 
-	//TODO: Remove
-	private String fMethodName;
-
 	private List<ParameterInfo> fParameterInfos;
 
 	private Set<String> fUsedNames;
 
-	private SnippetFinder.Match[] fDuplicates;
-
-	// either of type TypeDeclaration or AnonymousClassDeclaration
-	private ASTNode fDestination;
-
 	private static final String EMPTY= ""; //$NON-NLS-1$
+
+	private static final String CLOSURE_PARAMETER_NAME= "arguments"; //$NON-NLS-1$
+
+	private static final String CLOSURE_PARAMETER_TYPE= "Object"; //$NON-NLS-1$
+
+	private static final String CLOSURE_METHOD= "doRun"; //$NON-NLS-1$
+
+	private static final String CLOSURE_INVOCATION_METHOD_NAME= "call"; //$NON-NLS-1$
+
+	private static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
 
 	private static class UsedNamesCollector extends ASTVisitor {
 		private Set<String> result= new HashSet<String>();
@@ -222,7 +208,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	public ExtractClosureRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength) {
 		fCUnit= unit;
 		fRoot= null;
-		fMethodName= "extracted"; //$NON-NLS-1$
 		fSelectionStart= selectionStart;
 		fSelectionLength= selectionLength;
 	}
@@ -282,7 +267,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return result;
 		initializeParameterInfos();
 		initializeUsedNames();
-		initializeDestination();
 		return result;
 	}
 
@@ -292,42 +276,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	/**
-	 * Sets the method name to be used for the extracted method.
-	 * 
-	 * @param name the new method name.
-	 */
-	public void setMethodName(String name) {
-		fMethodName= name;
-	}
-
-	/**
-	 * Returns the method name to be used for the extracted method.
-	 * 
-	 * @return the method name to be used for the extracted method.
-	 */
-	public String getMethodName() {
-		return fMethodName;
-	}
-
-	/**
 	 * Returns the parameter infos.
 	 * 
 	 * @return a list of parameter infos.
 	 */
 	public List<ParameterInfo> getParameterInfos() {
 		return fParameterInfos;
-	}
-
-
-	/**
-	 * Checks if the new method name is a valid method name. This method doesn't check if a method
-	 * with the same name already exists in the hierarchy. This check is done in
-	 * <code>checkInput</code> since it is expensive.
-	 * 
-	 * @return validation status
-	 */
-	public RefactoringStatus checkMethodName() {
-		return Checks.checkMethodName(fMethodName, fCUnit);
 	}
 
 	public ICompilationUnit getCompilationUnit() {
@@ -394,21 +348,15 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 */
 	@Override
 	public RefactoringStatus checkFinalConditions(IProgressMonitor pm) throws CoreException {
-		pm.beginTask(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_checking_new_name, 2);
 		pm.subTask(EMPTY);
 
-		RefactoringStatus result= checkMethodName();
+		RefactoringStatus result= new RefactoringStatus();
 		result.merge(checkParameterNames());
 		result.merge(checkVarargOrder());
 		pm.worked(1);
 		if (pm.isCanceled())
 			throw new OperationCanceledException();
 
-		BodyDeclaration node= fAnalyzer.getEnclosingBodyDeclaration();
-		if (node != null) {
-			fAnalyzer.checkInput(result, fMethodName, fDestination);
-			pm.worked(1);
-		}
 		pm.done();
 		return result;
 	}
@@ -418,8 +366,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 */
 	@Override
 	public Change createChange(IProgressMonitor pm) throws CoreException {
-		if (fMethodName == null)
-			return null;
 		pm.beginTask("", 2); //$NON-NLS-1$
 		try {
 			BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
@@ -433,28 +379,26 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
 
-			TextEditGroup substituteDesc= new TextEditGroup(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_substitute_with_call,
-					BasicElementLabels.getJavaElementName(fMethodName)));
-			result.addTextEditGroup(substituteDesc);
+			TextEditGroup closureEditGroup= new TextEditGroup("Extract to Closure");
+			result.addTextEditGroup(closureEditGroup);
 
-			MethodDeclaration mm= createNewMethod(selectedNodes, fCUnit.findRecommendedLineSeparator(), substituteDesc);
+			// A sentinel is just a placeholder to keep track of the position of insertion
+			// For this refactoring, we need to insert two things:
+			// 1) The DataflowChannels
+			// 2) The DataflowMessagingRunnable
+			Block sentinel= fAST.newBlock();
+			ListRewrite sentinelRewriter= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
+			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
 
-			TextEditGroup insertDesc= new TextEditGroup(Messages.format(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_add_method, BasicElementLabels.getJavaElementName(fMethodName)));
-			result.addTextEditGroup(insertDesc);
+			ClassInstanceCreation dataflowClosure= createNewDataflowClosure(selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup);
+			MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
 
-			ChildListPropertyDescriptor desc= (ChildListPropertyDescriptor)declaration.getLocationInParent();
-			ListRewrite container= fRewriter.getListRewrite(declaration.getParent(), desc);
-			container.insertAfter(mm, declaration, insertDesc);
-
-			replaceBranches(result);
+			sentinelRewriter.replace(sentinel, fAST.newExpressionStatement(closureInvocation), closureEditGroup);
 
 			if (fImportRewriter.hasRecordedChanges()) {
 				TextEdit edit= fImportRewriter.rewriteImports(null);
 				root.addChild(edit);
-				result.addTextEditGroup(new TextEditGroup(
-						JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports,
-						new TextEdit[] { edit }
-						));
+				result.addTextEditGroup(new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports, new TextEdit[] { edit }));
 			}
 			root.addChild(fRewriter.rewriteAST());
 			return result;
@@ -464,126 +408,143 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	}
 
-	//TODO: This might be a good place to check for the different types of conditionals and replace appropriately
-	private void replaceBranches(final CompilationUnitChange result) {
-		ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
-		for (int i= 0; i < selectedNodes.length; i++) {
-			ASTNode astNode= selectedNodes[i];
-			astNode.accept(new ASTVisitor() {
-				private LinkedList<String> fOpenLoopLabels= new LinkedList<String>();
+	private MethodInvocation createClosureInvocation(ClassInstanceCreation dataflowClosure) {
+		MethodInvocation closureInvocation= fAST.newMethodInvocation();
+		closureInvocation.setName(fAST.newSimpleName(CLOSURE_INVOCATION_METHOD_NAME));
+		closureInvocation.setExpression(dataflowClosure);
+		createClosureArguments(closureInvocation);
+		return closureInvocation;
+	}
 
-				private void registerLoopLabel(Statement node) {
-					String identifier;
-					if (node.getParent() instanceof LabeledStatement) {
-						LabeledStatement labeledStatement= (LabeledStatement)node.getParent();
-						identifier= labeledStatement.getLabel().getIdentifier();
-					} else {
-						identifier= null;
-					}
-					fOpenLoopLabels.add(identifier);
-				}
-
-				@Override
-				public boolean visit(ForStatement node) {
-					registerLoopLabel(node);
-					return super.visit(node);
-				}
-
-				@Override
-				public void endVisit(ForStatement node) {
-					fOpenLoopLabels.removeLast();
-				}
-
-				@Override
-				public boolean visit(WhileStatement node) {
-					registerLoopLabel(node);
-					return super.visit(node);
-				}
-
-				@Override
-				public void endVisit(WhileStatement node) {
-					fOpenLoopLabels.removeLast();
-				}
-
-				@Override
-				public boolean visit(EnhancedForStatement node) {
-					registerLoopLabel(node);
-					return super.visit(node);
-				}
-
-				@Override
-				public void endVisit(EnhancedForStatement node) {
-					fOpenLoopLabels.removeLast();
-				}
-
-				@Override
-				public boolean visit(DoStatement node) {
-					registerLoopLabel(node);
-					return super.visit(node);
-				}
-
-				@Override
-				public void endVisit(DoStatement node) {
-					fOpenLoopLabels.removeLast();
-				}
-
-				@Override
-				public void endVisit(ContinueStatement node) {
-					final SimpleName label= node.getLabel();
-					if (fOpenLoopLabels.isEmpty() || (label != null && !fOpenLoopLabels.contains(label.getIdentifier()))) {
-						TextEditGroup description= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_replace_continue);
-						result.addTextEditGroup(description);
-
-						ReturnStatement rs= fAST.newReturnStatement();
-						IVariableBinding returnValue= fAnalyzer.getReturnValue();
-						if (returnValue != null) {
-							rs.setExpression(fAST.newSimpleName(getName(returnValue)));
-						}
-
-						fRewriter.replace(node, rs, description);
-					}
-				}
-			});
+	private void createClosureArguments(MethodInvocation closureInvocation) {
+		List<Expression> arguments= closureInvocation.arguments();
+		for (int i= 0; i < fParameterInfos.size(); i++) {
+			ParameterInfo parameter= fParameterInfos.get(i);
+			arguments.add(ASTNodeFactory.newName(fAST, parameter.getOldName()));
 		}
 	}
 
 	/**
-	 * Returns the signature of the new method.
+	 * Create an ASTNode similar to
 	 * 
-	 * @return the signature of the extracted method
+	 * new DataFlowMessagingRunnable(...){...}
+	 * 
+	 * @param selectedNodes
+	 * @param findRecommendedLineSeparator
+	 * @param editGroup
+	 * @return
 	 */
-	public String getSignature() {
-		return getSignature(fMethodName);
+	private ClassInstanceCreation createNewDataflowClosure(ASTNode[] selectedNodes, String findRecommendedLineSeparator, TextEditGroup editGroup) {
+		ClassInstanceCreation dataflowClosure= fAST.newClassInstanceCreation();
+
+		// Create the small chunks
+		augmentWithTypeInfo(dataflowClosure);
+		augmentWithConstructorArgument(dataflowClosure);
+		augmentWithAnonymousClassDeclaration(dataflowClosure, selectedNodes, editGroup);
+
+		return dataflowClosure;
+	}
+
+	private void augmentWithTypeInfo(ClassInstanceCreation dataflowClosure) {
+		ImportRewriteContext context= new ContextSensitiveImportRewriteContext(fAnalyzer.getEnclosingBodyDeclaration(), fImportRewriter);
+		fImportRewriter.addImport(CLOSURE_TYPE, context);
+		dataflowClosure.setType(fAST.newSimpleType(fAST.newName("DataflowMessagingRunnable")));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void augmentWithConstructorArgument(ClassInstanceCreation dataflowClosure) {
+		String argumentsCount= new Integer(fParameterInfos.size()).toString();
+		dataflowClosure.arguments().add(fAST.newNumberLiteral(argumentsCount));
+	}
+
+	private void augmentWithAnonymousClassDeclaration(ClassInstanceCreation dataflowClosure, ASTNode[] selectedNodes, TextEditGroup editGroup) {
+		AnonymousClassDeclaration closure= fAST.newAnonymousClassDeclaration();
+		closure.bodyDeclarations().add(createRunMethodForClosure(selectedNodes, editGroup));
+		dataflowClosure.setAnonymousClassDeclaration(closure);
 	}
 
 	/**
-	 * Returns the signature of the new method.
+	 * Create a ASTNode similar to
 	 * 
-	 * @param methodName the method name used for the new method
-	 * @return the signature of the extracted method
+	 * protected void doRun(Object... arguments) { ... }
+	 * 
+	 * @param selectedNodes - The statements to be enclosed in the doRun(...) method
+	 * @param editGroup
+	 * @return
 	 */
-	public String getSignature(String methodName) {
-		MethodDeclaration methodDecl= createNewMethodDeclaration();
-		methodDecl.setBody(null);
-		String str= ASTNodes.asString(methodDecl);
-		return str.substring(0, str.indexOf(';'));
+	private Object createRunMethodForClosure(ASTNode[] selectedNodes, TextEditGroup editGroup) {
+		MethodDeclaration runMethod= fAST.newMethodDeclaration();
+		runMethod.modifiers().addAll(ASTNodeFactory.newModifiers(fAST, Modifier.PROTECTED));
+		runMethod.setReturnType2(fAST.newPrimitiveType(org.eclipse.jdt.core.dom.PrimitiveType.VOID));
+		runMethod.setName(fAST.newSimpleName(CLOSURE_METHOD));
+		runMethod.parameters().add(createObjectArrayArgument());
+		runMethod.setBody(createClosureBody(selectedNodes, editGroup));
+		return runMethod;
 	}
 
 	/**
-	 * Returns the number of duplicate code snippets found.
+	 * Creates an the Object... arguments type
 	 * 
-	 * @return the number of duplicate code fragments
+	 * @return
 	 */
-	public int getNumberOfDuplicates() {
-		if (fDuplicates == null)
-			return 0;
-		int result= 0;
-		for (int i= 0; i < fDuplicates.length; i++) {
-			if (!fDuplicates[i].isMethodBody())
-				result++;
+	private Object createObjectArrayArgument() {
+		SingleVariableDeclaration parameter= fAST.newSingleVariableDeclaration();
+		parameter.setVarargs(true);
+		parameter.setType(fAST.newSimpleType(fAST.newSimpleName(CLOSURE_PARAMETER_TYPE)));
+		parameter.setName(fAST.newSimpleName(CLOSURE_PARAMETER_NAME));
+		return parameter;
+	}
+
+	private Block createClosureBody(ASTNode[] selectedNodes, TextEditGroup editGroup) {
+		Block methodBlock= fAST.newBlock();
+		ListRewrite statements= fRewriter.getListRewrite(methodBlock, Block.STATEMENTS_PROPERTY);
+
+		// Locals that are not passed as an arguments since the extracted method only
+		// writes to them
+		IVariableBinding[] methodLocals= fAnalyzer.getMethodLocals();
+		for (int i= 0; i < methodLocals.length; i++) {
+			if (methodLocals[i] != null) {
+				methodBlock.statements().add(createDeclaration(methodLocals[i], null));
+			}
 		}
-		return result;
+
+		int argumentPosition= 0;
+		for (ParameterInfo parameter : fParameterInfos) {
+			for (int n= 0; n < selectedNodes.length; n++) {
+				SimpleName[] oldNames= LinkedNodeFinder.findByBinding(selectedNodes[n], parameter.getOldBinding());
+				for (int i= 0; i < oldNames.length; i++) {
+					fRewriter.replace(oldNames[i], createCastParameters(parameter, argumentPosition), null);
+				}
+			}
+			argumentPosition++;
+		}
+
+		ListRewrite source= fRewriter.getListRewrite(
+				selectedNodes[0].getParent(),
+				(ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
+		ASTNode toMove= source.createMoveTarget(
+				selectedNodes[0], selectedNodes[selectedNodes.length - 1], null, editGroup);
+		statements.insertLast(toMove, editGroup);
+		return methodBlock;
 	}
+
+	private ASTNode createCastParameters(ParameterInfo parameter, int argumentsPosition) {
+		ParenthesizedExpression argumentExpression= fAST.newParenthesizedExpression();
+		CastExpression castExpression= fAST.newCastExpression();
+
+		VariableDeclaration infoDecl= getVariableDeclaration(parameter);
+		castExpression.setType(ASTNodeFactory.newType(fAST, infoDecl, fImportRewriter, null));
+
+		ArrayAccess arrayAccess= fAST.newArrayAccess();
+		arrayAccess.setArray(fAST.newSimpleName(CLOSURE_PARAMETER_NAME));
+		arrayAccess.setIndex(fAST.newNumberLiteral(Integer.toString(argumentsPosition)));
+		castExpression.setExpression(arrayAccess);
+
+		argumentExpression.setExpression(castExpression);
+		return argumentExpression;
+	}
+
+
 
 	//---- Helper methods ------------------------------------------------------------------------
 
@@ -620,18 +581,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-	private void initializeDestination() {
-		BodyDeclaration decl= fAnalyzer.getEnclosingBodyDeclaration();
-		fDestination= getNextParent(decl);
-	}
-
-	private ASTNode getNextParent(ASTNode node) {
-		do {
-			node= node.getParent();
-		} while (node != null && !(node instanceof AbstractTypeDeclaration || node instanceof AnonymousClassDeclaration));
-		return node;
-	}
-
 	private RefactoringStatus mergeTextSelectionStatus(RefactoringStatus status) {
 		status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_no_set_of_statements);
 		return status;
@@ -646,257 +595,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	//---- Code generation -----------------------------------------------------------------------
-
-	private ASTNode[] createCallNodes(SnippetFinder.Match duplicate, int modifiers) {
-		List<ASTNode> result= new ArrayList<ASTNode>(2);
-
-		IVariableBinding[] locals= fAnalyzer.getCallerLocals();
-		for (int i= 0; i < locals.length; i++) {
-			result.add(createDeclaration(locals[i], null));
-		}
-
-		MethodInvocation invocation= fAST.newMethodInvocation();
-		invocation.setName(fAST.newSimpleName(fMethodName));
-		ASTNode typeNode= ASTResolving.findParentType(fAnalyzer.getEnclosingBodyDeclaration());
-		RefactoringStatus status= new RefactoringStatus();
-		while (fDestination != typeNode) {
-			fAnalyzer.checkInput(status, fMethodName, typeNode);
-			if (!status.isOK()) {
-				SimpleName destinationTypeName= fAST.newSimpleName(ASTNodes.getEnclosingType(fDestination).getName());
-				if ((modifiers & Modifier.STATIC) == 0) {
-					ThisExpression thisExpression= fAST.newThisExpression();
-					thisExpression.setQualifier(destinationTypeName);
-					invocation.setExpression(thisExpression);
-				} else {
-					invocation.setExpression(destinationTypeName);
-				}
-				break;
-			}
-			typeNode= typeNode.getParent();
-		}
-
-		List<Expression> arguments= invocation.arguments();
-		for (int i= 0; i < fParameterInfos.size(); i++) {
-			ParameterInfo parameter= fParameterInfos.get(i);
-			arguments.add(ASTNodeFactory.newName(fAST, getMappedName(duplicate, parameter)));
-		}
-
-		ASTNode call;
-		int returnKind= fAnalyzer.getReturnKind();
-		switch (returnKind) {
-			case ExtractClosureAnalyzer.ACCESS_TO_LOCAL:
-				IVariableBinding binding= fAnalyzer.getReturnLocal();
-				if (binding != null) {
-					VariableDeclarationStatement decl= createDeclaration(getMappedBinding(duplicate, binding), invocation);
-					call= decl;
-				} else {
-					Assignment assignment= fAST.newAssignment();
-					assignment.setLeftHandSide(ASTNodeFactory.newName(fAST,
-							getMappedBinding(duplicate, fAnalyzer.getReturnValue()).getName()));
-					assignment.setRightHandSide(invocation);
-					call= assignment;
-				}
-				break;
-			case ExtractClosureAnalyzer.RETURN_STATEMENT_VALUE:
-				ReturnStatement rs= fAST.newReturnStatement();
-				rs.setExpression(invocation);
-				call= rs;
-				break;
-			default:
-				call= invocation;
-		}
-
-		if (call instanceof Expression && !fAnalyzer.isExpressionSelected()) {
-			call= fAST.newExpressionStatement((Expression)call);
-		}
-		result.add(call);
-
-		// We have a void return statement. The code looks like
-		// extracted();
-		// return;
-		if (returnKind == ExtractClosureAnalyzer.RETURN_STATEMENT_VOID && !fAnalyzer.isLastStatementSelected()) {
-			result.add(fAST.newReturnStatement());
-		}
-		return result.toArray(new ASTNode[result.size()]);
-	}
-
-	private IVariableBinding getMappedBinding(SnippetFinder.Match duplicate, IVariableBinding org) {
-		if (duplicate == null)
-			return org;
-		return duplicate.getMappedBinding(org);
-	}
-
-	private String getMappedName(SnippetFinder.Match duplicate, ParameterInfo paramter) {
-		if (duplicate == null)
-			return paramter.getOldName();
-		return duplicate.getMappedName(paramter.getOldBinding()).getIdentifier();
-	}
-
-
-	private MethodDeclaration createNewMethod(ASTNode[] selectedNodes, String lineDelimiter, TextEditGroup substitute) throws CoreException {
-		MethodDeclaration result= createNewMethodDeclaration();
-		result.setBody(createMethodBody(selectedNodes, substitute, result.getModifiers()));
-		return result;
-	}
-
-	private MethodDeclaration createNewMethodDeclaration() {
-		MethodDeclaration result= fAST.newMethodDeclaration();
-
-		//TODO: Remove these modifiers
-		int modifiers= 0;
-		ASTNode enclosingBodyDeclaration= fAnalyzer.getEnclosingBodyDeclaration();
-		while (enclosingBodyDeclaration != null && enclosingBodyDeclaration.getParent() != fDestination) {
-			enclosingBodyDeclaration= enclosingBodyDeclaration.getParent();
-		}
-		if (enclosingBodyDeclaration instanceof BodyDeclaration) { // should always be the case
-			int enclosingModifiers= ((BodyDeclaration)enclosingBodyDeclaration).getModifiers();
-			boolean shouldBeStatic= Modifier.isStatic(enclosingModifiers)
-					|| enclosingBodyDeclaration instanceof EnumDeclaration
-					|| fAnalyzer.getForceStatic();
-			if (shouldBeStatic) {
-				modifiers|= Modifier.STATIC;
-			}
-		}
-
-		ITypeBinding[] typeVariables= computeLocalTypeVariables();
-		List<TypeParameter> typeParameters= result.typeParameters();
-		for (int i= 0; i < typeVariables.length; i++) {
-			TypeParameter parameter= fAST.newTypeParameter();
-			parameter.setName(fAST.newSimpleName(typeVariables[i].getName()));
-			typeParameters.add(parameter);
-		}
-
-		result.modifiers().addAll(ASTNodeFactory.newModifiers(fAST, modifiers));
-		result.setReturnType2((Type)ASTNode.copySubtree(fAST, fAnalyzer.getReturnType()));
-		result.setName(fAST.newSimpleName(fMethodName));
-
-		ImportRewriteContext context= new ContextSensitiveImportRewriteContext(enclosingBodyDeclaration, fImportRewriter);
-
-		List<SingleVariableDeclaration> parameters= result.parameters();
-		for (int i= 0; i < fParameterInfos.size(); i++) {
-			ParameterInfo info= fParameterInfos.get(i);
-			VariableDeclaration infoDecl= getVariableDeclaration(info);
-			SingleVariableDeclaration parameter= fAST.newSingleVariableDeclaration();
-			parameter.modifiers().addAll(ASTNodeFactory.newModifiers(fAST, ASTNodes.getModifiers(infoDecl)));
-			parameter.setType(ASTNodeFactory.newType(fAST, infoDecl, fImportRewriter, context));
-			parameter.setName(fAST.newSimpleName(info.getNewName()));
-			parameter.setVarargs(info.isNewVarargs());
-			parameters.add(parameter);
-		}
-
-		return result;
-	}
-
-	private ITypeBinding[] computeLocalTypeVariables() {
-		List<ITypeBinding> result= new ArrayList<ITypeBinding>(Arrays.asList(fAnalyzer.getTypeVariables()));
-		for (int i= 0; i < fParameterInfos.size(); i++) {
-			ParameterInfo info= fParameterInfos.get(i);
-			processVariable(result, info.getOldBinding());
-		}
-		IVariableBinding[] methodLocals= fAnalyzer.getMethodLocals();
-		for (int i= 0; i < methodLocals.length; i++) {
-			processVariable(result, methodLocals[i]);
-		}
-		return result.toArray(new ITypeBinding[result.size()]);
-	}
-
-	private void processVariable(List<ITypeBinding> result, IVariableBinding variable) {
-		if (variable == null)
-			return;
-		ITypeBinding binding= variable.getType();
-		if (binding != null && binding.isParameterizedType()) {
-			ITypeBinding[] typeArgs= binding.getTypeArguments();
-			for (int args= 0; args < typeArgs.length; args++) {
-				ITypeBinding arg= typeArgs[args];
-				if (arg.isTypeVariable() && !result.contains(arg)) {
-					ASTNode decl= fRoot.findDeclaringNode(arg);
-					if (decl != null && decl.getParent() instanceof MethodDeclaration) {
-						result.add(arg);
-					}
-				}
-			}
-		}
-	}
-
-	private Block createMethodBody(ASTNode[] selectedNodes, TextEditGroup substitute, int modifiers) {
-		Block result= fAST.newBlock();
-		ListRewrite statements= fRewriter.getListRewrite(result, Block.STATEMENTS_PROPERTY);
-
-		// Locals that are not passed as an arguments since the extracted method only
-		// writes to them
-		IVariableBinding[] methodLocals= fAnalyzer.getMethodLocals();
-		for (int i= 0; i < methodLocals.length; i++) {
-			if (methodLocals[i] != null) {
-				result.statements().add(createDeclaration(methodLocals[i], null));
-			}
-		}
-
-		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo parameter= iter.next();
-			if (parameter.isRenamed()) {
-				for (int n= 0; n < selectedNodes.length; n++) {
-					SimpleName[] oldNames= LinkedNodeFinder.findByBinding(selectedNodes[n], parameter.getOldBinding());
-					for (int i= 0; i < oldNames.length; i++) {
-						fRewriter.replace(oldNames[i], fAST.newSimpleName(parameter.getNewName()), null);
-					}
-				}
-			}
-		}
-
-		boolean extractsExpression= fAnalyzer.isExpressionSelected();
-		ASTNode[] callNodes= createCallNodes(null, modifiers);
-		ASTNode replacementNode;
-		if (callNodes.length == 1) {
-			replacementNode= callNodes[0];
-		} else {
-			replacementNode= fRewriter.createGroupNode(callNodes);
-		}
-		if (extractsExpression) {
-			// if we have an expression then only one node is selected.
-			ITypeBinding binding= fAnalyzer.getExpressionBinding();
-			if (binding != null && (!binding.isPrimitive() || !"void".equals(binding.getName()))) { //$NON-NLS-1$
-				ReturnStatement rs= fAST.newReturnStatement();
-				rs.setExpression((Expression)fRewriter.createMoveTarget(selectedNodes[0] instanceof ParenthesizedExpression
-						? ((ParenthesizedExpression)selectedNodes[0]).getExpression()
-						: selectedNodes[0]));
-				statements.insertLast(rs, null);
-			} else {
-				ExpressionStatement st= fAST.newExpressionStatement((Expression)fRewriter.createMoveTarget(selectedNodes[0]));
-				statements.insertLast(st, null);
-			}
-			fRewriter.replace(selectedNodes[0].getParent() instanceof ParenthesizedExpression ? selectedNodes[0].getParent() : selectedNodes[0], replacementNode, substitute);
-		} else {
-			if (selectedNodes.length == 1) {
-				statements.insertLast(fRewriter.createMoveTarget(selectedNodes[0]), substitute);
-				fRewriter.replace(selectedNodes[0], replacementNode, substitute);
-			} else {
-				ListRewrite source= fRewriter.getListRewrite(
-						selectedNodes[0].getParent(),
-						(ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
-				ASTNode toMove= source.createMoveTarget(
-						selectedNodes[0], selectedNodes[selectedNodes.length - 1],
-						replacementNode, substitute);
-				statements.insertLast(toMove, substitute);
-			}
-			IVariableBinding returnValue= fAnalyzer.getReturnValue();
-			if (returnValue != null) {
-				ReturnStatement rs= fAST.newReturnStatement();
-				rs.setExpression(fAST.newSimpleName(getName(returnValue)));
-				statements.insertLast(rs, null);
-			}
-		}
-		return result;
-	}
-
-	private String getName(IVariableBinding binding) {
-		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= iter.next();
-			if (Bindings.equals(binding, info.getOldBinding())) {
-				return info.getNewName();
-			}
-		}
-		return binding.getName();
-	}
 
 	private VariableDeclaration getVariableDeclaration(ParameterInfo parameter) {
 		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), fAnalyzer.getEnclosingBodyDeclaration());
