@@ -15,9 +15,11 @@ package edu.illinois.jflow.core.transformations.code;
  *******************************************************************************/
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
@@ -42,6 +44,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -81,7 +84,7 @@ import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
 
 /**
- * Extracts a method in a compilation unit based on a text selection range.
+ * Extracts a closure in a compilation unit based on a text selection range.
  */
 @SuppressWarnings("restriction")
 public class ExtractClosureRefactoring extends Refactoring {
@@ -117,6 +120,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private static final String CLOSURE_INVOCATION_METHOD_NAME= "call"; //$NON-NLS-1$
 
 	private static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
+
+	private static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
 
 	private static class UsedNamesCollector extends ASTVisitor {
 		private Set<String> result= new HashSet<String>();
@@ -390,8 +395,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 			ListRewrite sentinelRewriter= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
 			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
 
+			addDataflowChannels(closureEditGroup, sentinel, sentinelRewriter);
+
 			ClassInstanceCreation dataflowClosure= createNewDataflowClosure(selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup);
 			MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
+
+			updateReadsToUseDataflowQueue(declaration);
 
 			sentinelRewriter.replace(sentinel, fAST.newExpressionStatement(closureInvocation), closureEditGroup);
 
@@ -406,6 +415,81 @@ public class ExtractClosureRefactoring extends Refactoring {
 			pm.done();
 		}
 
+	}
+
+	private void updateReadsToUseDataflowQueue(BodyDeclaration declaration) {
+		// Update all references to use dataflow channels
+		Selection selection= Selection.createFromStartLength(fSelectionStart, fSelectionLength);
+		int channelNumber= 0;
+		for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
+			SimpleName[] references= LinkedNodeFinder.findByBinding(declaration, potentialWrites);
+			for (int n= 0; n < references.length; n++) {
+				if (!selection.covers(references[n])) {
+					fRewriter.replace(references[n], createChannelRead(channelNumber), null);
+				}
+			}
+			channelNumber++;
+		}
+	}
+
+	private ASTNode createChannelRead(int channelNumber) {
+		MethodInvocation methodInvocation= fAST.newMethodInvocation();
+		methodInvocation.setExpression(fAST.newSimpleName("channel" + channelNumber));
+		methodInvocation.setName(fAST.newSimpleName("getVal"));
+		return methodInvocation;
+	}
+
+	//---- Code generation -----------------------------------------------------------------------
+
+	private void addDataflowChannels(TextEditGroup closureEditGroup, Block sentinel, ListRewrite sentinelRewriter) {
+		int channelNumber= 0;
+		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
+			for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
+				// Use string generation since this is a single statement
+				String channel= "final DataflowQueue<" + resolveType(potentialWrites) + "> channel" + channelNumber + "= new DataflowQueue<" + resolveType(potentialWrites) + ">();";
+				ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
+				sentinelRewriter.insertBefore(newStatement, sentinel, closureEditGroup);
+				channelNumber++;
+			}
+
+			fImportRewriter.addImport(DATAFLOWQUEUE_TYPE);
+		}
+	}
+
+
+	// TODO: Is there a utility class that does this mapping?
+	final static Map<String, String> primitivesToClass= new HashMap<String, String>();
+	static {
+		primitivesToClass.put("char", "Character");
+		primitivesToClass.put("byte", "Byte");
+		primitivesToClass.put("short", "Short");
+		primitivesToClass.put("int", "Integer");
+		primitivesToClass.put("long", "Long");
+		primitivesToClass.put("float", "Float");
+		primitivesToClass.put("double", "Double");
+		primitivesToClass.put("boolean", "Boolean");
+	}
+
+	private String resolveType(IVariableBinding binding) {
+		ITypeBinding type= binding.getType();
+		if (type.isPrimitive())
+			return primitivesToClass.get(type.getName());
+		return type.getName();
+	}
+
+	private VariableDeclaration getVariableDeclaration(ParameterInfo parameter) {
+		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), fAnalyzer.getEnclosingBodyDeclaration());
+	}
+
+	private VariableDeclarationStatement createDeclaration(IVariableBinding binding, Expression intilizer) {
+		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, fAnalyzer.getEnclosingBodyDeclaration());
+		VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
+		fragment.setName((SimpleName)ASTNode.copySubtree(fAST, original.getName()));
+		fragment.setInitializer(intilizer);
+		VariableDeclarationStatement result= fAST.newVariableDeclarationStatement(fragment);
+		result.modifiers().addAll(ASTNode.copySubtrees(fAST, ASTNodes.getModifiers(original)));
+		result.setType(ASTNodeFactory.newType(fAST, original, fImportRewriter, new ContextSensitiveImportRewriteContext(original, fImportRewriter)));
+		return result;
 	}
 
 	private MethodInvocation createClosureInvocation(ClassInstanceCreation dataflowClosure) {
@@ -508,6 +592,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			}
 		}
 
+		// Update the bindings to the parameters
 		int argumentPosition= 0;
 		for (ParameterInfo parameter : fParameterInfos) {
 			for (int n= 0; n < selectedNodes.length; n++) {
@@ -525,6 +610,17 @@ public class ExtractClosureRefactoring extends Refactoring {
 		ASTNode toMove= source.createMoveTarget(
 				selectedNodes[0], selectedNodes[selectedNodes.length - 1], null, editGroup);
 		statements.insertLast(toMove, editGroup);
+
+		// Add the potential writes at the end (in case multiple writes have occurrsed and we only want the latest values)  
+		int channelNumber= 0;
+		for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
+			String channel= "channel" + channelNumber + ".bind(" + potentialWrites.getName() + ");";
+			ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
+			statements.insertLast(newStatement, editGroup);
+			channelNumber++;
+		}
+
+
 		return methodBlock;
 	}
 
@@ -594,20 +690,5 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return type;
 	}
 
-	//---- Code generation -----------------------------------------------------------------------
 
-	private VariableDeclaration getVariableDeclaration(ParameterInfo parameter) {
-		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), fAnalyzer.getEnclosingBodyDeclaration());
-	}
-
-	private VariableDeclarationStatement createDeclaration(IVariableBinding binding, Expression intilizer) {
-		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, fAnalyzer.getEnclosingBodyDeclaration());
-		VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
-		fragment.setName((SimpleName)ASTNode.copySubtree(fAST, original.getName()));
-		fragment.setInitializer(intilizer);
-		VariableDeclarationStatement result= fAST.newVariableDeclarationStatement(fragment);
-		result.modifiers().addAll(ASTNode.copySubtrees(fAST, ASTNodes.getModifiers(original)));
-		result.setType(ASTNodeFactory.newType(fAST, original, fImportRewriter, new ContextSensitiveImportRewriteContext(original, fImportRewriter)));
-		return result;
-	}
 }

@@ -78,12 +78,8 @@ import org.eclipse.jdt.internal.corext.refactoring.code.flow.InputFlowAnalyzer;
 import org.eclipse.jdt.internal.corext.refactoring.util.CodeAnalyzer;
 import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
-import org.eclipse.jdt.internal.ui.viewsupport.BindingLabelProvider;
-import org.eclipse.jdt.ui.JavaElementLabels;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
-
-import com.ibm.icu.text.MessageFormat;
 
 @SuppressWarnings("restriction")
 class ExtractClosureAnalyzer extends CodeAnalyzer {
@@ -142,6 +138,8 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 	private boolean fIsLastStatementSelected;
 
 	private SimpleName fEnclosingLoopLabel;
+
+	private IVariableBinding[] fPotentialReadsOutsideOfClosure;
 
 	public ExtractClosureAnalyzer(ICompilationUnit unit, Selection selection) throws CoreException {
 		super(unit, selection, false);
@@ -206,6 +204,10 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	public ITypeBinding[] getTypeVariables() {
 		return fTypeVariables;
+	}
+
+	public IVariableBinding[] getPotentialReadsOutsideOfClosure() {
+		return fPotentialReadsOutsideOfClosure;
 	}
 
 	//---- Activation checking ---------------------------------------------------------------------------
@@ -564,27 +566,9 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 				}
 			}
 		}
-		switch (localReads.size()) {
-			case 0:
-				fReturnValue= null;
-				break;
-			case 1:
-				break;
-			default:
-				fReturnValue= null;
-				StringBuffer affectedLocals= new StringBuffer();
-				for (int i= 0; i < localReads.size(); i++) {
-					IVariableBinding binding= localReads.get(i);
-					String bindingName= BindingLabelProvider.getBindingLabel(binding, BindingLabelProvider.DEFAULT_TEXTFLAGS | JavaElementLabels.F_PRE_TYPE_SIGNATURE);
-					affectedLocals.append(bindingName);
-					if (i != localReads.size() - 1) {
-						affectedLocals.append('\n');
-					}
-				}
-				String message= MessageFormat.format(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_assignments_to_local, new Object[] { affectedLocals.toString() });
-				status.addFatalError(message, JavaStatusContext.create(fCUnit, getSelection()));
-				return;
-		}
+
+		fPotentialReadsOutsideOfClosure= localReads.toArray(new IVariableBinding[localReads.size()]);
+
 		List<IVariableBinding> callerLocals= new ArrayList<IVariableBinding>(5);
 		FlowInfo localInfo= new InputFlowAnalyzer(flowContext, selection, false).perform(fEnclosingBodyDeclaration);
 		IVariableBinding[] writes= localInfo.get(flowContext, FlowInfo.WRITE | FlowInfo.WRITE_POTENTIAL | FlowInfo.UNKNOWN);
