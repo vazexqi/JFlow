@@ -1,14 +1,8 @@
-/*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
- *     Benjamin Muskalla <bmuskalla@eclipsesource.com> - [extract method] remember selected access modifier - https://bugs.eclipse.org/bugs/show_bug.cgi?id=101233
- *******************************************************************************/
+/**
+ * This class derives
+ * from {@link org.eclipse.jdt.internal.ui.refactoring.code.ExtractMethodInputPage} and is
+ * licensed under the Eclipse Public License.
+ */
 package edu.illinois.jflow.core.transformations.ui.refactoring;
 
 import java.util.Iterator;
@@ -28,7 +22,12 @@ import org.eclipse.swt.widgets.Composite;
 
 import edu.illinois.jflow.core.transformations.code.ExtractClosureRefactoring;
 
-
+/**
+ * This is the input page for the Extract Closure Refactoring.
+ * 
+ * @author Nicholas Chen
+ * 
+ */
 @SuppressWarnings("restriction")
 public class ExtractClosureInputPage extends UserInputWizardPage {
 

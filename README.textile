@@ -1,0 +1,9 @@
+h2. JFlow - Interactive Source-to-source Program Transformations for Flow-Based Parallelism
+
+Emerging applications demand new parallel abstractions. Traditional parallel abstractions such as Data Parallelism and Task Parallelism, while necessary, do not fully the needs of today’s multi-threaded commercial applications. Emerging applications in the domain of recognition, mining and synthesis (RMS); image and video processing; information flow; and automatic financial trading exhibit flow-based forms of parallelism. How can we assist developers in taking advantage of such forms of parallelism?
+
+We propose a solution based on interactive source-to-source transformations. Interactive source- to-source transformations engage the developer, i.e., the domain expert in the process of parallelizing and optimizing an application. There are three components to this work: catalog, library and transformation. 
+
+This repository contains the source code for the transformation component. For more information about each component please visit "https://wiki.engr.illinois.edu/display/jflow":https://wiki.engr.illinois.edu/display/jflow
+
+JFlow is licensed under the Illinois/NCSA Open Source License. See LICENSE.txt for details.

@@ -1,18 +1,9 @@
+/**
+ * This class derives
+ * from {@link org.eclipse.jdt.internal.corext.refactoring.code.ExtractMethodRefactoring} and is
+ * licensed under the Eclipse Public License.
+ */
 package edu.illinois.jflow.core.transformations.code;
-
-/*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
- *     Benjamin Muskalla <bmuskalla@eclipsesource.com> - [extract method] Does not replace similar code in parent class of anonymous class - https://bugs.eclipse.org/bugs/show_bug.cgi?id=160853
- *     Benjamin Muskalla <bmuskalla@eclipsesource.com> - [extract method] Extract method and continue https://bugs.eclipse.org/bugs/show_bug.cgi?id=48056
- *     Benjamin Muskalla <bmuskalla@eclipsesource.com> - [extract method] should declare method static if extracted from anonymous in static method - https://bugs.eclipse.org/bugs/show_bug.cgi?id=152004
- *******************************************************************************/
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +40,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
@@ -66,6 +58,7 @@ import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRe
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
+import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
@@ -85,10 +78,11 @@ import org.eclipse.text.edits.TextEditGroup;
 
 /**
  * Extracts a closure in a compilation unit based on a text selection range.
+ * 
+ * @author Nicholas Chen
  */
 @SuppressWarnings("restriction")
 public class ExtractClosureRefactoring extends Refactoring {
-
 	private ICompilationUnit fCUnit;
 
 	private CompilationUnit fRoot;
@@ -122,6 +116,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
 
 	private static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
+
+	private static final String DATAFLOWQUEUE_PUT_METHOD= "bind";
+
+	private static final String GENERIC_CHANNEL_NAME= "channel";
 
 	private static class UsedNamesCollector extends ASTVisitor {
 		private Set<String> result= new HashSet<String>();
@@ -389,19 +387,26 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 			// A sentinel is just a placeholder to keep track of the position of insertion
 			// For this refactoring, we need to insert two things:
-			// 1) The DataflowChannels
+			// 1) The DataflowChannels (if necessary)
 			// 2) The DataflowMessagingRunnable
 			Block sentinel= fAST.newBlock();
 			ListRewrite sentinelRewriter= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
 			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
 
+			// Add the dataflowChannels that are required
 			addDataflowChannels(closureEditGroup, sentinel, sentinelRewriter);
 
+			// Add the new closure body
 			ClassInstanceCreation dataflowClosure= createNewDataflowClosure(selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup);
 			MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
 
+			// Update all references to values written in the closure body to read from channels
 			updateReadsToUseDataflowQueue(declaration);
 
+			// Handle InterruptedException from using DataflowChannels
+			updateExceptions(declaration, closureEditGroup);
+
+			// Replace the placeholder sentinel with the actual code
 			sentinelRewriter.replace(sentinel, fAST.newExpressionStatement(closureInvocation), closureEditGroup);
 
 			if (fImportRewriter.hasRecordedChanges()) {
@@ -415,6 +420,27 @@ public class ExtractClosureRefactoring extends Refactoring {
 			pm.done();
 		}
 
+	}
+
+	private void updateExceptions(BodyDeclaration declaration, TextEditGroup closureEditGroup) {
+		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
+		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
+			MethodDeclaration method= (MethodDeclaration)declaration;
+			ListRewrite exceptions= fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY);
+			Name newName= ASTNodeFactory.newName(fAST, "InterruptedException");
+			exceptions.insertLast(newName, closureEditGroup);
+		}
+	}
+
+	private ITypeBinding[] filterRuntimeExceptions(ITypeBinding[] exceptions) {
+		List<ITypeBinding> result= new ArrayList<ITypeBinding>(exceptions.length);
+		for (int i= 0; i < exceptions.length; i++) {
+			ITypeBinding exception= exceptions[i];
+			if (Bindings.isRuntimeException(exception))
+				continue;
+			result.add(exception);
+		}
+		return result.toArray(new ITypeBinding[result.size()]);
 	}
 
 	private void updateReadsToUseDataflowQueue(BodyDeclaration declaration) {
@@ -434,7 +460,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private ASTNode createChannelRead(int channelNumber) {
 		MethodInvocation methodInvocation= fAST.newMethodInvocation();
-		methodInvocation.setExpression(fAST.newSimpleName("channel" + channelNumber));
+		methodInvocation.setExpression(fAST.newSimpleName(GENERIC_CHANNEL_NAME + channelNumber));
 		methodInvocation.setName(fAST.newSimpleName("getVal"));
 		return methodInvocation;
 	}
@@ -611,10 +637,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 				selectedNodes[0], selectedNodes[selectedNodes.length - 1], null, editGroup);
 		statements.insertLast(toMove, editGroup);
 
-		// Add the potential writes at the end (in case multiple writes have occurrsed and we only want the latest values)  
+		// Add the potential writes at the end (in case multiple writes have occurred and we only want the latest values)  
 		int channelNumber= 0;
 		for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
-			String channel= "channel" + channelNumber + ".bind(" + potentialWrites.getName() + ");";
+			// Use string generation since this is a single statement
+			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");";
 			ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
 			statements.insertLast(newStatement, editGroup);
 			channelNumber++;
@@ -639,8 +666,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		argumentExpression.setExpression(castExpression);
 		return argumentExpression;
 	}
-
-
 
 	//---- Helper methods ------------------------------------------------------------------------
 

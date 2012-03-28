@@ -19,6 +19,12 @@ import edu.illinois.jflow.core.transformations.code.ExtractClosureRefactoring;
 import edu.illinois.jflow.core.transformations.ui.JFlowRefactoringMessages;
 import edu.illinois.jflow.core.transformations.ui.refactoring.ExtractClosureWizard;
 
+/**
+ * Action to invoke our Extract Closure Refactoring
+ * 
+ * @author Nicholas Chen
+ * 
+ */
 @SuppressWarnings("restriction")
 public class ExtractClosureTopLevelAction implements IWorkbenchWindowActionDelegate {
 	private IWorkbenchWindow window;

@@ -1,15 +1,8 @@
-/*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
- *     Benjamin Muskalla <bmuskalla@eclipsesource.com> - [extract method] Extract method and continue https://bugs.eclipse.org/bugs/show_bug.cgi?id=48056
- *     Benjamin Muskalla <bmuskalla@eclipsesource.com> - [extract method] Name ambiguous return value in error message - https://bugs.eclipse.org/bugs/show_bug.cgi?id=50607
- *******************************************************************************/
+/**
+ * This class derives
+ * from {@link org.eclipse.jdt.internal.corext.refactoring.code.ExtractMethodAnalyzer} and is
+ * licensed under the Eclipse Public License.
+ */
 package edu.illinois.jflow.core.transformations.code;
 
 import java.util.ArrayList;
@@ -71,6 +64,7 @@ import org.eclipse.jdt.internal.corext.dom.LocalVariableIndex;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.base.JavaStatusContext;
+import org.eclipse.jdt.internal.corext.refactoring.code.LocalTypeAnalyzer;
 import org.eclipse.jdt.internal.corext.refactoring.code.flow.FlowContext;
 import org.eclipse.jdt.internal.corext.refactoring.code.flow.FlowInfo;
 import org.eclipse.jdt.internal.corext.refactoring.code.flow.InOutFlowAnalyzer;
@@ -81,6 +75,12 @@ import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 
+/**
+ * Analyzes the "flow" in the selected statements to find potential reads/writes.
+ * 
+ * @author Nicholas Chen
+ * 
+ */
 @SuppressWarnings("restriction")
 class ExtractClosureAnalyzer extends CodeAnalyzer {
 
