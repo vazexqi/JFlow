@@ -127,7 +127,6 @@ public class ExtractClosureInputPage extends UserInputWizardPage {
 				return result;
 			}
 		}
-		result.merge(fRefactoring.checkParameterNames());
 		result.merge(fRefactoring.checkVarargOrder());
 		return result;
 	}

@@ -7,11 +7,9 @@ package edu.illinois.jflow.core.transformations.code;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
@@ -22,8 +20,6 @@ import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Block;
@@ -32,9 +28,7 @@ import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -42,10 +36,8 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
-import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -101,9 +93,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private List<ParameterInfo> fParameterInfos;
 
-	private Set<String> fUsedNames;
-
 	private static final String EMPTY= ""; //$NON-NLS-1$
+
+	// This section is specific to the API for GPars Dataflow
 
 	private static final String CLOSURE_PARAMETER_NAME= "arguments"; //$NON-NLS-1$
 
@@ -117,89 +109,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
 
-	private static final String DATAFLOWQUEUE_PUT_METHOD= "bind";
+	private static final String DATAFLOWQUEUE_PUT_METHOD= "bind"; //$NON-NLS-1$
 
-	private static final String GENERIC_CHANNEL_NAME= "channel";
-
-	private static class UsedNamesCollector extends ASTVisitor {
-		private Set<String> result= new HashSet<String>();
-
-		private Set<SimpleName> fIgnore= new HashSet<SimpleName>();
-
-		public static Set<String> perform(ASTNode[] nodes) {
-			UsedNamesCollector collector= new UsedNamesCollector();
-			for (int i= 0; i < nodes.length; i++) {
-				nodes[i].accept(collector);
-			}
-			return collector.result;
-		}
-
-		@Override
-		public boolean visit(FieldAccess node) {
-			Expression exp= node.getExpression();
-			if (exp != null)
-				fIgnore.add(node.getName());
-			return true;
-		}
-
-		@Override
-		public void endVisit(FieldAccess node) {
-			fIgnore.remove(node.getName());
-		}
-
-		@Override
-		public boolean visit(MethodInvocation node) {
-			Expression exp= node.getExpression();
-			if (exp != null)
-				fIgnore.add(node.getName());
-			return true;
-		}
-
-		@Override
-		public void endVisit(MethodInvocation node) {
-			fIgnore.remove(node.getName());
-		}
-
-		@Override
-		public boolean visit(QualifiedName node) {
-			fIgnore.add(node.getName());
-			return true;
-		}
-
-		@Override
-		public void endVisit(QualifiedName node) {
-			fIgnore.remove(node.getName());
-		}
-
-		@Override
-		public boolean visit(SimpleName node) {
-			if (!fIgnore.contains(node))
-				result.add(node.getIdentifier());
-			return true;
-		}
-
-		@Override
-		public boolean visit(TypeDeclaration node) {
-			return visitType(node);
-		}
-
-		@Override
-		public boolean visit(AnnotationTypeDeclaration node) {
-			return visitType(node);
-		}
-
-		@Override
-		public boolean visit(EnumDeclaration node) {
-			return visitType(node);
-		}
-
-		private boolean visitType(AbstractTypeDeclaration node) {
-			result.add(node.getName().getIdentifier());
-			// don't dive into type declaration since they open a new
-			// context.
-			return false;
-		}
-	}
+	private static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
 
 	/**
 	 * Creates a new extract closure refactoring
@@ -269,7 +181,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		if (result.hasFatalError())
 			return result;
 		initializeParameterInfos();
-		initializeUsedNames();
 		return result;
 	}
 
@@ -292,35 +203,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	/**
-	 * Checks if the parameter names are valid.
-	 * 
-	 * @return validation status
-	 */
-	public RefactoringStatus checkParameterNames() {
-		RefactoringStatus result= new RefactoringStatus();
-		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo parameter= iter.next();
-			result.merge(Checks.checkIdentifier(parameter.getNewName(), fCUnit));
-			for (Iterator<ParameterInfo> others= fParameterInfos.iterator(); others.hasNext();) {
-				ParameterInfo other= others.next();
-				if (parameter != other && other.getNewName().equals(parameter.getNewName())) {
-					result.addError(Messages.format(
-							JFlowRefactoringCoreMessages.ExtractClosureRefactoring_error_sameParameter,
-							BasicElementLabels.getJavaElementName(other.getNewName())));
-					return result;
-				}
-			}
-			if (parameter.isRenamed() && fUsedNames.contains(parameter.getNewName())) {
-				result.addError(Messages.format(
-						JFlowRefactoringCoreMessages.ExtractClosureRefactoring_error_nameInUse,
-						BasicElementLabels.getJavaElementName(parameter.getNewName())));
-				return result;
-			}
-		}
-		return result;
-	}
-
-	/**
 	 * Checks if varargs are ordered correctly.
 	 * 
 	 * @return validation status
@@ -337,15 +219,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return new RefactoringStatus();
 	}
 
-	/**
-	 * Returns the names already in use in the selected statements/expressions.
-	 * 
-	 * @return names already in use.
-	 */
-	public Set<String> getUsedNames() {
-		return fUsedNames;
-	}
-
 	/* (non-Javadoc)
 	 * Method declared in Refactoring
 	 */
@@ -354,7 +227,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		pm.subTask(EMPTY);
 
 		RefactoringStatus result= new RefactoringStatus();
-		result.merge(checkParameterNames());
 		result.merge(checkVarargOrder());
 		pm.worked(1);
 		if (pm.isCanceled())
@@ -691,14 +563,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 		if (vararg != null) {
 			fParameterInfos.add(vararg);
-		}
-	}
-
-	private void initializeUsedNames() {
-		fUsedNames= UsedNamesCollector.perform(fAnalyzer.getSelectedNodes());
-		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo parameter= iter.next();
-			fUsedNames.remove(parameter.getOldName());
 		}
 	}
 
