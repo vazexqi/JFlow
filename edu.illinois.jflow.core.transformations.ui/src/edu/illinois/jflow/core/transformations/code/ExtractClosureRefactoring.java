@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
@@ -17,6 +19,10 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.ITypeHierarchy;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -29,6 +35,7 @@ import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -50,7 +57,6 @@ import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRe
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
-import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
@@ -75,17 +81,72 @@ import org.eclipse.text.edits.TextEditGroup;
  */
 @SuppressWarnings("restriction")
 public class ExtractClosureRefactoring extends Refactoring {
+
+	private final class DataflowChannelVisitor extends ASTVisitor {
+		private int largestChannelNumber= 0;
+
+		private IProgressMonitor pm;
+
+		public DataflowChannelVisitor(IProgressMonitor pm) {
+			this.pm= pm;
+		}
+
+		@Override
+		public boolean visit(VariableDeclarationStatement node) {
+			ITypeBinding binding= node.getType().resolveBinding();
+			IJavaElement javaElement= binding.getJavaElement();
+			if (javaElement != null) {
+
+				IType type= (IType)binding.getJavaElement();
+				ITypeHierarchy supertypeHierarchy;
+				try {
+					supertypeHierarchy= type.newSupertypeHierarchy(pm);
+					IType[] allInterfaces= supertypeHierarchy.getAllInterfaces();
+					for (IType interfaceType : allInterfaces) {
+						String fullyQualifiedName= interfaceType.getFullyQualifiedName();
+						if (fullyQualifiedName.equals(DATAFLOWQUEUE_INTERFACE)) {
+							List<VariableDeclarationFragment> fragments= node.fragments();
+							for (VariableDeclarationFragment fragment : fragments) {
+								String identifier= fragment.getName().getIdentifier();
+								Pattern pattern= Pattern.compile(GENERIC_CHANNEL_NAME + "(\\d+)");
+								Matcher matcher= pattern.matcher(identifier);
+								if (matcher.find()) {
+									String group= matcher.group(1);
+									determineLargestCount(group);
+								}
+							}
+						}
+
+					}
+				} catch (JavaModelException e) {
+					e.printStackTrace();
+				}
+
+			}
+			return super.visit(node);
+		}
+
+		private void determineLargestCount(String channelName) {
+			int parseInt= Integer.parseInt(channelName);
+			largestChannelNumber= parseInt > getLargestChannelNumber() ? parseInt : getLargestChannelNumber();
+		}
+
+		public int getLargestChannelNumber() {
+			return largestChannelNumber;
+		}
+	}
+
 	private ICompilationUnit fCUnit;
 
 	private CompilationUnit fRoot;
+
+	private AST fAST;
 
 	private ImportRewrite fImportRewriter;
 
 	private int fSelectionStart;
 
 	private int fSelectionLength;
-
-	private AST fAST;
 
 	private ASTRewrite fRewriter;
 
@@ -108,6 +169,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
 
 	private static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
+
+	private static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
 
 	private static final String DATAFLOWQUEUE_PUT_METHOD= "bind"; //$NON-NLS-1$
 
@@ -266,20 +329,17 @@ public class ExtractClosureRefactoring extends Refactoring {
 			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
 
 			// Add the dataflowChannels that are required
-			addDataflowChannels(closureEditGroup, sentinel, sentinelRewriter);
-
-			// Add the new closure body
-			ClassInstanceCreation dataflowClosure= createNewDataflowClosure(selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup);
-			MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
+			addDataflowChannels(declaration, sentinel, sentinelRewriter, closureEditGroup, pm);
 
 			// Update all references to values written in the closure body to read from channels
-			updateReadsToUseDataflowQueue(declaration);
+			updateReadsToUseDataflowQueue(declaration, closureEditGroup, pm);
 
 			// Handle InterruptedException from using DataflowChannels
 			updateExceptions(declaration, closureEditGroup);
 
 			// Replace the placeholder sentinel with the actual code
-			sentinelRewriter.replace(sentinel, fAST.newExpressionStatement(closureInvocation), closureEditGroup);
+			ExpressionStatement closureInvocationStatement= createClosureInvocationStatement(declaration, selectedNodes, closureEditGroup, pm);
+			sentinelRewriter.replace(sentinel, closureInvocationStatement, closureEditGroup);
 
 			if (fImportRewriter.hasRecordedChanges()) {
 				TextEdit edit= fImportRewriter.rewriteImports(null);
@@ -294,6 +354,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	}
 
+	private ExpressionStatement createClosureInvocationStatement(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup closureEditGroup, IProgressMonitor pm) throws JavaModelException {
+		ClassInstanceCreation dataflowClosure= createNewDataflowClosure(declaration, selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup, pm);
+		MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
+		ExpressionStatement closureInvocationStatement= fAST.newExpressionStatement(closureInvocation);
+		return closureInvocationStatement;
+	}
+
 	private void updateExceptions(BodyDeclaration declaration, TextEditGroup closureEditGroup) {
 		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
 		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
@@ -304,26 +371,15 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-	private ITypeBinding[] filterRuntimeExceptions(ITypeBinding[] exceptions) {
-		List<ITypeBinding> result= new ArrayList<ITypeBinding>(exceptions.length);
-		for (int i= 0; i < exceptions.length; i++) {
-			ITypeBinding exception= exceptions[i];
-			if (Bindings.isRuntimeException(exception))
-				continue;
-			result.add(exception);
-		}
-		return result.toArray(new ITypeBinding[result.size()]);
-	}
-
-	private void updateReadsToUseDataflowQueue(BodyDeclaration declaration) {
+	private void updateReadsToUseDataflowQueue(BodyDeclaration declaration, TextEditGroup closureEditGroup, IProgressMonitor pm) {
 		// Update all references to use dataflow channels
 		Selection selection= Selection.createFromStartLength(fSelectionStart, fSelectionLength);
-		int channelNumber= 0;
+		int channelNumber= generateFreshChannelNumber(declaration, pm);
 		for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
 			SimpleName[] references= LinkedNodeFinder.findByBinding(declaration, potentialWrites);
 			for (int n= 0; n < references.length; n++) {
 				if (!selection.covers(references[n])) {
-					fRewriter.replace(references[n], createChannelRead(channelNumber), null);
+					fRewriter.replace(references[n], createChannelRead(channelNumber), closureEditGroup);
 				}
 			}
 			channelNumber++;
@@ -337,14 +393,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return methodInvocation;
 	}
 
-	//---- Code generation -----------------------------------------------------------------------
-
-	private void addDataflowChannels(TextEditGroup closureEditGroup, Block sentinel, ListRewrite sentinelRewriter) {
-		int channelNumber= 0;
+	private void addDataflowChannels(BodyDeclaration declaration, Block sentinel, ListRewrite sentinelRewriter, TextEditGroup closureEditGroup, IProgressMonitor pm) {
+		int channelNumber= generateFreshChannelNumber(declaration, pm);
 		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
 			for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
 				// Use string generation since this is a single statement
-				String channel= "final DataflowQueue<" + resolveType(potentialWrites) + "> channel" + channelNumber + "= new DataflowQueue<" + resolveType(potentialWrites) + ">();";
+				String channel= "final DataflowQueue<" + resolveType(potentialWrites) + "> " + GENERIC_CHANNEL_NAME + channelNumber + "= new DataflowQueue<" + resolveType(potentialWrites) + ">();";
 				ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
 				sentinelRewriter.insertBefore(newStatement, sentinel, closureEditGroup);
 				channelNumber++;
@@ -352,6 +406,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 			fImportRewriter.addImport(DATAFLOWQUEUE_TYPE);
 		}
+	}
+
+
+	private int generateFreshChannelNumber(BodyDeclaration declaration, IProgressMonitor pm) {
+		DataflowChannelVisitor channelNameCollector= new DataflowChannelVisitor(pm);
+		declaration.accept(channelNameCollector);
+		return channelNameCollector.getLargestChannelNumber() + 1;
 	}
 
 
@@ -379,6 +440,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), fAnalyzer.getEnclosingBodyDeclaration());
 	}
 
+	@SuppressWarnings("unchecked")
 	private VariableDeclarationStatement createDeclaration(IVariableBinding binding, Expression intilizer) {
 		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, fAnalyzer.getEnclosingBodyDeclaration());
 		VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
@@ -398,6 +460,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return closureInvocation;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void createClosureArguments(MethodInvocation closureInvocation) {
 		List<Expression> arguments= closureInvocation.arguments();
 		for (int i= 0; i < fParameterInfos.size(); i++) {
@@ -416,13 +479,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * @param editGroup
 	 * @return
 	 */
-	private ClassInstanceCreation createNewDataflowClosure(ASTNode[] selectedNodes, String findRecommendedLineSeparator, TextEditGroup editGroup) {
+	private ClassInstanceCreation createNewDataflowClosure(BodyDeclaration declaration, ASTNode[] selectedNodes, String findRecommendedLineSeparator, TextEditGroup editGroup, IProgressMonitor pm) {
 		ClassInstanceCreation dataflowClosure= fAST.newClassInstanceCreation();
 
 		// Create the small chunks
 		augmentWithTypeInfo(dataflowClosure);
 		augmentWithConstructorArgument(dataflowClosure);
-		augmentWithAnonymousClassDeclaration(dataflowClosure, selectedNodes, editGroup);
+		augmentWithAnonymousClassDeclaration(declaration, dataflowClosure, selectedNodes, editGroup, pm);
 
 		return dataflowClosure;
 	}
@@ -439,9 +502,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 		dataflowClosure.arguments().add(fAST.newNumberLiteral(argumentsCount));
 	}
 
-	private void augmentWithAnonymousClassDeclaration(ClassInstanceCreation dataflowClosure, ASTNode[] selectedNodes, TextEditGroup editGroup) {
+	@SuppressWarnings("unchecked")
+	private void augmentWithAnonymousClassDeclaration(BodyDeclaration declaration, ClassInstanceCreation dataflowClosure, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
 		AnonymousClassDeclaration closure= fAST.newAnonymousClassDeclaration();
-		closure.bodyDeclarations().add(createRunMethodForClosure(selectedNodes, editGroup));
+		closure.bodyDeclarations().add(createRunMethodForClosure(declaration, selectedNodes, editGroup, pm));
 		dataflowClosure.setAnonymousClassDeclaration(closure);
 	}
 
@@ -454,13 +518,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * @param editGroup
 	 * @return
 	 */
-	private Object createRunMethodForClosure(ASTNode[] selectedNodes, TextEditGroup editGroup) {
+	@SuppressWarnings("unchecked")
+	private Object createRunMethodForClosure(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
 		MethodDeclaration runMethod= fAST.newMethodDeclaration();
 		runMethod.modifiers().addAll(ASTNodeFactory.newModifiers(fAST, Modifier.PROTECTED));
 		runMethod.setReturnType2(fAST.newPrimitiveType(org.eclipse.jdt.core.dom.PrimitiveType.VOID));
 		runMethod.setName(fAST.newSimpleName(CLOSURE_METHOD));
 		runMethod.parameters().add(createObjectArrayArgument());
-		runMethod.setBody(createClosureBody(selectedNodes, editGroup));
+		runMethod.setBody(createClosureBody(declaration, selectedNodes, editGroup, pm));
 		return runMethod;
 	}
 
@@ -477,7 +542,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return parameter;
 	}
 
-	private Block createClosureBody(ASTNode[] selectedNodes, TextEditGroup editGroup) {
+	@SuppressWarnings("unchecked")
+	private Block createClosureBody(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
 		Block methodBlock= fAST.newBlock();
 		ListRewrite statements= fRewriter.getListRewrite(methodBlock, Block.STATEMENTS_PROPERTY);
 
@@ -510,7 +576,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		statements.insertLast(toMove, editGroup);
 
 		// Add the potential writes at the end (in case multiple writes have occurred and we only want the latest values)  
-		int channelNumber= 0;
+		int channelNumber= generateFreshChannelNumber(declaration, pm);
 		for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
 			// Use string generation since this is a single statement
 			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");";
@@ -538,8 +604,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		argumentExpression.setExpression(castExpression);
 		return argumentExpression;
 	}
-
-	//---- Helper methods ------------------------------------------------------------------------
 
 	private void initializeParameterInfos() {
 		IVariableBinding[] arguments= fAnalyzer.getArguments();
