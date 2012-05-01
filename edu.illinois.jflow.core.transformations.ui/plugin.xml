@@ -11,11 +11,19 @@
             visible="true">
          <menu
                label="%JFlow.menu.label"
-               id="edu.illinois.jflow.core.transformations.Menu">
-            <separator
-                  name="parallelizeGroup">
-            </separator>
+               id="edu.illinois.jflow.core.transformations.Menu"
+               path="additions">
+	           <separator name="parallelizeGroup"/>
          </menu>
+         <!-- According to http://help.eclipse.org/helios/index.jsp?topic=%2Forg.eclipse.platform.doc.isv%2Freference%2Fextension-points%2Forg_eclipse_ui_actionSets.html -->
+         <!-- The order of the actions are in the *reverse* of the order listed here (!) -->
+          <action
+               label="%InvertLoop.label"
+               class="edu.illinois.jflow.core.transformations.ui.actions.InvertLoopTopLevelAction"
+               tooltip="%InvertLoop.tooltip"
+               menubarPath="edu.illinois.jflow.core.transformations.Menu/parallelizeGroup"
+               id="edu.illinois.jflow.core.transformations.ui.actions.InvertLoopTopLevelAction">
+         </action>
          <action
                label="%ExtractClosure.label"
                class="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureTopLevelAction"
@@ -23,6 +31,7 @@
                menubarPath="edu.illinois.jflow.core.transformations.Menu/parallelizeGroup"
                id="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureTopLevelAction">
          </action>
+
       </actionSet>
    </extension>
 
