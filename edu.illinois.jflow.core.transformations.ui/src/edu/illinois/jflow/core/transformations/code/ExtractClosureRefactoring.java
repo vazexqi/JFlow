@@ -82,7 +82,11 @@ import org.eclipse.text.edits.TextEditGroup;
 @SuppressWarnings("restriction")
 public class ExtractClosureRefactoring extends Refactoring {
 
-	private final class DataflowChannelVisitor extends ASTVisitor {
+	/**
+	 * Locates the existing DataflowChannels and the names and finds new unique names for them.
+	 * 
+	 */
+	private static final class DataflowChannelVisitor extends ASTVisitor {
 		private int largestChannelNumber= 0;
 
 		private IProgressMonitor pm;
@@ -91,6 +95,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			this.pm= pm;
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public boolean visit(VariableDeclarationStatement node) {
 			ITypeBinding binding= node.getType().resolveBinding();
@@ -332,7 +337,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 			addDataflowChannels(declaration, sentinel, sentinelRewriter, closureEditGroup, pm);
 
 			// Update all references to values written in the closure body to read from channels
-			updateReadsToUseDataflowQueue(declaration, closureEditGroup, pm);
+			List<ASTNode> channels= createTempVariablesForChannels(declaration, closureEditGroup, pm);
+			for (ASTNode astNode : channels) {
+				sentinelRewriter.insertAfter(astNode, sentinel, closureEditGroup);
+			}
 
 			// Handle InterruptedException from using DataflowChannels
 			updateExceptions(declaration, closureEditGroup);
@@ -361,32 +369,34 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return closureInvocationStatement;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void updateExceptions(BodyDeclaration declaration, TextEditGroup closureEditGroup) {
 		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
 		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
 			MethodDeclaration method= (MethodDeclaration)declaration;
-			ListRewrite exceptions= fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY);
-			Name newName= ASTNodeFactory.newName(fAST, "InterruptedException");
-			exceptions.insertLast(newName, closureEditGroup);
+			List<Name> exceptions= fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).getOriginalList();
+			for (Name name : exceptions) {
+				if (name.getFullyQualifiedName().matches("InterruptedException"))
+					return;
+			}
+			Name exception= ASTNodeFactory.newName(fAST, "InterruptedException");
+			fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).insertLast(exception, closureEditGroup);
 		}
 	}
 
-	private void updateReadsToUseDataflowQueue(BodyDeclaration declaration, TextEditGroup closureEditGroup, IProgressMonitor pm) {
-		// Update all references to use dataflow channels
-		Selection selection= Selection.createFromStartLength(fSelectionStart, fSelectionLength);
+	private List<ASTNode> createTempVariablesForChannels(BodyDeclaration declaration, TextEditGroup closureEditGroup, IProgressMonitor pm) {
+		List<ASTNode> nodes= new ArrayList<ASTNode>();
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialWrites : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
-			SimpleName[] references= LinkedNodeFinder.findByBinding(declaration, potentialWrites);
-			for (int n= 0; n < references.length; n++) {
-				if (!selection.covers(references[n])) {
-					fRewriter.replace(references[n], createChannelRead(channelNumber), closureEditGroup);
-				}
-			}
+		for (IVariableBinding potentialReads : fAnalyzer.getPotentialReadsOutsideOfClosure()) {
+			VariableDeclarationStatement tempVariable= createDeclaration(potentialReads, createChannelRead(channelNumber));
+			nodes.add(tempVariable);
 			channelNumber++;
 		}
+
+		return nodes;
 	}
 
-	private ASTNode createChannelRead(int channelNumber) {
+	private Expression createChannelRead(int channelNumber) {
 		MethodInvocation methodInvocation= fAST.newMethodInvocation();
 		methodInvocation.setExpression(fAST.newSimpleName(GENERIC_CHANNEL_NAME + channelNumber));
 		methodInvocation.setName(fAST.newSimpleName("getVal"));
@@ -593,8 +603,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 		ParenthesizedExpression argumentExpression= fAST.newParenthesizedExpression();
 		CastExpression castExpression= fAST.newCastExpression();
 
-		VariableDeclaration infoDecl= getVariableDeclaration(parameter);
-		castExpression.setType(ASTNodeFactory.newType(fAST, infoDecl, fImportRewriter, null));
+		IVariableBinding oldBinding= parameter.getOldBinding();
+		if (oldBinding.getType().isPrimitive()) {
+			castExpression.setType(fAST.newSimpleType(fAST.newName(resolveType(oldBinding))));
+		} else {
+			VariableDeclaration infoDecl= getVariableDeclaration(parameter);
+			castExpression.setType(ASTNodeFactory.newType(fAST, infoDecl, fImportRewriter, null));
+		}
 
 		ArrayAccess arrayAccess= fAST.newArrayAccess();
 		arrayAccess.setArray(fAST.newSimpleName(CLOSURE_PARAMETER_NAME));
