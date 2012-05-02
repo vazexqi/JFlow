@@ -36,6 +36,7 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -45,6 +46,7 @@ import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -95,7 +97,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			this.pm= pm;
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		public boolean visit(VariableDeclarationStatement node) {
 			ITypeBinding binding= node.getType().resolveBinding();
@@ -110,7 +111,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 					for (IType interfaceType : allInterfaces) {
 						String fullyQualifiedName= interfaceType.getFullyQualifiedName();
 						if (fullyQualifiedName.equals(DATAFLOWQUEUE_INTERFACE)) {
-							List<VariableDeclarationFragment> fragments= node.fragments();
+							// This is safe because VariableDeclarationStatement.fragment() returns a list of VariableDeclarationFragment
+							@SuppressWarnings("unchecked")
+							List<VariableDeclarationFragment> fragments= (List<VariableDeclarationFragment>)node.fragments();
 							for (VariableDeclarationFragment fragment : fragments) {
 								String identifier= fragment.getName().getIdentifier();
 								Pattern pattern= Pattern.compile(GENERIC_CHANNEL_NAME + "(\\d+)");
@@ -369,12 +372,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return closureInvocationStatement;
 	}
 
-	@SuppressWarnings("unchecked")
 	private void updateExceptions(BodyDeclaration declaration, TextEditGroup closureEditGroup) {
 		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
 		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
 			MethodDeclaration method= (MethodDeclaration)declaration;
-			List<Name> exceptions= fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).getOriginalList();
+			// This is safe since MethodDeclaration THROWN_EXCEPTIONS_PROPERTY returns a list of Name
+			@SuppressWarnings("unchecked")
+			List<Name> exceptions= (List<Name>)fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).getOriginalList();
 			for (Name name : exceptions) {
 				if (name.getFullyQualifiedName().matches("InterruptedException"))
 					return;
@@ -450,14 +454,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), fAnalyzer.getEnclosingBodyDeclaration());
 	}
 
-	@SuppressWarnings("unchecked")
 	private VariableDeclarationStatement createDeclaration(IVariableBinding binding, Expression intilizer) {
 		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, fAnalyzer.getEnclosingBodyDeclaration());
 		VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
 		fragment.setName((SimpleName)ASTNode.copySubtree(fAST, original.getName()));
 		fragment.setInitializer(intilizer);
 		VariableDeclarationStatement result= fAST.newVariableDeclarationStatement(fragment);
-		result.modifiers().addAll(ASTNode.copySubtrees(fAST, ASTNodes.getModifiers(original)));
+		// This is safe because we are dealing exclusively with ASTNode
+		@SuppressWarnings("unchecked")
+		List<ASTNode> copySubtrees= (List<ASTNode>)ASTNode.copySubtrees(fAST, ASTNodes.getModifiers(original));
+		@SuppressWarnings("unchecked")
+		List<ASTNode> modifiers= (List<ASTNode>)result.modifiers();
+		modifiers.addAll(copySubtrees);
 		result.setType(ASTNodeFactory.newType(fAST, original, fImportRewriter, new ContextSensitiveImportRewriteContext(original, fImportRewriter)));
 		return result;
 	}
@@ -470,9 +478,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return closureInvocation;
 	}
 
-	@SuppressWarnings("unchecked")
 	private void createClosureArguments(MethodInvocation closureInvocation) {
-		List<Expression> arguments= closureInvocation.arguments();
+		// This is safe since MethodInvocation.arguments() returns a list of Expression
+		@SuppressWarnings("unchecked")
+		List<Expression> arguments= (List<Expression>)closureInvocation.arguments();
 		for (int i= 0; i < fParameterInfos.size(); i++) {
 			ParameterInfo parameter= fParameterInfos.get(i);
 			arguments.add(ASTNodeFactory.newName(fAST, parameter.getOldName()));
@@ -506,16 +515,21 @@ public class ExtractClosureRefactoring extends Refactoring {
 		dataflowClosure.setType(fAST.newSimpleType(fAST.newName("DataflowMessagingRunnable")));
 	}
 
-	@SuppressWarnings("unchecked")
 	private void augmentWithConstructorArgument(ClassInstanceCreation dataflowClosure) {
 		String argumentsCount= new Integer(fParameterInfos.size()).toString();
-		dataflowClosure.arguments().add(fAST.newNumberLiteral(argumentsCount));
+		// This is safe since ClassInstanceCreation.arguments() can only return Expression
+		@SuppressWarnings("unchecked")
+		List<Expression> arguments= (List<Expression>)dataflowClosure.arguments();
+		arguments.add(fAST.newNumberLiteral(argumentsCount));
 	}
 
-	@SuppressWarnings("unchecked")
 	private void augmentWithAnonymousClassDeclaration(BodyDeclaration declaration, ClassInstanceCreation dataflowClosure, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
 		AnonymousClassDeclaration closure= fAST.newAnonymousClassDeclaration();
-		closure.bodyDeclarations().add(createRunMethodForClosure(declaration, selectedNodes, editGroup, pm));
+		MethodDeclaration createRunMethodForClosure= createRunMethodForClosure(declaration, selectedNodes, editGroup, pm);
+		// This is safe since AnonymousClassDeclaration.bodyDeclarations can only return a list of BodyDeclaration
+		@SuppressWarnings("unchecked")
+		List<BodyDeclaration> bodyDeclarations= (List<BodyDeclaration>)closure.bodyDeclarations();
+		bodyDeclarations.add(createRunMethodForClosure);
 		dataflowClosure.setAnonymousClassDeclaration(closure);
 	}
 
@@ -528,14 +542,23 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * @param editGroup
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
-	private Object createRunMethodForClosure(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
+	private MethodDeclaration createRunMethodForClosure(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
 		MethodDeclaration runMethod= fAST.newMethodDeclaration();
-		runMethod.modifiers().addAll(ASTNodeFactory.newModifiers(fAST, Modifier.PROTECTED));
+		List<Modifier> newModifiers= ASTNodeFactory.newModifiers(fAST, Modifier.PROTECTED);
+
+		// This is safe since MethodDeclaration.modifiers() returns a list of IExtendedModifier
+		@SuppressWarnings("unchecked")
+		List<IExtendedModifier> modifiers= (List<IExtendedModifier>)runMethod.modifiers();
+		modifiers.addAll(newModifiers);
 		runMethod.setReturnType2(fAST.newPrimitiveType(org.eclipse.jdt.core.dom.PrimitiveType.VOID));
 		runMethod.setName(fAST.newSimpleName(CLOSURE_METHOD));
-		runMethod.parameters().add(createObjectArrayArgument());
+
+		// This is safe since MethodDeclaration.paramters() returns a list of SingleVariableDeclaration
+		@SuppressWarnings("unchecked")
+		List<SingleVariableDeclaration> parameters= (List<SingleVariableDeclaration>)runMethod.parameters();
+		parameters.add(createObjectArrayArgument());
 		runMethod.setBody(createClosureBody(declaration, selectedNodes, editGroup, pm));
+
 		return runMethod;
 	}
 
@@ -544,7 +567,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * 
 	 * @return
 	 */
-	private Object createObjectArrayArgument() {
+	private SingleVariableDeclaration createObjectArrayArgument() {
 		SingleVariableDeclaration parameter= fAST.newSingleVariableDeclaration();
 		parameter.setVarargs(true);
 		parameter.setType(fAST.newSimpleType(fAST.newSimpleName(CLOSURE_PARAMETER_TYPE)));
@@ -552,7 +575,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return parameter;
 	}
 
-	@SuppressWarnings("unchecked")
 	private Block createClosureBody(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
 		Block methodBlock= fAST.newBlock();
 		ListRewrite statements= fRewriter.getListRewrite(methodBlock, Block.STATEMENTS_PROPERTY);
@@ -562,7 +584,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 		IVariableBinding[] methodLocals= fAnalyzer.getMethodLocals();
 		for (int i= 0; i < methodLocals.length; i++) {
 			if (methodLocals[i] != null) {
-				methodBlock.statements().add(createDeclaration(methodLocals[i], null));
+				// This is safe since Block.statements() returns a list of Statement
+				@SuppressWarnings("unchecked")
+				List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
+				methodBlockStatements.add(createDeclaration(methodLocals[i], null));
 			}
 		}
 
