@@ -104,9 +104,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 			if (javaElement != null) {
 
 				IType type= (IType)binding.getJavaElement();
-				ITypeHierarchy supertypeHierarchy;
 				try {
-					supertypeHierarchy= type.newSupertypeHierarchy(pm);
+					ITypeHierarchy supertypeHierarchy= type.newSupertypeHierarchy(pm);
 					IType[] allInterfaces= supertypeHierarchy.getAllInterfaces();
 					for (IType interfaceType : allInterfaces) {
 						String fullyQualifiedName= interfaceType.getFullyQualifiedName();
@@ -166,23 +165,23 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	// This section is specific to the API for GPars Dataflow
 
-	private static final String CLOSURE_PARAMETER_NAME= "arguments"; //$NON-NLS-1$
+	public static final String CLOSURE_PARAMETER_NAME= "arguments"; //$NON-NLS-1$
 
-	private static final String CLOSURE_PARAMETER_TYPE= "Object"; //$NON-NLS-1$
+	public static final String CLOSURE_PARAMETER_TYPE= "Object"; //$NON-NLS-1$
 
-	private static final String CLOSURE_METHOD= "doRun"; //$NON-NLS-1$
+	public static final String CLOSURE_METHOD= "doRun"; //$NON-NLS-1$
 
-	private static final String CLOSURE_INVOCATION_METHOD_NAME= "call"; //$NON-NLS-1$
+	public static final String CLOSURE_INVOCATION_METHOD_NAME= "call"; //$NON-NLS-1$
 
-	private static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
+	public static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
 
-	private static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
+	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
 
-	private static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
+	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
 
-	private static final String DATAFLOWQUEUE_PUT_METHOD= "bind"; //$NON-NLS-1$
+	public static final String DATAFLOWQUEUE_PUT_METHOD= "bind"; //$NON-NLS-1$
 
-	private static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
+	public static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
 
 	/**
 	 * Creates a new extract closure refactoring
@@ -199,7 +198,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	/**
-	 * Creates a new extract closure refactoring
+	 * Creates a new extract closure refactoring (for quick assist)
 	 * 
 	 * @param astRoot the AST root of an AST created from a compilation unit
 	 * @param selectionStart start

@@ -5,6 +5,12 @@ import org.eclipse.osgi.util.NLS;
 public class JFlowRefactoringCoreMessages extends NLS {
 	private static final String BUNDLE_NAME= "edu.illinois.jflow.core.transformations.code.refactoring"; //$NON-NLS-1$
 
+	public static String InvertLoopAnalyzer_does_not_contain_closure;
+
+	public static String InvertLoopAnalyzer_not_on_loop;
+
+	public static String InvertLoopRefactoring_name;
+
 	public static String ExtractClosureRefactoring_name;
 
 	public static String ExtractClosureRefactoring_change_name;
@@ -86,10 +92,6 @@ public class JFlowRefactoringCoreMessages extends NLS {
 	public static String ExtractClosureAnalyzer_super_or_this;
 
 	public static String FlowAnalyzer_execution_flow;
-
-	public static String InitializableRefactoring_argument_not_exist;
-
-	public static String InitializableRefactoring_illegal_argument;
 
 	public static String StatementAnalyzer_doesNotCover;
 

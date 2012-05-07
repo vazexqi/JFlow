@@ -23,6 +23,7 @@ public class InvertLoopWizard extends RefactoringWizard {
 
 	@Override
 	protected void addUserInputPages() {
+		addPage(new InvertLoopInputPage());
 	}
 
 }
