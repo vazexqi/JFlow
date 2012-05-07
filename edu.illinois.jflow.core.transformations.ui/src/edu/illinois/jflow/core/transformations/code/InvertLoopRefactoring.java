@@ -19,6 +19,8 @@ import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.NumberLiteral;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -29,6 +31,8 @@ import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 import org.eclipse.jdt.core.refactoring.CompilationUnitChange;
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
+import org.eclipse.jdt.internal.corext.dom.ASTNodes;
+import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
@@ -52,7 +56,6 @@ import edu.illinois.jflow.core.transformations.code.InvertLoopAnalyzer.InOutChan
 @SuppressWarnings("restriction")
 public class InvertLoopRefactoring extends Refactoring {
 
-
 	private ICompilationUnit fCUnit;
 
 	private CompilationUnit fRoot;
@@ -72,6 +75,10 @@ public class InvertLoopRefactoring extends Refactoring {
 	// This section is specific to the API for GPars Dataflow
 
 	private static final String FLOWGRAPH_TYPE= "groovyx.gpars.dataflow.operator.FlowGraph";
+
+	private static final String ARRAYS_TYPE= "java.util.Arrays";
+
+	private static final String FLOWGRAPH_VARIABLE_NAME= "fGraph";
 
 	public InvertLoopRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength) {
 		fCUnit= unit;
@@ -176,7 +183,7 @@ public class InvertLoopRefactoring extends Refactoring {
 
 	private void createFlowGraph(ASTNode selectedLoopStatement, ListRewrite rewriter, TextEditGroup inverterEditGroup) {
 		//Use string generation since this is a single statement
-		String flowGraph= "FlowGraph fGraph = new FlowGraph();";
+		String flowGraph= "FlowGraph " + FLOWGRAPH_VARIABLE_NAME + " = new FlowGraph();";
 		ASTNode newStatement= ASTNodeFactory.newStatement(fAST, flowGraph);
 		rewriter.insertBefore(newStatement, selectedLoopStatement, inverterEditGroup);
 		fImportRewriter.addImport(FLOWGRAPH_TYPE);
@@ -200,30 +207,68 @@ public class InvertLoopRefactoring extends Refactoring {
 
 	private void hoiseClosures(ASTNode selectedLoopStatement, ListRewrite rewriter, TextEditGroup inverterEditGroup) {
 		for (ClassInstanceCreation closure : fAnalyzer.getClosures()) {
-			ExpressionStatement newExpressionStatement= fAST.newExpressionStatement(createClosureExpressionStatement(closure));
+			ExpressionStatement newExpressionStatement= fAST.newExpressionStatement(createClosureExpressionStatement(closure, inverterEditGroup));
 			rewriter.insertBefore(newExpressionStatement, selectedLoopStatement, inverterEditGroup);
 		}
 	}
 
-	private Expression createClosureExpressionStatement(ClassInstanceCreation closure) {
+	private Expression createClosureExpressionStatement(ClassInstanceCreation closure, TextEditGroup inverterEditGroup) {
+		fImportRewriter.addImport(ARRAYS_TYPE);
+
 		MethodInvocation dataflowOperatorInvocation= fAST.newMethodInvocation();
-		dataflowOperatorInvocation.setExpression(fAST.newSimpleName("fGraph"));
+		dataflowOperatorInvocation.setExpression(fAST.newSimpleName(FLOWGRAPH_VARIABLE_NAME));
 		dataflowOperatorInvocation.setName(fAST.newSimpleName("operator"));
+
+		// This is safe because MethodInvocation.arguments() returns a list of Expression
 		@SuppressWarnings("unchecked")
 		List<Expression> arguments= (List<Expression>)dataflowOperatorInvocation.arguments();
 		InOutChannelInformation inOutChannelInformation= fAnalyzer.getClosures2channels().get(closure);
+
 		arguments.add(createInputChannelExpression(inOutChannelInformation.inputs));
 		arguments.add(createOutputChannelExpression(inOutChannelInformation.outputs));
-		ASTNode instanceCreationTarget= fRewriter.createMoveTarget(closure);
-		arguments.add((Expression)instanceCreationTarget);
-		fImportRewriter.addImport("java.util.Arrays");
+		createClosureArgument(arguments, closure, inOutChannelInformation.outputs, inverterEditGroup);
+
 		return dataflowOperatorInvocation;
 	}
 
+	private void createClosureArgument(List<Expression> arguments, ClassInstanceCreation closure, List<VariableDeclarationFragment> outputs, TextEditGroup editGroup) {
+
+		for (int index= 0; index < outputs.size(); index++) {
+			VariableDeclarationFragment fragment= outputs.get(index);
+			SimpleName[] node= LinkedNodeFinder.findByNode(closure, fragment.getName());
+			for (SimpleName simpleName : node) {
+				MethodInvocation originalMethod= (MethodInvocation)ASTNodes.getParent(simpleName, MethodInvocation.class);
+				Expression target= (Expression)fRewriter.createCopyTarget((ASTNode)originalMethod.arguments().get(0));
+
+				MethodInvocation newMethod= fAST.newMethodInvocation();
+
+				MethodInvocation nestedMethod= fAST.newMethodInvocation();
+				nestedMethod.setName(fAST.newSimpleName("getOwningProcessor"));
+
+				newMethod.setExpression(nestedMethod);
+				newMethod.setName(fAST.newSimpleName("bindOutput"));
+
+				// This is safe because MethodInvocation.arguments() returns a list of Expression
+				@SuppressWarnings("unchecked")
+				List<Expression> newMethodArguments= (List<Expression>)newMethod.arguments();
+
+				NumberLiteral newNumberLiteral= fAST.newNumberLiteral();
+				newNumberLiteral.setToken(Integer.toString(index));
+				newMethodArguments.add(newNumberLiteral);
+				newMethodArguments.add(target);
+
+				fRewriter.replace(originalMethod, newMethod, editGroup);
+			}
+
+		}
+
+
+		ASTNode instanceCreationTarget= fRewriter.createMoveTarget(closure);
+		arguments.add((Expression)instanceCreationTarget);
+	}
+
 	private Expression createInputChannelExpression(List<VariableDeclarationFragment> inputs) {
-		MethodInvocation arrays= fAST.newMethodInvocation();
-		arrays.setExpression(fAST.newSimpleName("Arrays"));
-		arrays.setName(fAST.newSimpleName("asList"));
+		MethodInvocation arrays= generateAsListMethodInvocation();
 		@SuppressWarnings("unchecked")
 		List<Expression> arguments= (List<Expression>)arrays.arguments();
 
@@ -240,10 +285,9 @@ public class InvertLoopRefactoring extends Refactoring {
 		return arrays;
 	}
 
+
 	private Expression createOutputChannelExpression(List<VariableDeclarationFragment> output) {
-		MethodInvocation arrays= fAST.newMethodInvocation();
-		arrays.setExpression(fAST.newSimpleName("Arrays"));
-		arrays.setName(fAST.newSimpleName("asList"));
+		MethodInvocation arrays= generateAsListMethodInvocation();
 		@SuppressWarnings("unchecked")
 		List<Expression> arguments= (List<Expression>)arrays.arguments();
 
@@ -260,6 +304,13 @@ public class InvertLoopRefactoring extends Refactoring {
 		return arrays;
 	}
 
+	private MethodInvocation generateAsListMethodInvocation() {
+		MethodInvocation arrays= fAST.newMethodInvocation();
+		arrays.setExpression(fAST.newSimpleName("Arrays"));
+		arrays.setName(fAST.newSimpleName("asList"));
+		return arrays;
+	}
+
 	private void hoiseExistingChannels(ASTNode selectedLoopStatement, ListRewrite rewriter, TextEditGroup inverterEditGroup) {
 		for (VariableDeclarationStatement variableDeclarationStatement : fAnalyzer.getChannels()) {
 			ASTNode variableDeclarationTarget= fRewriter.createMoveTarget(variableDeclarationStatement);
@@ -267,6 +318,7 @@ public class InvertLoopRefactoring extends Refactoring {
 		}
 	}
 
+	//TODO: Have to handle the different direct input from the for loop and not the loop parameter
 	private void replaceForLoop(ASTNode selectedLoopStatement, ListRewrite rewriter, TextEditGroup inverterEditGroup) {
 		if (selectedLoopStatement instanceof EnhancedForStatement) {
 			EnhancedForStatement loop= (EnhancedForStatement)selectedLoopStatement;
@@ -281,7 +333,7 @@ public class InvertLoopRefactoring extends Refactoring {
 
 	private void addWaitForAll(ASTNode selectedLoopStatement, ListRewrite rewriter, TextEditGroup inverterEditGroup) {
 		//Use string generation since this is a single statement
-		String flowGraph= "fGraph.waitForAll();";
+		String flowGraph= FLOWGRAPH_VARIABLE_NAME + ".waitForAll();";
 		ASTNode newStatement= ASTNodeFactory.newStatement(fAST, flowGraph);
 		rewriter.insertAfter(newStatement, selectedLoopStatement, inverterEditGroup);
 	}
