@@ -246,4 +246,9 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 	public List<VariableDeclarationStatement> getChannels() {
 		return channels;
 	}
+
+	public Map<ClassInstanceCreation, InOutChannelInformation> getClosures2channels() {
+		return closures2channels;
+	}
+
 }
