@@ -173,7 +173,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	public static final String CLOSURE_INVOCATION_METHOD_NAME= "call"; //$NON-NLS-1$
 
-	public static final String CLOSURE_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
+	public static final String CLOSURE_PACKAGE= "groovyx.gpars"; //$NON-NLS-1$
+
+	public static final String CLOSURE_TYPE= "DataflowMessagingRunnable"; //$NON-NLS-1$
+
+	public static final String CLOSURE_QUALIFIED_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE; //$NON-NLS-1$
 
 	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
 
@@ -510,8 +514,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private void augmentWithTypeInfo(ClassInstanceCreation dataflowClosure) {
 		ImportRewriteContext context= new ContextSensitiveImportRewriteContext(fAnalyzer.getEnclosingBodyDeclaration(), fImportRewriter);
-		fImportRewriter.addImport(CLOSURE_TYPE, context);
-		dataflowClosure.setType(fAST.newSimpleType(fAST.newName("DataflowMessagingRunnable")));
+		fImportRewriter.addImport(CLOSURE_QUALIFIED_TYPE, context);
+		dataflowClosure.setType(fAST.newSimpleType(fAST.newName(CLOSURE_TYPE)));
 	}
 
 	private void augmentWithConstructorArgument(ClassInstanceCreation dataflowClosure) {

@@ -80,26 +80,30 @@ import org.eclipse.jdt.internal.ui.text.DocumentCharacterIterator;
  * Clients may instantiate or subclass. Subclasses must make sure to always call the superclass'
  * code when overriding methods that are marked with "subclasses may extend".
  * </p>
- *
+ * 
  * @since 3.0 (internal)
  * @since 3.2 (API)
  */
 public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructureProvider, IJavaFoldingStructureProviderExtension {
 	/**
 	 * A context that contains the information needed to compute the folding structure of an
-	 * {@link ICompilationUnit} or an {@link IClassFile}. Computed folding regions are collected
-	 * via
-	 * {@linkplain #addProjectionRange(DefaultJavaFoldingStructureProvider.JavaProjectionAnnotation, Position) addProjectionRange}.
+	 * {@link ICompilationUnit} or an {@link IClassFile}. Computed folding regions are collected via
+	 * {@linkplain #addProjectionRange(DefaultJavaFoldingStructureProvider.JavaProjectionAnnotation, Position)
+	 * addProjectionRange}.
 	 */
 	protected final class FoldingStructureComputationContext {
 		private final ProjectionAnnotationModel fModel;
+
 		private final IDocument fDocument;
 
 		private final boolean fAllowCollapsing;
 
 		private IType fFirstType;
+
 		private boolean fHasHeaderComment;
+
 		private LinkedHashMap<JavaProjectionAnnotation, Position> fMap= new LinkedHashMap<JavaProjectionAnnotation, Position>();
+
 		private IScanner fScanner;
 
 		private FoldingStructureComputationContext(IDocument document, ProjectionAnnotationModel model, boolean allowCollapsing, IScanner scanner) {
@@ -135,10 +139,10 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns <code>true</code> if newly created folding regions may be collapsed,
-		 * <code>false</code> if not. This is usually <code>false</code> when updating the
-		 * folding structure while typing; it may be <code>true</code> when computing or restoring
-		 * the initial folding structure.
-		 *
+		 * <code>false</code> if not. This is usually <code>false</code> when updating the folding
+		 * structure while typing; it may be <code>true</code> when computing or restoring the
+		 * initial folding structure.
+		 * 
 		 * @return <code>true</code> if newly created folding regions may be collapsed,
 		 *         <code>false</code> if not
 		 */
@@ -148,7 +152,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns the document which contains the code being folded.
-		 *
+		 * 
 		 * @return the document which contains the code being folded
 		 */
 		private IDocument getDocument() {
@@ -169,7 +173,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		 * Adds a projection (folding) region to this context. The created annotation / position
 		 * pair will be added to the {@link ProjectionAnnotationModel} of the
 		 * {@link ProjectionViewer} of the editor.
-		 *
+		 * 
 		 * @param annotation the annotation to add
 		 * @param position the corresponding position
 		 */
@@ -179,7 +183,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns <code>true</code> if header comments should be collapsed.
-		 *
+		 * 
 		 * @return <code>true</code> if header comments should be collapsed
 		 */
 		public boolean collapseHeaderComments() {
@@ -188,7 +192,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns <code>true</code> if import containers should be collapsed.
-		 *
+		 * 
 		 * @return <code>true</code> if import containers should be collapsed
 		 */
 		public boolean collapseImportContainer() {
@@ -197,7 +201,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns <code>true</code> if inner types should be collapsed.
-		 *
+		 * 
 		 * @return <code>true</code> if inner types should be collapsed
 		 */
 		public boolean collapseInnerTypes() {
@@ -206,7 +210,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns <code>true</code> if javadoc comments should be collapsed.
-		 *
+		 * 
 		 * @return <code>true</code> if javadoc comments should be collapsed
 		 */
 		public boolean collapseJavadoc() {
@@ -215,7 +219,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Returns <code>true</code> if methods should be collapsed.
-		 *
+		 * 
 		 * @return <code>true</code> if methods should be collapsed
 		 */
 		public boolean collapseMembers() {
@@ -229,16 +233,17 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	protected static final class JavaProjectionAnnotation extends ProjectionAnnotation {
 
 		private IJavaElement fJavaElement;
+
 		private boolean fIsComment;
 
 		/**
 		 * Creates a new projection annotation.
-		 *
+		 * 
 		 * @param isCollapsed <code>true</code> to set the initial state to collapsed,
-		 *        <code>false</code> to set it to expanded
+		 *            <code>false</code> to set it to expanded
 		 * @param element the java element this annotation refers to
 		 * @param isComment <code>true</code> for a foldable comment, <code>false</code> for a
-		 *        foldable code element
+		 *            foldable code element
 		 */
 		public JavaProjectionAnnotation(boolean isCollapsed, IJavaElement element, boolean isComment) {
 			super(isCollapsed);
@@ -268,7 +273,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		@Override
 		public String toString() {
 			return "JavaProjectionAnnotation:\n" + //$NON-NLS-1$
-					"\telement: \t"+ fJavaElement.toString() + "\n" + //$NON-NLS-1$ //$NON-NLS-2$
+					"\telement: \t" + fJavaElement.toString() + "\n" + //$NON-NLS-1$ //$NON-NLS-2$
 					"\tcollapsed: \t" + isCollapsed() + "\n" + //$NON-NLS-1$ //$NON-NLS-2$
 					"\tcomment: \t" + isComment() + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
 		}
@@ -277,7 +282,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 	private static final class Tuple {
 		JavaProjectionAnnotation annotation;
+
 		Position position;
+
 		Tuple(JavaProjectionAnnotation annotation, Position position) {
 			this.annotation= annotation;
 			this.position= position;
@@ -325,6 +332,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	 */
 	private static final class JavaElementSetFilter implements Filter {
 		private final Set<? extends IJavaElement> fSet;
+
 		private final boolean fMatchCollapsed;
 
 		private JavaElementSetFilter(Set<? extends IJavaElement> set, boolean matchCollapsed) {
@@ -368,10 +376,10 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		/**
 		 * Ignore the delta if there are errors on the caret line.
 		 * <p>
-		 * We don't ignore the delta if an import is added and the
-		 * caret isn't inside the import container.
+		 * We don't ignore the delta if an import is added and the caret isn't inside the import
+		 * container.
 		 * </p>
-		 *
+		 * 
 		 * @param ast the compilation unit AST
 		 * @param delta the Java element delta for the given AST element
 		 * @return <code>true</code> if the delta should be ignored
@@ -444,9 +452,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Projection position that will return two foldable regions: one folding away
-	 * the region from after the '/**' to the beginning of the content, the other
-	 * from after the first content line until after the comment.
+	 * Projection position that will return two foldable regions: one folding away the region from
+	 * after the '/**' to the beginning of the content, the other from after the first content line
+	 * until after the comment.
 	 */
 	private static final class CommentPosition extends Position implements IProjectionPosition {
 		CommentPosition(int offset, int length) {
@@ -497,13 +505,12 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		}
 
 		/**
-		 * Finds the offset of the first identifier part within <code>content</code>.
-		 * Returns 0 if none is found.
-		 *
+		 * Finds the offset of the first identifier part within <code>content</code>. Returns 0 if
+		 * none is found.
+		 * 
 		 * @param content the content to search
 		 * @param prefixEnd the end of the prefix
-		 * @return the first index of a unicode identifier part, or zero if none can
-		 *         be found
+		 * @return the first index of a unicode identifier part, or zero if none can be found
 		 */
 		private int findFirstContent(final CharSequence content, int prefixEnd) {
 			int lenght= content.length();
@@ -551,9 +558,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Projection position that will return two foldable regions: one folding away
-	 * the lines before the one containing the simple name of the java element, one
-	 * folding away any lines after the caption.
+	 * Projection position that will return two foldable regions: one folding away the lines before
+	 * the one containing the simple name of the java element, one folding away any lines after the
+	 * caption.
 	 */
 	private static final class JavaElementPosition extends Position implements IProjectionPosition {
 
@@ -655,7 +662,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		/**
 		 * Registers the listener with the viewer.
-		 *
+		 * 
 		 * @param viewer the viewer to register a listener with
 		 */
 		public ProjectionListener(ProjectionViewer viewer) {
@@ -691,25 +698,34 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 	/* context and listeners */
 	private JavaEditor fEditor;
+
 	private ProjectionListener fProjectionListener;
+
 	private IJavaElement fInput;
+
 	private IElementChangedListener fElementListener;
 
 	/* preferences */
 	private boolean fCollapseJavadoc= false;
+
 	private boolean fCollapseImportContainer= true;
+
 	private boolean fCollapseInnerTypes= true;
+
 	private boolean fCollapseMembers= false;
+
 	private boolean fCollapseHeaderComments= true;
 
 	/* filters */
 	/** Member filter, matches nested members (but not top-level types). */
-	private final Filter fMemberFilter = new MemberFilter();
+	private final Filter fMemberFilter= new MemberFilter();
+
 	/** Comment filter, matches comments. */
-	private final Filter fCommentFilter = new CommentFilter();
+	private final Filter fCommentFilter= new CommentFilter();
 
 	/**
 	 * Reusable scanner.
+	 * 
 	 * @since 3.3
 	 */
 	private IScanner fSharedScanner= ToolFactory.createScanner(true, false, false, false);
@@ -717,9 +733,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	private volatile int fUpdatingCount= 0;
 
 	/**
-	 * Creates a new folding provider. It must be
-	 * {@link #install(ITextEditor, ProjectionViewer) installed} on an editor/viewer pair before it
-	 * can be used, and {@link #uninstall() uninstalled} when not used any longer.
+	 * Creates a new folding provider. It must be {@link #install(ITextEditor, ProjectionViewer)
+	 * installed} on an editor/viewer pair before it can be used, and {@link #uninstall()
+	 * uninstalled} when not used any longer.
 	 * <p>
 	 * The projection state may be reset by calling {@link #initialize()}.
 	 * </p>
@@ -732,7 +748,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	 * <p>
 	 * Subclasses may extend.
 	 * </p>
-	 *
+	 * 
 	 * @param editor {@inheritDoc}
 	 * @param viewer {@inheritDoc}
 	 */
@@ -744,7 +760,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		if (editor instanceof JavaEditor) {
 			fProjectionListener= new ProjectionListener(viewer);
-			fEditor= (JavaEditor)editor;
+			fEditor= (JavaEditor) editor;
 		}
 	}
 
@@ -772,7 +788,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 	/**
 	 * Returns <code>true</code> if the provider is installed, <code>false</code> otherwise.
-	 *
+	 * 
 	 * @return <code>true</code> if the provider is installed, <code>false</code> otherwise
 	 */
 	protected final boolean isInstalled() {
@@ -804,11 +820,11 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Called whenever projection is disabled, for example when the provider is
-	 * {@link #uninstall() uninstalled}, when the viewer issues a
-	 * {@link IProjectionListener#projectionDisabled() projectionDisabled} message and before
-	 * {@link #handleProjectionEnabled() enabling} the provider. Implementations must be prepared to
-	 * handle multiple calls to this method even if the provider is already disabled.
+	 * Called whenever projection is disabled, for example when the provider is {@link #uninstall()
+	 * uninstalled}, when the viewer issues a {@link IProjectionListener#projectionDisabled()
+	 * projectionDisabled} message and before {@link #handleProjectionEnabled() enabling} the
+	 * provider. Implementations must be prepared to handle multiple calls to this method even if
+	 * the provider is already disabled.
 	 * <p>
 	 * Subclasses may extend.
 	 * </p>
@@ -952,14 +968,14 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		ctx.getModel().modifyAnnotations(deletedArray, additions, changedArray);
 
 		ctx.fScanner.setSource(null);
-    }
+	}
 
 	private void computeFoldingStructure(FoldingStructureComputationContext ctx) {
 		IParent parent= (IParent) fInput;
 		try {
 			if (!(fInput instanceof ISourceReference))
 				return;
-			String source= ((ISourceReference)fInput).getSource();
+			String source= ((ISourceReference) fInput).getSource();
 			if (source == null)
 				return;
 
@@ -985,19 +1001,19 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	/**
 	 * Computes the folding structure for a given {@link IJavaElement java element}. Computed
 	 * projection annotations are
-	 * {@link DefaultJavaFoldingStructureProvider.FoldingStructureComputationContext#addProjectionRange(DefaultJavaFoldingStructureProvider.JavaProjectionAnnotation, Position) added}
-	 * to the computation context.
+	 * {@link DefaultJavaFoldingStructureProvider.FoldingStructureComputationContext#addProjectionRange(DefaultJavaFoldingStructureProvider.JavaProjectionAnnotation, Position)
+	 * added} to the computation context.
 	 * <p>
 	 * Subclasses may extend or replace. The default implementation creates projection annotations
 	 * for the following elements:
 	 * <ul>
 	 * <li>true members (not for top-level types)</li>
 	 * <li>the javadoc comments of any member</li>
-	 * <li>header comments (javadoc or multi-line comments appearing before the first type's
-	 * javadoc or before the package or import declarations).</li>
+	 * <li>header comments (javadoc or multi-line comments appearing before the first type's javadoc
+	 * or before the package or import declarations).</li>
 	 * </ul>
 	 * </p>
-	 *
+	 * 
 	 * @param element the java element to compute the folding structure for
 	 * @param ctx the computation context
 	 */
@@ -1056,7 +1072,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	/**
 	 * Returns <code>true</code> if <code>type</code> is an anonymous enum declaration,
 	 * <code>false</code> otherwise. See also https://bugs.eclipse.org/bugs/show_bug.cgi?id=143276
-	 *
+	 * 
 	 * @param type the type to test
 	 * @return <code>true</code> if <code>type</code> is an anonymous enum declaration
 	 * @since 3.3
@@ -1070,8 +1086,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Returns <code>true</code> if <code>type</code> is not a top-level type, <code>false</code> if it is.
-	 *
+	 * Returns <code>true</code> if <code>type</code> is not a top-level type, <code>false</code> if
+	 * it is.
+	 * 
 	 * @param type the type to test
 	 * @return <code>true</code> if <code>type</code> is an inner type
 	 */
@@ -1080,68 +1097,67 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Computes the projection ranges for a given <code>ISourceReference</code>. More than one
-	 * range or none at all may be returned. If there are no foldable regions, an empty array is
-	 * returned.
+	 * Computes the projection ranges for a given <code>ISourceReference</code>. More than one range
+	 * or none at all may be returned. If there are no foldable regions, an empty array is returned.
 	 * <p>
 	 * The last region in the returned array (if not empty) describes the region for the java
 	 * element that implements the source reference. Any preceding regions describe javadoc comments
 	 * of that java element.
 	 * </p>
-	 *
+	 * 
 	 * @param reference a java element that is a source reference
 	 * @param ctx the folding context
 	 * @return the regions to be folded
 	 */
 	protected final IRegion[] computeProjectionRanges(ISourceReference reference, FoldingStructureComputationContext ctx) {
 		try {
-				ISourceRange range= reference.getSourceRange();
-				if (!SourceRange.isAvailable(range))
-					return new IRegion[0];
+			ISourceRange range= reference.getSourceRange();
+			if (!SourceRange.isAvailable(range))
+				return new IRegion[0];
 
-				String contents= reference.getSource();
-				if (contents == null)
-					return new IRegion[0];
+			String contents= reference.getSource();
+			if (contents == null)
+				return new IRegion[0];
 
-				List<IRegion> regions= new ArrayList<IRegion>();
-				if (!ctx.hasFirstType() && reference instanceof IType) {
-					ctx.setFirstType((IType) reference);
-					IRegion headerComment= computeHeaderComment(ctx);
-					if (headerComment != null) {
-						regions.add(headerComment);
-						ctx.setHasHeaderComment();
+			List<IRegion> regions= new ArrayList<IRegion>();
+			if (!ctx.hasFirstType() && reference instanceof IType) {
+				ctx.setFirstType((IType) reference);
+				IRegion headerComment= computeHeaderComment(ctx);
+				if (headerComment != null) {
+					regions.add(headerComment);
+					ctx.setHasHeaderComment();
+				}
+			}
+
+			final int shift= range.getOffset();
+			IScanner scanner= ctx.getScanner();
+			scanner.resetTo(shift, shift + range.getLength());
+
+			int start= shift;
+			while (true) {
+
+				int token= scanner.getNextToken();
+				start= scanner.getCurrentTokenStartPosition();
+
+				switch (token) {
+					case ITerminalSymbols.TokenNameCOMMENT_JAVADOC:
+					case ITerminalSymbols.TokenNameCOMMENT_BLOCK: {
+						int end= scanner.getCurrentTokenEndPosition() + 1;
+						regions.add(new Region(start, end - start));
+						continue;
 					}
+					case ITerminalSymbols.TokenNameCOMMENT_LINE:
+						continue;
 				}
 
-				final int shift= range.getOffset();
-				IScanner scanner= ctx.getScanner();
-				scanner.resetTo(shift, shift + range.getLength());
+				break;
+			}
 
-				int start= shift;
-				while (true) {
+			regions.add(new Region(start, shift + range.getLength() - start));
 
-					int token= scanner.getNextToken();
-					start= scanner.getCurrentTokenStartPosition();
-
-					switch (token) {
-						case ITerminalSymbols.TokenNameCOMMENT_JAVADOC:
-						case ITerminalSymbols.TokenNameCOMMENT_BLOCK: {
-							int end= scanner.getCurrentTokenEndPosition() + 1;
-							regions.add(new Region(start, end - start));
-							continue;
-						}
-						case ITerminalSymbols.TokenNameCOMMENT_LINE:
-							continue;
-					}
-
-					break;
-				}
-
-				regions.add(new Region(start, shift + range.getLength() - start));
-
-				IRegion[] result= new IRegion[regions.size()];
-				regions.toArray(result);
-				return result;
+			IRegion[] result= new IRegion[regions.size()];
+			regions.toArray(result);
+			return result;
 		} catch (JavaModelException e) {
 		} catch (InvalidInputException e) {
 		}
@@ -1172,7 +1188,8 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		try {
 			boolean foundComment= false;
 			int terminal= scanner.getNextToken();
-			while (terminal != ITerminalSymbols.TokenNameEOF && !(terminal == ITerminalSymbols.TokenNameclass || terminal == ITerminalSymbols.TokenNameinterface || terminal == ITerminalSymbols.TokenNameenum || (foundComment && (terminal == ITerminalSymbols.TokenNameimport || terminal == ITerminalSymbols.TokenNamepackage)))) {
+			while (terminal != ITerminalSymbols.TokenNameEOF
+					&& !(terminal == ITerminalSymbols.TokenNameclass || terminal == ITerminalSymbols.TokenNameinterface || terminal == ITerminalSymbols.TokenNameenum || (foundComment && (terminal == ITerminalSymbols.TokenNameimport || terminal == ITerminalSymbols.TokenNamepackage)))) {
 
 				if (terminal == ITerminalSymbols.TokenNameCOMMENT_JAVADOC || terminal == ITerminalSymbols.TokenNameCOMMENT_BLOCK || terminal == ITerminalSymbols.TokenNameCOMMENT_LINE) {
 					if (!foundComment)
@@ -1196,9 +1213,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 	/**
 	 * Creates a comment folding position from an
-	 * {@link #alignRegion(IRegion, DefaultJavaFoldingStructureProvider.FoldingStructureComputationContext) aligned}
-	 * region.
-	 *
+	 * {@link #alignRegion(IRegion, DefaultJavaFoldingStructureProvider.FoldingStructureComputationContext)
+	 * aligned} region.
+	 * 
 	 * @param aligned an aligned region
 	 * @return a folding position corresponding to <code>aligned</code>
 	 */
@@ -1208,9 +1225,9 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 	/**
 	 * Creates a folding position that remembers its member from an
-	 * {@link #alignRegion(IRegion, DefaultJavaFoldingStructureProvider.FoldingStructureComputationContext) aligned}
-	 * region.
-	 *
+	 * {@link #alignRegion(IRegion, DefaultJavaFoldingStructureProvider.FoldingStructureComputationContext)
+	 * aligned} region.
+	 * 
 	 * @param aligned an aligned region
 	 * @param member the member to remember
 	 * @return a folding position corresponding to <code>aligned</code>
@@ -1220,17 +1237,16 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Aligns <code>region</code> to start and end at a line offset. The region's start is
-	 * decreased to the next line offset, and the end offset increased to the next line start or the
-	 * end of the document. <code>null</code> is returned if <code>region</code> is
-	 * <code>null</code> itself or does not comprise at least one line delimiter, as a single line
-	 * cannot be folded.
-	 *
+	 * Aligns <code>region</code> to start and end at a line offset. The region's start is decreased
+	 * to the next line offset, and the end offset increased to the next line start or the end of
+	 * the document. <code>null</code> is returned if <code>region</code> is <code>null</code>
+	 * itself or does not comprise at least one line delimiter, as a single line cannot be folded.
+	 * 
 	 * @param region the region to align, may be <code>null</code>
 	 * @param ctx the folding context
-	 * @return a region equal or greater than <code>region</code> that is aligned with line
-	 *         offsets, <code>null</code> if the region is too small to be foldable (e.g. covers
-	 *         only one line)
+	 * @return a region equal or greater than <code>region</code> that is aligned with line offsets,
+	 *         <code>null</code> if the region is too small to be foldable (e.g. covers only one
+	 *         line)
 	 */
 	protected final IRegion alignRegion(IRegion region, FoldingStructureComputationContext ctx) {
 		if (region == null)
@@ -1277,17 +1293,15 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Matches deleted annotations to changed or added ones. A deleted
-	 * annotation/position tuple that has a matching addition / change
-	 * is updated and marked as changed. The matching tuple is not added
-	 * (for additions) or marked as deletion instead (for changes). The
-	 * result is that more annotations are changed and fewer get
-	 * deleted/re-added.
-	 *
+	 * Matches deleted annotations to changed or added ones. A deleted annotation/position tuple
+	 * that has a matching addition / change is updated and marked as changed. The matching tuple is
+	 * not added (for additions) or marked as deletion instead (for changes). The result is that
+	 * more annotations are changed and fewer get deleted/re-added.
+	 * 
 	 * @param deletions list with deleted annotations
 	 * @param additions map with position to annotation mappings
 	 * @param changes list with changed annotations
-	 * @param ctx	the context
+	 * @param ctx the context
 	 */
 	private void match(List<JavaProjectionAnnotation> deletions, Map<JavaProjectionAnnotation, Position> additions, List<JavaProjectionAnnotation> changes, FoldingStructureComputationContext ctx) {
 		if (deletions.isEmpty() || (additions.isEmpty() && changes.isEmpty()))
@@ -1334,26 +1348,21 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	}
 
 	/**
-	 * Finds a match for <code>tuple</code> in a collection of
-	 * annotations. The positions for the
-	 * <code>JavaProjectionAnnotation</code> instances in
-	 * <code>annotations</code> can be found in the passed
-	 * <code>positionMap</code> or <code>fCachedModel</code> if
-	 * <code>positionMap</code> is <code>null</code>.
+	 * Finds a match for <code>tuple</code> in a collection of annotations. The positions for the
+	 * <code>JavaProjectionAnnotation</code> instances in <code>annotations</code> can be found in
+	 * the passed <code>positionMap</code> or <code>fCachedModel</code> if <code>positionMap</code>
+	 * is <code>null</code>.
 	 * <p>
-	 * A tuple is said to match another if their annotations have the
-	 * same comment flag and their position offsets are equal.
+	 * A tuple is said to match another if their annotations have the same comment flag and their
+	 * position offsets are equal.
 	 * </p>
 	 * <p>
-	 * If a match is found, the annotation gets removed from
-	 * <code>annotations</code>.
+	 * If a match is found, the annotation gets removed from <code>annotations</code>.
 	 * </p>
-	 *
+	 * 
 	 * @param tuple the tuple for which we want to find a match
-	 * @param annotations collection of
-	 *        <code>JavaProjectionAnnotation</code>
-	 * @param positionMap a <code>Map&lt;Annotation, Position&gt;</code>
-	 *        or <code>null</code>
+	 * @param annotations collection of <code>JavaProjectionAnnotation</code>
+	 * @param positionMap a <code>Map&lt;Annotation, Position&gt;</code> or <code>null</code>
 	 * @param ctx the context
 	 * @return a matching tuple or <code>null</code> for no match
 	 */
@@ -1441,10 +1450,10 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 	/**
 	 * Collapses or expands all annotations matched by the passed filter.
-	 *
+	 * 
 	 * @param filter the filter to use to select which annotations to collapse
 	 * @param expand <code>true</code> to expand the matched annotations, <code>false</code> to
-	 *        collapse them
+	 *            collapse them
 	 */
 	private void modifyFiltered(Filter filter, boolean expand) {
 		if (!isInstalled())

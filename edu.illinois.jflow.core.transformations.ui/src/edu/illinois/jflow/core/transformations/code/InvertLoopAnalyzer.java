@@ -51,7 +51,7 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 				IType[] allClasses= superTypeHierarchy.getAllClasses();
 				for (IType classType : allClasses) {
 					String fullyQualifiedName= classType.getFullyQualifiedName();
-					if (fullyQualifiedName.equals(ExtractClosureRefactoring.CLOSURE_TYPE)) {
+					if (fullyQualifiedName.equals(ExtractClosureRefactoring.CLOSURE_QUALIFIED_TYPE)) {
 						getClosures().add(node);
 					}
 				}
