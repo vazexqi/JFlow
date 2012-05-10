@@ -22,7 +22,7 @@ public abstract class JFlowRefactoringAction implements IWorkbenchWindowActionDe
 
 	private IWorkbenchWindow window;
 
-	protected abstract void startTextSelectionRefactoring(IEditorPart activeEditor, JavaEditor javaEditor, ISelection selection);
+	protected abstract void startTextSelectionRefactoring(JavaEditor activeEditor, ITextSelection textSelection);
 
 	public JFlowRefactoringAction() {
 		super();
@@ -43,20 +43,18 @@ public abstract class JFlowRefactoringAction implements IWorkbenchWindowActionDe
 		IEditorPart activeEditor= activePage.getActiveEditor();
 
 		if (activeEditor instanceof JavaEditor) {
-			startJavaEditorRefactoring(activeEditor);
+			startJavaEditorRefactoring((JavaEditor)activeEditor);
 		}
 	}
 
-	private void startJavaEditorRefactoring(IEditorPart activeEditor) {
-		JavaEditor javaEditor= (JavaEditor)activeEditor;
-
+	private void startJavaEditorRefactoring(JavaEditor javaEditor) {
 		if (!ActionUtil.isEditable(javaEditor))
 			return;
 
 		ISelectionService selectionService= window.getSelectionService();
 		ISelection selection= selectionService.getSelection();
 		if (selection instanceof ITextSelection) {
-			startTextSelectionRefactoring(activeEditor, javaEditor, selection);
+			startTextSelectionRefactoring(javaEditor, (ITextSelection)selection);
 		}
 	}
 

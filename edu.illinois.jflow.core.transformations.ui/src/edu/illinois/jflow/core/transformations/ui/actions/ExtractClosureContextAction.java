@@ -12,13 +12,13 @@ import edu.illinois.jflow.core.transformations.ui.JFlowRefactoringMessages;
 import edu.illinois.jflow.core.transformations.ui.refactoring.ExtractClosureWizard;
 
 /**
- * Action to invoke our Extract Closure Refactoring
+ * Context menu action to invoke our Extract Closure Refactoring
  * 
  * @author Nicholas Chen
  * 
  */
 @SuppressWarnings("restriction")
-public class ExtractClosureTopLevelAction extends JFlowRefactoringAction {
+public class ExtractClosureContextAction extends JFlowContextAction {
 
 	@Override
 	protected void startTextSelectionRefactoring(JavaEditor javaEditor, ITextSelection textSelection) {

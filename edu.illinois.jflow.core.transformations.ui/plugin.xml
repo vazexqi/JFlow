@@ -31,8 +31,35 @@
                menubarPath="edu.illinois.jflow.core.transformations.Menu/parallelizeGroup"
                id="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureTopLevelAction">
          </action>
-
       </actionSet>
+   </extension>
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <viewerContribution
+            id="edu.illinois.jflow.core.transformations.ui.viewer.contribution"
+            targetID="#CompilationUnitEditorContext">
+         <menu
+               id="edu.illinois.jflow.core.transformations.context.menu"
+               label="%JFlow.menu.label"
+               path="additions">
+            <groupMarker name="edu.illinois.jflow.core.transformations.context.part"/>
+         </menu>
+         <action
+               class="edu.illinois.jflow.core.transformations.ui.actions.InvertLoopContextAction"
+               id="edu.illinois.jflow.core.transformations.ui.actions.InvertLoopContextAction"
+               label="%InvertLoop.label"
+               menubarPath="edu.illinois.jflow.core.transformations.context.menu/part"
+               tooltip="%InvertLoop.tooltip">
+         </action>
+         <action
+               class="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureContextAction"
+               id="edu.illinois.jflow.core.transformations.ui.actions.ExtractClosureContextAction"
+               label="%ExtractClosure.label"
+               menubarPath="edu.illinois.jflow.core.transformations.context.menu/part"
+               tooltip="%ExtractClosure.tooltip">
+         </action>
+
+      </viewerContribution>
    </extension>
 
 </plugin>
