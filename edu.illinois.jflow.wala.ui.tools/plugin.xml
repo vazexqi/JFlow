@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            id="edu.illinois.jflow.wala.ui.tools.category"
+            name="WALA Tools">
+      </category>
+      <view
+            category="edu.illinois.jflow.wala.ui.tools.category"
+            class="edu.illinois.jflow.wala.ui.tools.PDG.PDGView"
+            id="edu.illinois.jflow.wala.ui.tools.PDG.view"
+            name="WALA Program Dependence Graph"
+            restorable="true">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.viewActions">
+      <viewContribution
+            id="edu.illinois.jflow.wala.ui.tools.PDG.view.Contribution"
+            targetID="edu.illinois.jflow.wala.ui.tools.PDG.view">
+         <action
+               class="edu.illinois.jflow.wala.ui.tools.PDG.GeneratePDG"
+               icon="icons/sample.gif"
+               id="edu.illinois.jflow.wala.ui.tools.PDG.GeneratePDG"
+               label="Generate PDG"
+               style="push"
+               toolbarPath="additions"
+               tooltip="Generates the PDG for the currently selected method (if possible)">
+         </action>
+      </viewContribution>
+   </extension>
+
+</plugin>
