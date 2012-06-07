@@ -1,3 +1,3 @@
 [submodule "wala"]
 	path = wala
-url=https://github.com/wala/WALA.git
+  url=git@github.com:vazexqi/WALA.git

@@ -13,6 +13,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.IJavaProject;
 
 import com.ibm.wala.client.AbstractAnalysisEngine;
+import com.ibm.wala.ide.util.EclipseAnalysisScopeReader;
 import com.ibm.wala.ide.util.EclipseFileProvider;
 import com.ibm.wala.ide.util.EclipseProjectPath;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
@@ -35,7 +36,6 @@ import com.ibm.wala.ipa.summaries.MethodSummary;
 import com.ibm.wala.ipa.summaries.XMLMethodSummaryReader;
 import com.ibm.wala.types.MemberReference;
 import com.ibm.wala.types.MethodReference;
-import com.ibm.wala.util.config.FileOfClasses;
 import com.ibm.wala.util.strings.Atom;
 
 import edu.illinois.jflow.wala.core.Activator;
@@ -66,10 +66,13 @@ public class EclipseProjectAnalysisEngine extends AbstractAnalysisEngine {
 			setExclusionsFile(retrieveExclusionFile());
 			EclipseProjectPath eclipseProject= EclipseProjectPath.make(javaProject);
 
-			AnalysisScope pristineAnalysisScope= AnalysisScope.createJavaAnalysisScope();
-			pristineAnalysisScope.setExclusions(FileOfClasses.createFileOfClasses(new File(getExclusionsFile())));
+			// It is important to include the SYNTHETIC_J2SE_MODEL because it contains some Java implementation of the basic
+			// native methods. This allows WALA to reason about things like Threads and System.arraycopy().
+			// https://groups.google.com/forum/?fromgroups#!searchin/wala-sourceforge-net/primordial/wala-sourceforge-net/_HLdzc29AZ8/e3j7vf5dIxUJ
+			AnalysisScope analysisScope= EclipseAnalysisScopeReader.readJavaScopeFromPlugin(SYNTHETIC_J2SE_MODEL, new File(getExclusionsFile()), getClass().getClassLoader(),
+					Activator.getDefault());
 
-			scope= eclipseProject.toAnalysisScope(pristineAnalysisScope);
+			scope= eclipseProject.toAnalysisScope(analysisScope);
 		} catch (CoreException e) {
 			e.printStackTrace();
 		}
