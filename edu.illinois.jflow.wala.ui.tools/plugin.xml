@@ -9,27 +9,25 @@
       </category>
       <view
             category="edu.illinois.jflow.wala.ui.tools.category"
-            class="edu.illinois.jflow.wala.ui.tools.PDG.PDGView"
-            id="edu.illinois.jflow.wala.ui.tools.PDG.view"
+            class="edu.illinois.jflow.wala.ui.tools.callgraph.CallGraphView"
+            id="edu.illinois.jflow.wala.ui.tools.callgraph.CallGraphView"
+            name="WALA Call Graph"
+            restorable="true">
+      </view>
+      <view
+            category="edu.illinois.jflow.wala.ui.tools.category"
+            class="edu.illinois.jflow.wala.ui.tools.pdg.PDGView"
+            id="edu.illinois.jflow.wala.ui.tools.pdg"
             name="WALA Program Dependence Graph"
             restorable="true">
       </view>
-   </extension>
-   <extension
-         point="org.eclipse.ui.viewActions">
-      <viewContribution
-            id="edu.illinois.jflow.wala.ui.tools.PDG.view.Contribution"
-            targetID="edu.illinois.jflow.wala.ui.tools.PDG.view">
-         <action
-               class="edu.illinois.jflow.wala.ui.tools.PDG.GeneratePDG"
-               icon="icons/sample.gif"
-               id="edu.illinois.jflow.wala.ui.tools.PDG.GeneratePDG"
-               label="Generate PDG"
-               style="push"
-               toolbarPath="additions"
-               tooltip="Generates the PDG for the currently selected method (if possible)">
-         </action>
-      </viewContribution>
+      <view
+            category="edu.illinois.jflow.wala.ui.tools.category"
+            class="edu.illinois.jflow.wala.ui.tools.ir.IRView"
+            id="edu.illinois.jflow.wala.ui.tools.ir.irview"
+            name="WALA IR"
+            restorable="true">
+      </view>
    </extension>
 
 </plugin>

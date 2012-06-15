@@ -8,7 +8,7 @@ import org.osgi.framework.BundleContext;
  */
 public class Activator extends AbstractUIPlugin {
 
-	// The plug-in ID
+	// The plug-in CallGraphViewID
 	public static final String PLUGIN_ID= "edu.illinois.jflow.wala.ui.tools"; //$NON-NLS-1$
 
 	// The shared instance

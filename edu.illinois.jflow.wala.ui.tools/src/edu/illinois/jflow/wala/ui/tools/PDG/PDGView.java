@@ -1,19 +1,28 @@
-package edu.illinois.jflow.wala.ui.tools.PDG;
+package edu.illinois.jflow.wala.ui.tools.pdg;
 
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.part.ViewPart;
+import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.LabelProvider;
 
-public class PDGView extends ViewPart {
+import edu.illinois.jflow.wala.ui.tools.graph.view.WalaGraphView;
 
-	public PDGView() {
+public class PDGView extends WalaGraphView {
+
+	@Override
+	protected LabelProvider getLabelProvider() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override
-	public void createPartControl(Composite parent) {
+	protected IStructuredContentProvider getContentProvider() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override
-	public void setFocus() {
+	protected void fillToolBar() {
+		// TODO Auto-generated method stub
 
 	}
+
 }
