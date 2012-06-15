@@ -7,3 +7,20 @@ We propose a solution based on interactive source-to-source transformations. Int
 This repository contains the source code for the transformation component. For more information about each component please visit "https://wiki.engr.illinois.edu/display/jflow":https://wiki.engr.illinois.edu/display/jflow
 
 JFlow is licensed under the Illinois/NCSA Open Source License. See LICENSE.txt for details.
+
+h2. Getting started
+
+h4. Development
+
+Prerequisites:
+
+* Install Eclipse RCP 3.7 from "http://www.eclipse.org/downloads/packages/eclipse-rcp-and-rap-developers/indigor":http://www.eclipse.org/downloads/packages/eclipse-rcp-and-rap-developers/indigor
+* Check out "Zest 2.0":http://marketplace.eclipse.org/content/zest from the Eclipse marketplace
+* Check out the source code from this repository using Git
+* Initialize the WALA submodule using @git submodule init@ followed by @git submodule update@
+* Import the projects into a new Eclipse workspace.
+* Follow the instructions on the "WALA wiki":http://wala.sourceforge.net/wiki/index.php/UserGuide:Getting_Started for configuring WALA for your system.
+
+h4. Usage
+
+Coming soon.
