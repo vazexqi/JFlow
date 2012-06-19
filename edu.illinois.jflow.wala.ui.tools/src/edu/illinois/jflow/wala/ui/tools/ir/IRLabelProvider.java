@@ -66,6 +66,7 @@ public class IRLabelProvider extends LabelProvider {
 					StringBuffer x= new StringBuffer(j + "   " + instructions[j].toString(ir.getSymbolTable()));
 					StringStuff.padWithSpaces(x, 35);
 					result.append(x);
+					result.append(ir.instructionPosition(j));
 					result.append("\n");
 				}
 			}
