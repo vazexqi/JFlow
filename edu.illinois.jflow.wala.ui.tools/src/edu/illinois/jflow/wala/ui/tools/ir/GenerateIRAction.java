@@ -14,6 +14,7 @@ import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.ui.SharedASTProvider;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 
 import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
@@ -67,7 +68,9 @@ public class GenerateIRAction extends Action {
 							IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
 							Graph<? extends ISSABasicBlock> graph= ir.getControlFlowGraph();
 							graph= CFGSanitizer.sanitize(ir, classHierarchy);
+							IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 							view.setIR(ir);
+							view.setDocument(document);
 							view.updateGraph(graph);
 						} catch (IllegalArgumentException e) {
 							e.printStackTrace();

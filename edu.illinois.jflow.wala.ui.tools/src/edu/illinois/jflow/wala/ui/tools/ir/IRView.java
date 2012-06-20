@@ -2,6 +2,7 @@ package edu.illinois.jflow.wala.ui.tools.ir;
 
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.zest.core.viewers.ZoomContributionViewItem;
@@ -19,6 +20,8 @@ public class IRView extends WalaGraphView {
 	public static final String WalaIRViewID= "edu.illinois.jflow.wala.ui.tools.ir.irview";
 
 	private IR ir;
+
+	private IDocument document;
 
 	@Override
 	protected LabelProvider getLabelProvider() {
@@ -52,5 +55,13 @@ public class IRView extends WalaGraphView {
 
 	public IR getIR() {
 		return ir;
+	}
+
+	public void setDocument(IDocument document) {
+		this.document= document;
+	}
+
+	public IDocument getDocument() {
+		return document;
 	}
 }
