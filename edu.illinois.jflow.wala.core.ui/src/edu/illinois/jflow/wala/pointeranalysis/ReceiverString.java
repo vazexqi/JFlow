@@ -36,11 +36,10 @@ public class ReceiverString implements ContextItem {
 
 	@Override
 	public String toString() {
-		StringBuffer str= new StringBuffer("[");
+		StringBuffer str= new StringBuffer(">>>\n");
 		for (int i= 0; i < instances.length; i++) {
-			str.append(" ").append(instances[i].toString());
+			str.append("[" + i + "]").append(instances[i].toString()).append("\n");
 		}
-		str.append(" ]");
 		return str.toString();
 	}
 

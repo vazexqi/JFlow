@@ -5,6 +5,7 @@ package edu.illinois.jflow.wala.pointeranalysis;
 
 import com.ibm.wala.classLoader.IClass;
 import com.ibm.wala.classLoader.IMethod;
+import com.ibm.wala.types.TypeName;
 import com.ibm.wala.types.TypeReference;
 import com.ibm.wala.util.strings.Atom;
 
@@ -52,5 +53,12 @@ public class AnalysisUtils {
 
 	private static boolean isObjectGetClass(String methodSignature) {
 		return methodSignature.equals(OBJECT_GETCLASS_SIGNATURE);
+	}
+
+	public static String walaTypeNameToJavaName(TypeName typeName) {
+		String fullyQualifiedName= typeName.getPackage() + "." + typeName.getClassName();
+
+		//WALA uses $ to refers to inner classes. We have to replace "$" by "." to make it a valid class name in Java source code.
+		return fullyQualifiedName.replace("$", ".").replace("/", ".");
 	}
 }

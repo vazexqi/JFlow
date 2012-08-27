@@ -11,8 +11,8 @@ public class CallGraphLabelProvider extends LabelProvider {
 	public String getText(Object element) {
 		if (element instanceof CGNode) {
 			CGNode node= (CGNode)element;
-			StringBuilder nodeText= new StringBuilder(node.getMethod().toString());
-			nodeText.append(node.getContext().toString().substring(0, 10));
+			StringBuilder nodeText= new StringBuilder("Method: " + node.getMethod().toString() + "\n");
+			nodeText.append("Context: " + node.getContext().toString());
 			return nodeText.toString();
 		}
 		if (element instanceof EntityConnectionData) {

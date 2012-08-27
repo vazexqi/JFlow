@@ -6,12 +6,17 @@ package edu.illinois.jflow.wala.utils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.IJavaProject;
 
+import com.ibm.wala.classLoader.IClass;
+import com.ibm.wala.classLoader.IMethod;
+import com.ibm.wala.classLoader.ShrikeCTMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ide.util.EclipseAnalysisScopeReader;
 import com.ibm.wala.ide.util.EclipseFileProvider;
@@ -24,6 +29,7 @@ import com.ibm.wala.ipa.callgraph.ClassTargetSelector;
 import com.ibm.wala.ipa.callgraph.ContextSelector;
 import com.ibm.wala.ipa.callgraph.Entrypoint;
 import com.ibm.wala.ipa.callgraph.MethodTargetSelector;
+import com.ibm.wala.ipa.callgraph.impl.DefaultEntrypoint;
 import com.ibm.wala.ipa.callgraph.impl.Util;
 import com.ibm.wala.ipa.callgraph.propagation.SSAContextInterpreter;
 import com.ibm.wala.ipa.callgraph.propagation.SSAPropagationCallGraphBuilder;
@@ -36,6 +42,9 @@ import com.ibm.wala.ipa.summaries.MethodSummary;
 import com.ibm.wala.ipa.summaries.XMLMethodSummaryReader;
 import com.ibm.wala.types.MemberReference;
 import com.ibm.wala.types.MethodReference;
+import com.ibm.wala.types.TypeName;
+import com.ibm.wala.types.annotations.Annotation;
+import com.ibm.wala.util.collections.HashSetFactory;
 import com.ibm.wala.util.strings.Atom;
 
 import edu.illinois.jflow.wala.core.Activator;
@@ -83,10 +92,9 @@ public class EclipseProjectAnalysisEngine extends AbstractAnalysisEngine {
 		return JFlowAnalysisUtil.getCallGraphBuilder(scope, cha, options, cache);
 	}
 
-	//TODO: Implement facility to change this
 	@Override
 	protected Iterable<Entrypoint> makeDefaultEntrypoints(AnalysisScope scope, IClassHierarchy cha) {
-		return super.makeDefaultEntrypoints(scope, cha);
+		return JFlowAnalysisUtil.makeAnnotatedEntryPoints(cha);
 	}
 
 }
@@ -141,6 +149,41 @@ class JFlowAnalysisUtil {
 
 	static BypassMethodTargetSelector getCustomBypassMethodTargetSelector(IClassHierarchy classHierarchy, AnalysisOptions analysisOptions, XMLMethodSummaryReader summary) {
 		return new JFlowBypassMethodTargetSelector(analysisOptions.getMethodTargetSelector(), summary.getSummaries(), summary.getIgnoredPackages(), classHierarchy);
+	}
+
+	static Iterable<Entrypoint> makeAnnotatedEntryPoints(IClassHierarchy classHierarchy) {
+		final HashSet<Entrypoint> result= HashSetFactory.make();
+		Iterator<IClass> classIterator= classHierarchy.iterator();
+		while (classIterator.hasNext()) {
+			IClass klass= classIterator.next();
+			if (!AnalysisUtils.isJDKClass(klass)) {
+				for (IMethod method : klass.getDeclaredMethods()) {
+					try {
+						if (!(method instanceof ShrikeCTMethod)) {
+							throw new RuntimeException("@EntryPoint only works for byte code.");
+						}
+						for (Annotation annotation : ((ShrikeCTMethod)method).getAnnotations(true)) {
+							if (isEntryPointClass(annotation.getType().getName())) {
+								result.add(new DefaultEntrypoint(method, classHierarchy));
+								break;
+							}
+						}
+					} catch (Exception e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+		}
+		return new Iterable<Entrypoint>() {
+			@Override
+			public Iterator<Entrypoint> iterator() {
+				return result.iterator();
+			}
+		};
+	}
+
+	private static boolean isEntryPointClass(TypeName typeName) {
+		return AnalysisUtils.walaTypeNameToJavaName(typeName).matches(".*EntryPoint.*");
 	}
 }
 
