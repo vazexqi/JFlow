@@ -2,3 +2,5 @@
 *.class
 bin/
 .metadata
+results/
+JLex.jar
