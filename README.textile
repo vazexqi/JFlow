@@ -14,11 +14,24 @@ h4. Development
 
 Prerequisites:
 
-* Install Eclipse RCP 3.7 from "http://www.eclipse.org/downloads/packages/eclipse-rcp-and-rap-developers/indigor":http://www.eclipse.org/downloads/packages/eclipse-rcp-and-rap-developers/indigor
+* Install Eclipse RCP 3.8 (SR1) from http://www.eclipse.org/downloads/packages/eclipse-rcp-and-rap-developers/junosr1
 * Check out "Zest 2.0":http://marketplace.eclipse.org/content/zest from the Eclipse marketplace
 * Check out the source code from this repository using Git
-* Initialize the WALA submodule using @git submodule init@ followed by @git submodule update@
-* Import the projects into a new Eclipse workspace.
+* Initialize the WALA and JDT submodule using @git submodule init@ followed by @git submodule update@
+* Import the following projects into a new Eclipse workspace
+** WALA
+*** com.ibm.wala.cast
+*** com.ibm.wala.cast.java
+*** com.ibm.wala.core
+*** com.ibm.wala.core.testdata
+*** com.ibm.wala.core.tests
+*** com.ibm.wala.core.ide
+*** com.ibm.wala.shrike
+*** com.ibm.wala.util
+** JDT
+*** org.eclipse.jdt.core (in jdt/org.eclipse.jdt)
+*** org.eclipse.jdt.core.manipulation (in jdt/org.eclipse.jdt.ui)
+*** org.eclipse.jdt.ui (in jdt/org.eclipse.jdt.ui)
 * Follow the instructions on the "WALA wiki":http://wala.sourceforge.net/wiki/index.php/UserGuide:Getting_Started for configuring WALA for your system.
 
 h4. Usage
