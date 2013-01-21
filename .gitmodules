@@ -1,3 +1,9 @@
 [submodule "wala"]
 	path = wala
   url=git@github.com:vazexqi/WALA.git
+[submodule "jdt/org.eclipse.jdt.ui"]
+	path = jdt/org.eclipse.jdt.ui
+	url = git@github.com:eclipse/eclipse.jdt.ui.git
+[submodule "jdt/org.eclipse.jdt"]
+	path = jdt/org.eclipse.jdt
+	url = git@github.com:eclipse/eclipse.jdt.core.git
