@@ -1,4 +1,4 @@
-package edu.illinois.jflow.wala.ui.tools.pdg;
+package edu.illinois.jflow.wala.ui.tools.PDG;
 
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;

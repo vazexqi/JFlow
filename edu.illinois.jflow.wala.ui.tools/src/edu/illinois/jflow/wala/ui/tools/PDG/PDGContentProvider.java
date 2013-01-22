@@ -1,4 +1,4 @@
-package edu.illinois.jflow.wala.ui.tools.pdg;
+package edu.illinois.jflow.wala.ui.tools.PDG;
 
 import java.util.ArrayList;
 import java.util.Iterator;

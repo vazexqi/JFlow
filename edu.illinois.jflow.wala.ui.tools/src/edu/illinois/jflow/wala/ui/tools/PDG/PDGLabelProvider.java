@@ -1,4 +1,4 @@
-package edu.illinois.jflow.wala.ui.tools.pdg;
+package edu.illinois.jflow.wala.ui.tools.PDG;
 
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.zest.core.viewers.EntityConnectionData;
