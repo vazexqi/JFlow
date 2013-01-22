@@ -26,6 +26,7 @@ Prerequisites:
 *** com.ibm.wala.core.testdata
 *** com.ibm.wala.core.tests
 *** com.ibm.wala.core.ide
+*** com.ibm.wala.core.ide.jdt
 *** com.ibm.wala.shrike
 *** com.ibm.wala.util
 ** JDT
