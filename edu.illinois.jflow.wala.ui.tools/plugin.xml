@@ -29,5 +29,28 @@
             restorable="true">
       </view>
    </extension>
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            id="edu.illinois.jflow.wala.ui.tools.wala"
+            nameFilter="*.java"
+            objectClass="org.eclipse.jdt.core.ICompilationUnit">
+         <menu
+               id="edu.illinois.jflow.wala.ui.tools.wala.popupMenu"
+               label="Wala"
+               path="additions">
+            <separator
+                  name="slot1">
+            </separator>
+         </menu>
+         <action
+               class="edu.illinois.jflow.wala.jdt.AnalysisAction"
+               enablesFor="+"
+               id="edu.illinois.jflow.wala.ui.tools.analyze"
+               label="Analyze!"
+               menubarPath="edu.illinois.jflow.wala.ui.tools.wala.popupMenu/slot1">
+         </action>
+      </objectContribution>
+   </extension>
 
 </plugin>
