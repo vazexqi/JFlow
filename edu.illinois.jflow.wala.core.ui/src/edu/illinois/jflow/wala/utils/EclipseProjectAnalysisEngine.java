@@ -21,6 +21,7 @@ import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ide.util.EclipseAnalysisScopeReader;
 import com.ibm.wala.ide.util.EclipseFileProvider;
 import com.ibm.wala.ide.util.EclipseProjectPath;
+import com.ibm.wala.ide.util.JavaEclipseProjectPath;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
 import com.ibm.wala.ipa.callgraph.AnalysisScope;
@@ -51,7 +52,6 @@ import edu.illinois.jflow.wala.core.Activator;
 import edu.illinois.jflow.wala.pointeranalysis.AnalysisUtils;
 import edu.illinois.jflow.wala.pointeranalysis.KObjectSensitiveContextSelector;
 
-
 /**
  * Modified from EclipseAnalysisEngine.java, originally from Keshmesh. Authored by Mohsen Vakilian
  * and Stas Negara. Modified by Nicholas Chen.
@@ -64,22 +64,25 @@ public class EclipseProjectAnalysisEngine extends AbstractAnalysisEngine {
 		this.javaProject= javaProject;
 	}
 
-	//TODO: Might add this from a preference pane
+	// TODO: Might add this from a preference pane
 	private String retrieveExclusionFile() throws IOException {
-		return new EclipseFileProvider().getFileFromPlugin(Activator.getDefault(), "EclipseDefaultExclusions.txt").getAbsolutePath();
+		return new EclipseFileProvider().getFileFromPlugin(Activator.getDefault(), "EclipseDefaultExclusions.txt")
+				.getAbsolutePath();
 	}
 
 	@Override
 	public void buildAnalysisScope() throws IOException {
 		try {
 			setExclusionsFile(retrieveExclusionFile());
-			EclipseProjectPath eclipseProject= EclipseProjectPath.make(javaProject);
+			JavaEclipseProjectPath eclipseProject= JavaEclipseProjectPath.make(javaProject, EclipseProjectPath.AnalysisScopeType.NO_SOURCE);
 
-			// It is important to include the SYNTHETIC_J2SE_MODEL because it contains some Java implementation of the basic
-			// native methods. This allows WALA to reason about things like Threads and System.arraycopy().
+			// It is important to include the SYNTHETIC_J2SE_MODEL because it
+			// contains some Java implementation of the basic
+			// native methods. This allows WALA to reason about things like
+			// Threads and System.arraycopy().
 			// https://groups.google.com/forum/?fromgroups#!searchin/wala-sourceforge-net/primordial/wala-sourceforge-net/_HLdzc29AZ8/e3j7vf5dIxUJ
-			AnalysisScope analysisScope= EclipseAnalysisScopeReader.readJavaScopeFromPlugin(SYNTHETIC_J2SE_MODEL, new File(getExclusionsFile()), getClass().getClassLoader(),
-					Activator.getDefault());
+			AnalysisScope analysisScope= EclipseAnalysisScopeReader.readJavaScopeFromPlugin(SYNTHETIC_J2SE_MODEL, new File(getExclusionsFile()), getClass().getClassLoader(), Activator.getDefault());
+
 
 			scope= eclipseProject.toAnalysisScope(analysisScope);
 		} catch (CoreException e) {
