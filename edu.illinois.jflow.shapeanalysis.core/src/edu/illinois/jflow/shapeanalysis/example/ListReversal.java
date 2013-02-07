@@ -13,8 +13,6 @@ public class ListReversal {
 			x= x.cdr;
 			reverseX.cdr= temp;
 		}
-		
-		System.out.println(reverseX);
 	}
 }
 
