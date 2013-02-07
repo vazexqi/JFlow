@@ -6,8 +6,8 @@ package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
  * @author nchen
  * 
  */
-public class Selector {
-	String selector;
+public final class Selector {
+	final String selector;
 
 	public Selector(String selector) {
 		this.selector= selector;

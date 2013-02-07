@@ -7,12 +7,12 @@ package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
  * @author nchen
  * 
  */
-public class SelectorEdge {
-	ShapeNode s;
+public final class SelectorEdge {
+	final ShapeNode s;
 
-	Selector sel;
+	final Selector sel;
 
-	ShapeNode t;
+	final ShapeNode t;
 
 	public SelectorEdge(ShapeNode s, Selector sel, ShapeNode t) {
 		this.s= s;

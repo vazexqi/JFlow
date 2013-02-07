@@ -7,10 +7,10 @@ package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
  * @author nchen
  * 
  */
-public class VariableEdge {
-	PointerVariable v;
+public final class VariableEdge {
+	final PointerVariable v;
 
-	ShapeNode n;
+	final ShapeNode n;
 
 	public VariableEdge(PointerVariable v, ShapeNode n) {
 		this.v= v;

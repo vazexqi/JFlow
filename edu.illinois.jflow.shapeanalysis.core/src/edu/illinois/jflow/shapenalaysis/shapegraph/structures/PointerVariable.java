@@ -6,8 +6,8 @@ package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
  * @author nchen
  * 
  */
-public class PointerVariable {
-	String name;
+public final class PointerVariable {
+	final String name;
 
 	public PointerVariable(String name) {
 		this.name= name;

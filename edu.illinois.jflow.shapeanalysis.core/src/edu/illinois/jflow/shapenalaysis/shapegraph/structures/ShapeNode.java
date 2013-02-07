@@ -9,11 +9,11 @@ import java.util.Set;
  * @author nchen
  * 
  */
-public class ShapeNode {
-	Set<PointerVariable> name= new HashSet<PointerVariable>();
-	
+public final class ShapeNode {
+	final Set<PointerVariable> name= new HashSet<PointerVariable>();
+
 	// Special node to represent the "primordial soup" of all objects
-	public static ShapeNode phiNode = new ShapeNode(new PointerVariable("phi")); 
+	public static ShapeNode phiNode= new ShapeNode(new PointerVariable("phi"));
 
 	public ShapeNode(PointerVariable variable) {
 		name.add(variable);
