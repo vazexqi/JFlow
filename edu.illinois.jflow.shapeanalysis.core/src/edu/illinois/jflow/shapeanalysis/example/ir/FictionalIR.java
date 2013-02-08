@@ -12,7 +12,7 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.Selector;
  * @author nchen
  * 
  */
-public class FictionalIR {
+public abstract class FictionalIR {
 	PointerVariable lhs;
 
 	PointerVariable rhs;
