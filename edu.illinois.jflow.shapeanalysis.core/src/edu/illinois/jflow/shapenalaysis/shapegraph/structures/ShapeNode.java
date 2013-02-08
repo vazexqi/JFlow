@@ -12,11 +12,15 @@ import java.util.Set;
 public final class ShapeNode {
 	final Set<PointerVariable> name= new HashSet<PointerVariable>();
 
-	// Special node to represent the "primordial soup" of all objects
-	public static ShapeNode phiNode= new ShapeNode(new PointerVariable("phi"));
-
 	public ShapeNode(PointerVariable variable) {
 		name.add(variable);
+	}
+
+	public ShapeNode(ShapeNode other) {
+		// Perform deep copy
+		for (PointerVariable p : other.name) {
+			name.add(new PointerVariable(p));
+		}
 	}
 
 	@Override

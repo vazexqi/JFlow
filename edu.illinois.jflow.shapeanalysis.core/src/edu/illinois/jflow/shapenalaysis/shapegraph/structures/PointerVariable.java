@@ -13,6 +13,10 @@ public final class PointerVariable {
 		this.name= name;
 	}
 
+	public PointerVariable(PointerVariable other) {
+		this.name= other.name;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;

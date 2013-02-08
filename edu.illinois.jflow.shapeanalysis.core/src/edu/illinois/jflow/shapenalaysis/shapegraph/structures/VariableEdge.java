@@ -17,6 +17,11 @@ public final class VariableEdge {
 		this.n= n;
 	}
 
+	public VariableEdge(VariableEdge other) {
+		this.v= other.v;
+		this.n= other.n;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;

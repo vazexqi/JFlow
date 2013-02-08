@@ -1,5 +1,7 @@
 package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,14 +18,32 @@ import com.ibm.wala.fixpoint.AbstractVariable;
  */
 public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 
-	Set<VariableEdge> variableEdges;
+	Set<VariableEdge> variableEdges= new HashSet<VariableEdge>();
 
-	Set<SelectorEdge> selectorEdges;
+	Set<SelectorEdge> selectorEdges= new HashSet<SelectorEdge>();
 
-	Map<ShapeNode, Boolean> isShared;
+	Map<ShapeNode, Boolean> isShared= new HashMap<ShapeNode, Boolean>();
 
 	@Override
-	public void copyState(StaticShapeGraph v) {
-	}
+	public void copyState(StaticShapeGraph other) {
+		if (other == null)
+			throw new IllegalArgumentException("Cannot copy, the reference is null!");
 
+		// Perform deep copy of each collection.
+		variableEdges= new HashSet<VariableEdge>();
+		for (VariableEdge ve : other.variableEdges) {
+			variableEdges.add(new VariableEdge(ve));
+		}
+
+		selectorEdges= new HashSet<SelectorEdge>();
+		for (SelectorEdge se : other.selectorEdges) {
+			selectorEdges.add(new SelectorEdge(se));
+		}
+
+		isShared= new HashMap<ShapeNode, Boolean>();
+		for (ShapeNode s : other.isShared.keySet()) {
+			isShared.put(new ShapeNode(s), other.isShared.get(s));
+		}
+
+	}
 }

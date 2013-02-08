@@ -20,6 +20,12 @@ public final class SelectorEdge {
 		this.t= t;
 	}
 
+	public SelectorEdge(SelectorEdge other) {
+		this.s= other.s;
+		this.sel= other.sel;
+		this.t= other.t;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;
