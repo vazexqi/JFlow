@@ -12,6 +12,10 @@ import edu.illinois.jflow.shapeanalysis.example.ir.PutNilInstruction;
 import edu.illinois.jflow.shapeanalysis.example.ir.PutSelectorInstruction;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.PointerVariable;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.Selector;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.SelectorEdge;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.ShapeNode;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.StaticShapeGraph;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
 
 /**
  * Returns a graph with FictionalIR as the nodes. The edges between the nodes represent control
@@ -22,9 +26,12 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.Selector;
  * 
  */
 public class LinkedListNormalizedCFGFactory {
-	static Graph<FictionalIR> createCFG() {
-		Graph<FictionalIR> graph= SlowSparseNumberedGraph.make();
-		FictionalIR[] i= new FictionalIR[15];
+
+	@SuppressWarnings("unchecked")
+	static Graph<FictionalIR<StaticShapeGraph>> createCFG() {
+		Graph<FictionalIR<StaticShapeGraph>> graph= SlowSparseNumberedGraph.make();
+
+		FictionalIR<StaticShapeGraph>[] i= new FictionalIR[15];
 
 		i[0]= new AssignNilInstruction(new PointerVariable("y")); // y := nil
 		i[1]= new DontCareInstruction(); // x != nil
@@ -43,7 +50,7 @@ public class LinkedListNormalizedCFGFactory {
 		i[14]= new DontCareInstruction(); // Just a placeholder for exit block
 
 		// Add all the nodes
-		for (FictionalIR ir : i) {
+		for (FictionalIR<StaticShapeGraph> ir : i) {
 			graph.addNode(ir);
 		}
 
@@ -66,6 +73,35 @@ public class LinkedListNormalizedCFGFactory {
 		graph.addEdge(i[11], i[1]);
 		graph.addEdge(i[1], i[12]);
 
+		// Add initial values 
+		i[0].setInitialValue(LinkedListNormalizedCFGFactory.initialState());
+
 		return graph;
+	}
+
+	static StaticShapeGraph initialState() {
+		StaticShapeGraph initialGraph= new StaticShapeGraph();
+
+		// This is the initial setup that we want
+		// from Figure 5 of the paper
+		//
+		//        -----              -----
+		// x --> |  x  | -- cdr --> | phi | ----
+		//        -----              -----      | cdr
+		//                             ^ -------
+		//
+		PointerVariable x= new PointerVariable("x");
+		ShapeNode xNode= new ShapeNode(x);
+		ShapeNode phiNode= ShapeNode.getPhiNode();
+
+		VariableEdge xPointer= new VariableEdge(x, xNode);
+		initialGraph.addVariableEdge(xPointer);
+
+		SelectorEdge xToPhi= new SelectorEdge(xNode, new Selector("cdr"), phiNode);
+		SelectorEdge phiToPhi= new SelectorEdge(phiNode, new Selector("cdr"), phiNode);
+		initialGraph.addSelectorEdge(xToPhi);
+		initialGraph.addSelectorEdge(phiToPhi);
+
+		return initialGraph;
 	}
 }

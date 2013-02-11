@@ -15,12 +15,16 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.StaticShapeGraph;
  * @author nchen
  * 
  */
-public abstract class FictionalIR {
+public abstract class FictionalIR<T> {
 	PointerVariable lhs;
 
 	PointerVariable rhs;
 
 	Selector sel;
+
+	boolean hasInitialValue;
+
+	T initialValue;
 
 	public PointerVariable getLhs() {
 		return lhs;
@@ -34,12 +38,25 @@ public abstract class FictionalIR {
 		return sel;
 	}
 
+	public boolean hasInitialValue() {
+		return hasInitialValue;
+	}
+
+	public T getInitialValue() {
+		return initialValue;
+	}
+
+	public void setInitialValue(T value) {
+		this.initialValue= value;
+		this.hasInitialValue= true;
+	}
+
 	public UnaryOperator<StaticShapeGraph> getTransferFunction() {
 		// This is the identity function for StaticShapeGraphs
 		return new SSGIdentity();
 	}
 
-	private final class SSGIdentity extends UnaryOperator<StaticShapeGraph> {
+	private final static class SSGIdentity extends UnaryOperator<StaticShapeGraph> {
 		@Override
 		public byte evaluate(StaticShapeGraph lhs, StaticShapeGraph rhs) {
 			if (lhs.equals(rhs)) {
@@ -58,7 +75,7 @@ public abstract class FictionalIR {
 
 		@Override
 		public boolean equals(Object o) {
-			return (o instanceof SSGIdentity);
+			return (o instanceof FictionalIR.SSGIdentity);
 		}
 
 		@Override
