@@ -10,26 +10,63 @@ import com.ibm.wala.util.CancelException;
 import com.ibm.wala.util.graph.Graph;
 
 import edu.illinois.jflow.shapeanalysis.example.ir.FictionalIR;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.PointerVariable;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.Selector;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.SelectorEdge;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.ShapeNode;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.StaticShapeGraph;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
 
+/**
+ * A "somewhat" specialized solver to solve the dataflow problem set up in Figure 5 of the paper
+ * "Solving Shape-Analysis Problems in Languages with Destructive Updating".
+ * 
+ * @author nchen
+ * 
+ */
 public class ShapeAnalysis {
+
+	StaticShapeGraph initialState() {
+		StaticShapeGraph initialGraph= new StaticShapeGraph();
+
+		// This is the initial setup that we want
+		//
+		//        -----              -----
+		// x --> |  x  | -- cdr --> | phi | ----
+		//        -----              -----      | cdr
+		//                             ^ -------
+		//
+		PointerVariable x= new PointerVariable("x");
+		ShapeNode xNode= new ShapeNode(x);
+		ShapeNode phiNode= ShapeNode.getPhiNode();
+
+		VariableEdge xPointer= new VariableEdge(x, xNode);
+		initialGraph.addVariableEdge(xPointer);
+
+		SelectorEdge xToPhi= new SelectorEdge(xNode, new Selector("cdr"), phiNode);
+		SelectorEdge phiToPhi= new SelectorEdge(phiNode, new Selector("cdr"), phiNode);
+		initialGraph.addSelectorEdge(xToPhi);
+		initialGraph.addSelectorEdge(phiToPhi);
+
+		return initialGraph;
+	}
 
 	class ShapeAnalysisDataflowSolver extends DataflowSolver<FictionalIR, StaticShapeGraph> {
 
 		public ShapeAnalysisDataflowSolver(IKilldallFramework<FictionalIR, StaticShapeGraph> problem) {
 			super(problem);
-			// TODO Auto-generated constructor stub
 		}
 
 		@Override
 		protected StaticShapeGraph makeNodeVariable(FictionalIR n, boolean IN) {
-			// TODO Auto-generated method stub
-			return null;
+			// TODO Check if this is the right place to put the initial values
+			// We are going to follow Fig 5. of the paper and initialize the case where the linked list has several variables
+			return ShapeAnalysis.this.initialState();
 		}
 
 		@Override
 		protected StaticShapeGraph makeEdgeVariable(FictionalIR src, FictionalIR dst) {
-			// TODO Auto-generated method stub
+			// We are not going to use any edgeTransferFunction so there is no need to create edge variables
 			return null;
 		}
 

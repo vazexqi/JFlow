@@ -24,6 +24,18 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 
 	Map<ShapeNode, Boolean> isShared= new HashMap<ShapeNode, Boolean>();
 
+	public void addVariableEdge(VariableEdge ve) {
+		variableEdges.add(ve);
+	}
+
+	public void addSelectorEdge(SelectorEdge se) {
+		selectorEdges.add(se);
+	}
+
+	public void addIsSharedMapping(ShapeNode node, Boolean isShared) {
+		this.isShared.put(node, isShared);
+	}
+
 	@Override
 	public void copyState(StaticShapeGraph other) {
 		if (other == null)

@@ -12,6 +12,8 @@ import java.util.Set;
 public final class ShapeNode {
 	final Set<PointerVariable> name= new HashSet<PointerVariable>();
 
+	private static final ShapeNode phiNode= new ShapeNode(new PointerVariable("phi"));
+
 	public ShapeNode(PointerVariable variable) {
 		name.add(variable);
 	}
@@ -21,6 +23,10 @@ public final class ShapeNode {
 		for (PointerVariable p : other.name) {
 			name.add(new PointerVariable(p));
 		}
+	}
+
+	public static ShapeNode getPhiNode() {
+		return phiNode;
 	}
 
 	@Override
@@ -47,4 +53,5 @@ public final class ShapeNode {
 			return false;
 		return true;
 	}
+
 }
