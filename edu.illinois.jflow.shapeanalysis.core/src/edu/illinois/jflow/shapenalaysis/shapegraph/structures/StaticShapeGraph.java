@@ -58,4 +58,28 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 		}
 
 	}
+
+	// Follow the convention of fellow AbstractVariable descendants and create this new method called
+	// sameValue(...) to test for content equality of objects.
+	public boolean sameValue(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+
+		StaticShapeGraph other= (StaticShapeGraph)obj;
+
+		// Skip checking for nullness since by default we initialize everything
+		boolean areVariableEdgesSame= false, areSelectorEdgesSame= false, areIsSharedSame= false;
+
+		areVariableEdgesSame= variableEdges.equals(other.variableEdges);
+		areSelectorEdgesSame= selectorEdges.equals(other.selectorEdges);
+		areIsSharedSame= isShared.equals(other.isShared);
+
+		// Check if VariableEdges are equal
+		return areVariableEdgesSame && areSelectorEdgesSame && areIsSharedSame;
+	}
+
 }
