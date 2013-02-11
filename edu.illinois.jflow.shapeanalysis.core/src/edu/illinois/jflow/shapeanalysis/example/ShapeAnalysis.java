@@ -89,25 +89,21 @@ public class ShapeAnalysis {
 
 		@Override
 		public UnaryOperator<StaticShapeGraph> getNodeTransferFunction(FictionalIR node) {
-			// TODO Auto-generated method stub
-			return null;
+			return node.getTransferFunction();
 		}
 
 		@Override
 		public boolean hasNodeTransferFunctions() {
-			// TODO Auto-generated method stub
-			return false;
+			return true;
 		}
 
 		@Override
 		public UnaryOperator<StaticShapeGraph> getEdgeTransferFunction(FictionalIR src, FictionalIR dst) {
-			// TODO Auto-generated method stub
-			return null;
+			throw new UnsupportedOperationException("There are no edge functions and thus there shouldn't be a call to this method");
 		}
 
 		@Override
 		public boolean hasEdgeTransferFunctions() {
-			// TODO Auto-generated method stub
 			return false;
 		}
 

@@ -1,12 +1,15 @@
 package edu.illinois.jflow.shapeanalysis.example.ir;
 
+import com.ibm.wala.fixpoint.UnaryOperator;
+
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.PointerVariable;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.Selector;
+import edu.illinois.jflow.shapenalaysis.shapegraph.structures.StaticShapeGraph;
 
 /**
  * This is an example of a fictional IR that resembles what is mentioned in
  * "Solving Shape-Analysis Problems in Languages with Destructive Updating". The purpose of this is
- * to illustrate how to build a shape analysis framewor without dealing with the complexities of
+ * to illustrate how to build a shape analysis framework without dealing with the complexities of
  * WALA (first).
  * 
  * @author nchen
@@ -29,5 +32,43 @@ public abstract class FictionalIR {
 
 	public Selector getSel() {
 		return sel;
+	}
+
+	public UnaryOperator<StaticShapeGraph> getTransferFunction() {
+		// This is the identity function for StaticShapeGraphs
+		return new SSGIdentity();
+	}
+
+	private final class SSGIdentity extends UnaryOperator<StaticShapeGraph> {
+		@Override
+		public byte evaluate(StaticShapeGraph lhs, StaticShapeGraph rhs) {
+			if (lhs.equals(rhs)) {
+				return NOT_CHANGED;
+			}
+			else {
+				lhs.copyState(lhs);
+				return CHANGED;
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			return "SSGIdentity".hashCode();
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			return (o instanceof SSGIdentity);
+		}
+
+		@Override
+		public String toString() {
+			return "StaticShapeGraph identity transfer function";
+		}
+
+		@Override
+		public boolean isIdentity() {
+			return true;
+		}
 	}
 }
