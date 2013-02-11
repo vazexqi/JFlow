@@ -51,9 +51,11 @@ public abstract class FictionalIR<T> {
 		this.hasInitialValue= true;
 	}
 
+	private static final SSGIdentity identity= new SSGIdentity();
+
 	public UnaryOperator<StaticShapeGraph> getTransferFunction() {
 		// This is the identity function for StaticShapeGraphs
-		return new SSGIdentity();
+		return identity;
 	}
 
 	private final static class SSGIdentity extends UnaryOperator<StaticShapeGraph> {
