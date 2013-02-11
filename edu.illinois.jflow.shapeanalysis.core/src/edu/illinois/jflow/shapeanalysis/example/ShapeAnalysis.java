@@ -74,56 +74,57 @@ public class ShapeAnalysis {
 		protected StaticShapeGraph[] makeStmtRHS(int size) {
 			// TODO Auto-generated method stub
 			return null;
-		}
-	}
 
-	class ShapeAnalysisFramework extends BasicFramework<FictionalIR, StaticShapeGraph> {
-
-		public ShapeAnalysisFramework(Graph<FictionalIR> cfg, ITransferFunctionProvider<FictionalIR, StaticShapeGraph> transferFunctionProvider) {
-			super(cfg, transferFunctionProvider);
 		}
 
-	}
+		class ShapeAnalysisFramework extends BasicFramework<FictionalIR, StaticShapeGraph> {
 
-	class ShapeAnalysisTransferFunctionProvider implements ITransferFunctionProvider<FictionalIR, StaticShapeGraph> {
+			public ShapeAnalysisFramework(Graph<FictionalIR> cfg, ITransferFunctionProvider<FictionalIR, StaticShapeGraph> transferFunctionProvider) {
+				super(cfg, transferFunctionProvider);
+			}
 
-		@Override
-		public UnaryOperator<StaticShapeGraph> getNodeTransferFunction(FictionalIR node) {
-			return node.getTransferFunction();
 		}
 
-		@Override
-		public boolean hasNodeTransferFunctions() {
-			return true;
+		class ShapeAnalysisTransferFunctionProvider implements ITransferFunctionProvider<FictionalIR, StaticShapeGraph> {
+
+			@Override
+			public UnaryOperator<StaticShapeGraph> getNodeTransferFunction(FictionalIR node) {
+				return node.getTransferFunction();
+			}
+
+			@Override
+			public boolean hasNodeTransferFunctions() {
+				return true;
+			}
+
+			@Override
+			public UnaryOperator<StaticShapeGraph> getEdgeTransferFunction(FictionalIR src, FictionalIR dst) {
+				throw new UnsupportedOperationException("There are no edge functions and thus there shouldn't be a call to this method");
+			}
+
+			@Override
+			public boolean hasEdgeTransferFunctions() {
+				return false;
+			}
+
+			@Override
+			public AbstractMeetOperator<StaticShapeGraph> getMeetOperator() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+
 		}
 
-		@Override
-		public UnaryOperator<StaticShapeGraph> getEdgeTransferFunction(FictionalIR src, FictionalIR dst) {
-			throw new UnsupportedOperationException("There are no edge functions and thus there shouldn't be a call to this method");
+		public DataflowSolver solve() {
+			// the framework describes the dataflow problem, in particular the underlying graph and the transfer functions
+			ShapeAnalysisFramework framework= new ShapeAnalysisFramework(LinkedListNormalizedCFGFactory.createCFG(), new ShapeAnalysisTransferFunctionProvider());
+			ShapeAnalysisDataflowSolver solver= new ShapeAnalysisDataflowSolver(framework);
+			try {
+				solver.solve(null);
+			} catch (CancelException e) {
+				assert false;
+			}
+			return solver;
 		}
-
-		@Override
-		public boolean hasEdgeTransferFunctions() {
-			return false;
-		}
-
-		@Override
-		public AbstractMeetOperator<StaticShapeGraph> getMeetOperator() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-	}
-
-	public DataflowSolver solve() {
-		// the framework describes the dataflow problem, in particular the underlying graph and the transfer functions
-		ShapeAnalysisFramework framework= new ShapeAnalysisFramework(LinkedListNormalizedCFGFactory.createCFG(), new ShapeAnalysisTransferFunctionProvider());
-		ShapeAnalysisDataflowSolver solver= new ShapeAnalysisDataflowSolver(framework);
-		try {
-			solver.solve(null);
-		} catch (CancelException e) {
-			assert false;
-		}
-		return solver;
 	}
 }
