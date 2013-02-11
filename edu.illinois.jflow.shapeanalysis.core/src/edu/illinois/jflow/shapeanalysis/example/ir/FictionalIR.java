@@ -61,7 +61,7 @@ public abstract class FictionalIR<T> {
 	private final static class SSGIdentity extends UnaryOperator<StaticShapeGraph> {
 		@Override
 		public byte evaluate(StaticShapeGraph lhs, StaticShapeGraph rhs) {
-			if (lhs.equals(rhs)) {
+			if (lhs.sameValue(rhs)) {
 				return NOT_CHANGED;
 			}
 			else {
