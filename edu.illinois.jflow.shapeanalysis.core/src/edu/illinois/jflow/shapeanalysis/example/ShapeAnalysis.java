@@ -26,7 +26,7 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
  */
 public class ShapeAnalysis {
 
-	StaticShapeGraph initialState() {
+	static StaticShapeGraph initialState() {
 		StaticShapeGraph initialGraph= new StaticShapeGraph();
 
 		// This is the initial setup that we want
@@ -51,7 +51,45 @@ public class ShapeAnalysis {
 		return initialGraph;
 	}
 
-	class ShapeAnalysisDataflowSolver extends DataflowSolver<FictionalIR, StaticShapeGraph> {
+	static class ShapeAnalysisFramework extends BasicFramework<FictionalIR, StaticShapeGraph> {
+
+		public ShapeAnalysisFramework(Graph<FictionalIR> cfg, ITransferFunctionProvider<FictionalIR, StaticShapeGraph> transferFunctionProvider) {
+			super(cfg, transferFunctionProvider);
+		}
+
+	}
+
+	static class ShapeAnalysisTransferFunctionProvider implements ITransferFunctionProvider<FictionalIR, StaticShapeGraph> {
+
+		@Override
+		public UnaryOperator<StaticShapeGraph> getNodeTransferFunction(FictionalIR node) {
+			return node.getTransferFunction();
+		}
+
+		@Override
+		public boolean hasNodeTransferFunctions() {
+			return true;
+		}
+
+		@Override
+		public UnaryOperator<StaticShapeGraph> getEdgeTransferFunction(FictionalIR src, FictionalIR dst) {
+			throw new UnsupportedOperationException("There are no edge functions and thus there shouldn't be a call to this method");
+		}
+
+		@Override
+		public boolean hasEdgeTransferFunctions() {
+			return false;
+		}
+
+		@Override
+		public AbstractMeetOperator<StaticShapeGraph> getMeetOperator() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+	}
+
+	static class ShapeAnalysisDataflowSolver extends DataflowSolver<FictionalIR, StaticShapeGraph> {
 
 		public ShapeAnalysisDataflowSolver(IKilldallFramework<FictionalIR, StaticShapeGraph> problem) {
 			super(problem);
@@ -61,7 +99,7 @@ public class ShapeAnalysis {
 		protected StaticShapeGraph makeNodeVariable(FictionalIR n, boolean IN) {
 			// TODO Check if this is the right place to put the initial values
 			// We are going to follow Fig 5. of the paper and initialize the case where the linked list has several variables
-			return ShapeAnalysis.this.initialState();
+			return ShapeAnalysis.initialState();
 		}
 
 		@Override
@@ -77,54 +115,18 @@ public class ShapeAnalysis {
 
 		}
 
-		class ShapeAnalysisFramework extends BasicFramework<FictionalIR, StaticShapeGraph> {
-
-			public ShapeAnalysisFramework(Graph<FictionalIR> cfg, ITransferFunctionProvider<FictionalIR, StaticShapeGraph> transferFunctionProvider) {
-				super(cfg, transferFunctionProvider);
-			}
-
-		}
-
-		class ShapeAnalysisTransferFunctionProvider implements ITransferFunctionProvider<FictionalIR, StaticShapeGraph> {
-
-			@Override
-			public UnaryOperator<StaticShapeGraph> getNodeTransferFunction(FictionalIR node) {
-				return node.getTransferFunction();
-			}
-
-			@Override
-			public boolean hasNodeTransferFunctions() {
-				return true;
-			}
-
-			@Override
-			public UnaryOperator<StaticShapeGraph> getEdgeTransferFunction(FictionalIR src, FictionalIR dst) {
-				throw new UnsupportedOperationException("There are no edge functions and thus there shouldn't be a call to this method");
-			}
-
-			@Override
-			public boolean hasEdgeTransferFunctions() {
-				return false;
-			}
-
-			@Override
-			public AbstractMeetOperator<StaticShapeGraph> getMeetOperator() {
-				// TODO Auto-generated method stub
-				return null;
-			}
-
-		}
-
 		public DataflowSolver solve() {
-			// the framework describes the dataflow problem, in particular the underlying graph and the transfer functions
-			ShapeAnalysisFramework framework= new ShapeAnalysisFramework(LinkedListNormalizedCFGFactory.createCFG(), new ShapeAnalysisTransferFunctionProvider());
-			ShapeAnalysisDataflowSolver solver= new ShapeAnalysisDataflowSolver(framework);
 			try {
-				solver.solve(null);
+				solve(null);
 			} catch (CancelException e) {
 				assert false;
 			}
-			return solver;
+			return this;
 		}
+	}
+
+	public static void main(String[] args) {
+		ShapeAnalysisDataflowSolver solver= new ShapeAnalysisDataflowSolver(new ShapeAnalysisFramework(LinkedListNormalizedCFGFactory.createCFG(), new ShapeAnalysisTransferFunctionProvider()));
+		solver.solve();
 	}
 }
