@@ -99,4 +99,19 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 		return areVariableEdgesSame && areSelectorEdgesSame && areIsSharedSame;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder sb= new StringBuilder();
+		sb.append(String.format("Variable Edges:%n"));
+		for (VariableEdge ve : variableEdges) {
+			sb.append(String.format("%s%n", ve));
+		}
+		sb.append(String.format("%n"));
+
+		sb.append(String.format("Selector Edges:%n"));
+		for (SelectorEdge se : selectorEdges) {
+			sb.append(String.format("%s%n", se));
+		}
+		return sb.toString();
+	}
 }

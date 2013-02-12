@@ -37,4 +37,9 @@ public final class Selector {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return selector;
+	}
 }

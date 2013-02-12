@@ -51,6 +51,11 @@ public abstract class FictionalIR<T> {
 		this.hasInitialValue= true;
 	}
 
+	@Override
+	public String toString() {
+		return "IR that has no effect on heap";
+	}
+
 	public UnaryOperator<StaticShapeGraph> getTransferFunction() {
 		// This is the identity function for StaticShapeGraphs
 		return SSGIdentity.instance();

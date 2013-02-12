@@ -52,4 +52,9 @@ public final class VariableEdge {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return "[" + v.toString() + "," + n.toString() + "]";
+	}
 }

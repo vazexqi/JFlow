@@ -81,7 +81,7 @@ public class ShapeAnalysis {
 			return new StaticShapeGraph[size];
 		}
 
-		public DataflowSolver solve() {
+		public DataflowSolver<FictionalIR<StaticShapeGraph>, StaticShapeGraph> solve() {
 			try {
 				solve(null);
 			} catch (CancelException e) {
@@ -93,6 +93,20 @@ public class ShapeAnalysis {
 
 	public static void main(String[] args) {
 		ShapeAnalysisDataflowSolver solver= new ShapeAnalysisDataflowSolver(new ShapeAnalysisFramework(LinkedListNormalizedCFGFactory.createCFG(), new ShapeAnalysisTransferFunctionProvider()));
-		solver.solve();
+		DataflowSolver<FictionalIR<StaticShapeGraph>, StaticShapeGraph> solution= solver.solve();
+
+		FictionalIR<StaticShapeGraph>[] ir= LinkedListNormalizedCFGFactory.instr;
+		for (int i= 0; i < ir.length; i++) {
+			System.out.println("[" + i + "] " + ir[i]);
+			System.out.println("---");
+
+			System.out.println("(IN)");
+			StaticShapeGraph in= solution.getIn(ir[i]);
+			System.out.println(in);
+
+			System.out.println("OUT");
+			StaticShapeGraph out= solution.getOut(ir[i]);
+			System.out.println(out);
+		}
 	}
 }

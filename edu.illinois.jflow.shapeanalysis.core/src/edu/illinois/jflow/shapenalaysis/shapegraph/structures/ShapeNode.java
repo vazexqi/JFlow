@@ -54,4 +54,21 @@ public final class ShapeNode {
 		return true;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder sb= new StringBuilder();
+		sb.append("N{");
+
+		for (PointerVariable pv : name) {
+			sb.append(pv + ",");
+		}
+
+		// Delete the last comma - the logic for just deleting the last comma is cleaner than special casing
+		// Because all ShapeNodes are constructed from at least one PointerVariable, we know the loop above must run at least once
+		sb.deleteCharAt(sb.length() - 1);
+
+		sb.append("}");
+		return sb.toString();
+	}
+
 }

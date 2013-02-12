@@ -62,4 +62,9 @@ public final class SelectorEdge {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return "<" + s + "," + sel + "," + t + ">";
+	}
 }
