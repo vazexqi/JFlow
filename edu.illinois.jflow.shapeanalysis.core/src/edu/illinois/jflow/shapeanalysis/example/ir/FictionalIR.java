@@ -51,14 +51,18 @@ public abstract class FictionalIR<T> {
 		this.hasInitialValue= true;
 	}
 
-	private static final SSGIdentity identity= new SSGIdentity();
-
 	public UnaryOperator<StaticShapeGraph> getTransferFunction() {
 		// This is the identity function for StaticShapeGraphs
-		return identity;
+		return SSGIdentity.instance();
 	}
 
 	private final static class SSGIdentity extends UnaryOperator<StaticShapeGraph> {
+		private static final SSGIdentity SINGLETON= new SSGIdentity();
+
+		public static SSGIdentity instance() {
+			return SINGLETON;
+		}
+
 		@Override
 		public byte evaluate(StaticShapeGraph lhs, StaticShapeGraph rhs) {
 			if (lhs.sameValue(rhs)) {
@@ -89,5 +93,6 @@ public abstract class FictionalIR<T> {
 		public boolean isIdentity() {
 			return true;
 		}
+
 	}
 }
