@@ -27,54 +27,56 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
  */
 public class LinkedListNormalizedCFGFactory {
 
+	public static FictionalIR<StaticShapeGraph>[] instr;
+
 	@SuppressWarnings("unchecked")
 	static Graph<FictionalIR<StaticShapeGraph>> createCFG() {
 		Graph<FictionalIR<StaticShapeGraph>> graph= SlowSparseNumberedGraph.make();
 
-		FictionalIR<StaticShapeGraph>[] i= new FictionalIR[15];
+		instr= new FictionalIR[15];
 
-		i[0]= new AssignNilInstruction(new PointerVariable("y")); // y := nil
-		i[1]= new DontCareInstruction(); // x != nil
-		i[2]= new AssignNilInstruction(new PointerVariable("t")); // t := nil
-		i[3]= new AssignInstruction(new PointerVariable("t"), new PointerVariable("y")); // t := y
-		i[4]= new AssignNilInstruction(new PointerVariable("y")); // y := nil
-		i[5]= new AssignInstruction(new PointerVariable("y"), new PointerVariable("x")); // y := x
-		i[6]= new AssignNilInstruction(new PointerVariable("t1")); // t1 := nil
-		i[7]= new GetSelectorInstruction(new PointerVariable("t1"), new Selector("cdr"), new PointerVariable("x")); // t1 := x.cdr
-		i[8]= new AssignNilInstruction(new PointerVariable("x")); // x := nil
-		i[9]= new AssignInstruction(new PointerVariable("x"), new PointerVariable("t1")); // x := t1
-		i[10]= new PutNilInstruction(new PointerVariable("y"), new Selector("cdr")); // y.cdr := nil
-		i[11]= new PutSelectorInstruction(new PointerVariable("y"), new Selector("cdr"), new PointerVariable("t")); // y.cdr := t
-		i[12]= new AssignNilInstruction(new PointerVariable("t")); // t := nil
-		i[13]= new AssignNilInstruction(new PointerVariable("t1")); /// t1 := nil
-		i[14]= new DontCareInstruction(); // Just a placeholder for exit block
+		instr[0]= new AssignNilInstruction(new PointerVariable("y")); // y := nil
+		instr[1]= new DontCareInstruction(); // x != nil
+		instr[2]= new AssignNilInstruction(new PointerVariable("t")); // t := nil
+		instr[3]= new AssignInstruction(new PointerVariable("t"), new PointerVariable("y")); // t := y
+		instr[4]= new AssignNilInstruction(new PointerVariable("y")); // y := nil
+		instr[5]= new AssignInstruction(new PointerVariable("y"), new PointerVariable("x")); // y := x
+		instr[6]= new AssignNilInstruction(new PointerVariable("t1")); // t1 := nil
+		instr[7]= new GetSelectorInstruction(new PointerVariable("t1"), new Selector("cdr"), new PointerVariable("x")); // t1 := x.cdr
+		instr[8]= new AssignNilInstruction(new PointerVariable("x")); // x := nil
+		instr[9]= new AssignInstruction(new PointerVariable("x"), new PointerVariable("t1")); // x := t1
+		instr[10]= new PutNilInstruction(new PointerVariable("y"), new Selector("cdr")); // y.cdr := nil
+		instr[11]= new PutSelectorInstruction(new PointerVariable("y"), new Selector("cdr"), new PointerVariable("t")); // y.cdr := t
+		instr[12]= new AssignNilInstruction(new PointerVariable("t")); // t := nil
+		instr[13]= new AssignNilInstruction(new PointerVariable("t1")); /// t1 := nil
+		instr[14]= new DontCareInstruction(); // Just a placeholder for exit block
 
 		// Add all the nodes
-		for (FictionalIR<StaticShapeGraph> ir : i) {
+		for (FictionalIR<StaticShapeGraph> ir : instr) {
 			graph.addNode(ir);
 		}
 
 		// Add all the edges
-		graph.addEdge(i[0], i[1]);
-		graph.addEdge(i[1], i[2]);
-		graph.addEdge(i[2], i[3]);
-		graph.addEdge(i[3], i[4]);
-		graph.addEdge(i[4], i[5]);
-		graph.addEdge(i[5], i[6]);
-		graph.addEdge(i[6], i[7]);
-		graph.addEdge(i[7], i[8]);
-		graph.addEdge(i[8], i[9]);
-		graph.addEdge(i[9], i[10]);
-		graph.addEdge(i[10], i[11]);
+		graph.addEdge(instr[0], instr[1]);
+		graph.addEdge(instr[1], instr[2]);
+		graph.addEdge(instr[2], instr[3]);
+		graph.addEdge(instr[3], instr[4]);
+		graph.addEdge(instr[4], instr[5]);
+		graph.addEdge(instr[5], instr[6]);
+		graph.addEdge(instr[6], instr[7]);
+		graph.addEdge(instr[7], instr[8]);
+		graph.addEdge(instr[8], instr[9]);
+		graph.addEdge(instr[9], instr[10]);
+		graph.addEdge(instr[10], instr[11]);
 
-		graph.addEdge(i[12], i[13]);
-		graph.addEdge(i[13], i[14]);
+		graph.addEdge(instr[12], instr[13]);
+		graph.addEdge(instr[13], instr[14]);
 
-		graph.addEdge(i[11], i[1]);
-		graph.addEdge(i[1], i[12]);
+		graph.addEdge(instr[11], instr[1]);
+		graph.addEdge(instr[1], instr[12]);
 
 		// Add initial values 
-		i[0].setInitialValue(LinkedListNormalizedCFGFactory.initialState());
+		instr[0].setInitialValue(LinkedListNormalizedCFGFactory.initialState());
 
 		return graph;
 	}
