@@ -53,10 +53,8 @@ public class ShapeAnalysis {
 
 		@Override
 		public AbstractMeetOperator<StaticShapeGraph> getMeetOperator() {
-			// TODO Auto-generated method stub
-			return null;
+			return SSGMeetOperator.instance();
 		}
-
 	}
 
 	static class ShapeAnalysisDataflowSolver extends DataflowSolver<FictionalIR<StaticShapeGraph>, StaticShapeGraph> {
@@ -75,14 +73,12 @@ public class ShapeAnalysis {
 		@Override
 		protected StaticShapeGraph makeEdgeVariable(FictionalIR<StaticShapeGraph> src, FictionalIR<StaticShapeGraph> dst) {
 			// We are not going to use any edgeTransferFunction so there is no need to create edge variables
-			return null;
+			throw new UnsupportedOperationException("There are no edge functions and thus there shouldn't be a call to this method");
 		}
 
 		@Override
 		protected StaticShapeGraph[] makeStmtRHS(int size) {
-			// TODO Auto-generated method stub
-			return null;
-
+			return new StaticShapeGraph[size];
 		}
 
 		public DataflowSolver solve() {

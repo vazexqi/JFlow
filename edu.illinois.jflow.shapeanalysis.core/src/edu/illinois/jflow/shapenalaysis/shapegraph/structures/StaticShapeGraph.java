@@ -22,7 +22,24 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 
 	Set<SelectorEdge> selectorEdges= new HashSet<SelectorEdge>();
 
+	// variableEdges and selectorEdges are pretty standard but isShared needs some clarification
+	// By default, we are not going to put all possible ShapeNodes into isShared. If a ShapeNode A is
+	// not inside isShared, we assume that by default it is not shared. If A is inside the map, we retrieve its value.
+	// There is no checking to ensure that the A is even in the set of ShapeNodes. It just blatantly answers "no" for anything not in its
+	// keyset. This is something to keep in mind while checking for shared ShapeNodes.
 	Map<ShapeNode, Boolean> isShared= new HashMap<ShapeNode, Boolean>();
+
+	public Set<VariableEdge> getVariableEdges() {
+		return variableEdges;
+	}
+
+	public Set<SelectorEdge> getSelectorEdges() {
+		return selectorEdges;
+	}
+
+	public Map<ShapeNode, Boolean> getIsShared() {
+		return isShared;
+	}
 
 	public void addVariableEdge(VariableEdge ve) {
 		variableEdges.add(ve);
