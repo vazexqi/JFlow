@@ -141,12 +141,16 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 	// Helper functions over static heap graphs
 	///////////////////////////////////////////
 
-	// See pg. 19 of the paper
+	// See Figure 10 of the paper
+	// induced-is-shared function - meaning that they are two objects pointing to ShapeNode l
 	public boolean iis(ShapeNode l) {
 		int count= 0;
 		for (SelectorEdge se : selectorEdges) {
-			if (se.hasAsTarget(l))
-				count++;
+			if (se.hasAsTarget(l)) {
+				if (ShapeNode.isCompatible(se.s, l)) { // Maybe this check can be removed since we are certain that we are not using spurious edges
+					count++;
+				}
+			}
 		}
 		return count >= 2;
 	}
