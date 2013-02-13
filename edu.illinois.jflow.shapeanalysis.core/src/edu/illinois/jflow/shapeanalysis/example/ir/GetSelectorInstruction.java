@@ -51,14 +51,14 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 
 			// 2) Materialize a new object for anything that y.sel points to
 			for (ShapeNode s : allThingsPointedByYThroughSelector) {
-				next.addVariableEdge(new VariableEdge(new PointerVariable(getRhs()), s.addName(getRhs())));
+				next.addVariableEdge(new VariableEdge(new PointerVariable(getLhs()), s.addName(getLhs())));
 			}
 
 			// 3) Update the variables to point to the newly materialized object
 			for (ShapeNode s : allThingsPointedByYThroughSelector) {
 				Set<PointerVariable> variables= in.variablesToShapeNode(s);
 				for (PointerVariable v : variables) {
-					next.addVariableEdge(new VariableEdge(new PointerVariable(v), s.addName(getRhs())));
+					next.addVariableEdge(new VariableEdge(new PointerVariable(v), s.addName(getLhs())));
 				}
 			}
 
