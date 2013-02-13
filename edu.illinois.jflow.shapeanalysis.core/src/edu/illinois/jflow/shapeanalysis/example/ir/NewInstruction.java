@@ -1,13 +1,10 @@
 package edu.illinois.jflow.shapeanalysis.example.ir;
 
-import java.util.Map.Entry;
-
 import com.ibm.wala.fixpoint.UnaryOperator;
 
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.PointerVariable;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.SelectorEdge;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.ShapeNode;
-import edu.illinois.jflow.shapenalaysis.shapegraph.structures.SharingFunction;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.StaticShapeGraph;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
 
@@ -24,6 +21,7 @@ public final class NewInstruction extends FictionalIR<StaticShapeGraph> {
 		return lhs + " := new";
 	}
 
+	@Override
 	public UnaryOperator<StaticShapeGraph> getTransferFunction() {
 		return this.new SSGNew();
 	}
@@ -51,7 +49,12 @@ public final class NewInstruction extends FictionalIR<StaticShapeGraph> {
 				next.addIsSharedMapping(new ShapeNode(s), in.isShared(s));
 			}
 
-			return 0;
+			if (!out.sameValue(next)) {
+				out.copyState(next);
+				return CHANGED;
+			} else {
+				return NOT_CHANGED;
+			}
 		}
 
 		@Override
