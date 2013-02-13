@@ -55,8 +55,8 @@ public final class PutNilInstruction extends FictionalIR<StaticShapeGraph> {
 
 			// isShared
 			Set<ShapeNode> allThingsPointedByXThroughSelector= new HashSet<ShapeNode>();
-			for (ShapeNode s : out.pointsToOfVariable(new PointerVariable(getLhs()))) {
-				allThingsPointedByXThroughSelector.addAll(out.pointsToOfShapeNodeThroughSelector(s, getSel()));
+			for (ShapeNode s : in.pointsToOfVariable(getLhs())) {
+				allThingsPointedByXThroughSelector.addAll(in.pointsToOfShapeNodeThroughSelector(s, getSel()));
 			}
 
 			for (ShapeNode s : in.getIsShared().keySet()) {
