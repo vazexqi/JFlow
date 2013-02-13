@@ -1,6 +1,5 @@
 package edu.illinois.jflow.shapeanalysis.example;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 

@@ -13,6 +13,10 @@ public final class Selector {
 		this.selector= selector;
 	}
 
+	public Selector(Selector other) {
+		this.selector= other.selector;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;

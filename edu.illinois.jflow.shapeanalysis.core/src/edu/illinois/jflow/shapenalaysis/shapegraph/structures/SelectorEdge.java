@@ -8,11 +8,11 @@ package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
  * 
  */
 public final class SelectorEdge {
-	final ShapeNode s;
+	public final ShapeNode s;
 
-	final Selector sel;
+	public final Selector sel;
 
-	final ShapeNode t;
+	public final ShapeNode t;
 
 	public SelectorEdge(ShapeNode s, Selector sel, ShapeNode t) {
 		this.s= s;

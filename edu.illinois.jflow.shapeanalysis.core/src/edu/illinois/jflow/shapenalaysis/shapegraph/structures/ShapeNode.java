@@ -29,6 +29,15 @@ public final class ShapeNode {
 		return phiNode;
 	}
 
+	public ShapeNode removeName(PointerVariable toRemove) {
+		ShapeNode newNode= new ShapeNode(this);
+		newNode.name.remove(toRemove); // Try to remove the name
+		if (newNode.name.isEmpty()) { // We have remove all variables and now it must point to the phi node
+			newNode.name.add(new PointerVariable("phi"));
+		}
+		return newNode;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;
