@@ -51,13 +51,13 @@ public class SSGMeetOperator extends AbstractMeetOperator<StaticShapeGraph> {
 			// isShared is a bit more tricky. We need to add all the values from ssg. However, if U already
 			// contains that value, then we need to perform an OR on that value.
 
-			Map<ShapeNode, Boolean> isShared= U.getIsShared();
-			for (Entry<ShapeNode, Boolean> entry : isShared.entrySet()) {
+			Map<ShapeNode, Boolean> UisShared= U.getIsShared();
+			for (Entry<ShapeNode, Boolean> entry : ssg.getIsShared().entrySet()) {
 				ShapeNode key= entry.getKey();
-				if (isShared.containsKey(key)) {
-					isShared.put(key, isShared.get(key) || entry.getValue());
+				if (UisShared.containsKey(key)) {
+					UisShared.put(key, UisShared.get(key) || entry.getValue());
 				} else {
-					isShared.put(new ShapeNode(entry.getKey()), entry.getValue());
+					UisShared.put(new ShapeNode(entry.getKey()), entry.getValue());
 				}
 			}
 		}
