@@ -50,7 +50,6 @@ public final class AssignNilInstruction extends FictionalIR<StaticShapeGraph> {
 			}
 
 			// isShared
-			// Ignore for now and just blatantly copy while waiting for refactoring of Issue #6.
 			for (ShapeNode s : in.getIsShared().keySet()) {
 				Boolean resultofShapeNode= in.getIsShared().get(s);
 				Boolean resultOfShapeNodeWithNameRemoved= in.getIsShared().get(s.removeName(getLhs()));
