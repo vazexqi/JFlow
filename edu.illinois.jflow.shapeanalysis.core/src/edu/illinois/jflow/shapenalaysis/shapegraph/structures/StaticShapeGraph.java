@@ -177,4 +177,38 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 
 		return pointsTo;
 	}
+
+	public Set<PointerVariable> variablesToShapeNode(ShapeNode pointee) {
+		Set<PointerVariable> pointers= new HashSet<PointerVariable>();
+
+		for (VariableEdge ve : variableEdges) {
+			if (ve.n.equals(pointee)) {
+				pointers.add(new PointerVariable(ve.v));
+			}
+		}
+
+		return pointers;
+	}
+
+	public Set<SelectorEdge> selectorEdgesStartingFrom(ShapeNode start) {
+		Set<SelectorEdge> edges= new HashSet<SelectorEdge>();
+
+		for (SelectorEdge se : selectorEdges) {
+			if (se.s.equals(start))
+				edges.add(new SelectorEdge(se));
+		}
+
+		return edges;
+	}
+
+	public Set<SelectorEdge> selectorEdgesEndingAt(ShapeNode end) {
+		Set<SelectorEdge> edges= new HashSet<SelectorEdge>();
+
+		for (SelectorEdge se : selectorEdges) {
+			if (se.t.equals(end))
+				edges.add(new SelectorEdge(se));
+		}
+
+		return edges;
+	}
 }
