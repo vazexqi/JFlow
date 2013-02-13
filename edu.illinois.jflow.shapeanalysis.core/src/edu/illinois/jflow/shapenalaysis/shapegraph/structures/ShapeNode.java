@@ -42,6 +42,25 @@ public final class ShapeNode {
 		return name.contains(toCheck);
 	}
 
+	public ShapeNode addNameIfContains(PointerVariable toAdd, PointerVariable toMatch) {
+		ShapeNode newNode= new ShapeNode(this);
+		if (containsName(toMatch)) {
+			newNode.name.add(toAdd);
+		}
+		return newNode;
+	}
+
+	// Although compatible is defined for a list of ShapeNode, in the analysis we only ever use pairs and triples so let us take advantage of that
+	public static boolean isCompatible(ShapeNode s1, ShapeNode s2) {
+		ShapeNode intersection= new ShapeNode(s1); // Create a copy since set intersection is a destructive modification
+		intersection.name.retainAll(s2.name);
+		return s1.equals(s2) || intersection.name.isEmpty();
+	}
+
+	public static boolean isCompatible(ShapeNode s1, ShapeNode s2, ShapeNode s3) {
+		return isCompatible(s1, s2) && isCompatible(s2, s3) && isCompatible(s1, s3);
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;
