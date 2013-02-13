@@ -1,8 +1,5 @@
 package edu.illinois.jflow.shapeanalysis.example.ir;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.ibm.wala.fixpoint.UnaryOperator;
 
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.PointerVariable;
@@ -39,7 +36,7 @@ public final class AssignNilInstruction extends FictionalIR<StaticShapeGraph> {
 
 			// VariableEdges
 			for (VariableEdge ve : in.getVariableEdges()) {
-				if (!ve.v.equals(lhs)) {
+				if (!ve.v.equals(getLhs())) {
 					ShapeNode newName= ve.n.removeName(getLhs());
 					next.addVariableEdge(new VariableEdge(new PointerVariable(ve.v), newName));
 				}
@@ -55,7 +52,9 @@ public final class AssignNilInstruction extends FictionalIR<StaticShapeGraph> {
 			// isShared
 			// Ignore for now and just blatantly copy while waiting for refactoring of Issue #6.
 			for (ShapeNode s : in.getIsShared().keySet()) {
-				next.getIsShared().put(new ShapeNode(s), in.getIsShared().get(s));
+				Boolean resultofShapeNode= in.getIsShared().get(s);
+				Boolean resultOfShapeNodeWithNameRemoved= in.getIsShared().get(s.removeName(getLhs()));
+				next.getIsShared().put(new ShapeNode(s), resultofShapeNode || resultOfShapeNodeWithNameRemoved);
 			}
 
 			if (!out.sameValue(next)) {

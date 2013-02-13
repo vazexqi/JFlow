@@ -1,6 +1,5 @@
 package edu.illinois.jflow.shapenalaysis.shapegraph.structures;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -22,12 +21,7 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 
 	Set<SelectorEdge> selectorEdges= new HashSet<SelectorEdge>();
 
-	// variableEdges and selectorEdges are pretty standard but isShared needs some clarification
-	// By default, we are not going to put all possible ShapeNodes into isShared. If a ShapeNode A is
-	// not inside isShared, we assume that by default it is not shared. If A is inside the map, we retrieve its value.
-	// There is no checking to ensure that the A is even in the set of ShapeNodes. It just blatantly answers "no" for anything not in its
-	// keyset. This is something to keep in mind while checking for shared ShapeNodes.
-	Map<ShapeNode, Boolean> isShared= new HashMap<ShapeNode, Boolean>();
+	SharingFunction isShared= new SharingFunction();
 
 	public Set<VariableEdge> getVariableEdges() {
 		return variableEdges;
@@ -69,11 +63,7 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 			selectorEdges.add(new SelectorEdge(se));
 		}
 
-		isShared= new HashMap<ShapeNode, Boolean>();
-		for (ShapeNode s : other.isShared.keySet()) {
-			isShared.put(new ShapeNode(s), other.isShared.get(s));
-		}
-
+		isShared= new SharingFunction(other.isShared);
 	}
 
 	// Follow the convention of fellow AbstractVariable descendants and create this new method called
