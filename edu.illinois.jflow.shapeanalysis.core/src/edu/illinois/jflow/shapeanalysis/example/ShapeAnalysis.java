@@ -104,7 +104,7 @@ public class ShapeAnalysis {
 			StaticShapeGraph in= solution.getIn(ir[i]);
 			System.out.println(in);
 
-			System.out.println("OUT");
+			System.out.println("(OUT)");
 			StaticShapeGraph out= solution.getOut(ir[i]);
 			System.out.println(out);
 		}

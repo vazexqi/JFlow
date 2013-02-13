@@ -93,15 +93,43 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 	public String toString() {
 		StringBuilder sb= new StringBuilder();
 		sb.append(String.format("Variable Edges:%n"));
-		for (VariableEdge ve : variableEdges) {
-			sb.append(String.format("%s%n", ve));
+		if (variableEdges.isEmpty()) {
+			sb.append("EMPTY");
+		} else {
+			for (VariableEdge ve : variableEdges) {
+				sb.append(String.format("%s%n", ve));
+			}
 		}
 		sb.append(String.format("%n"));
 
 		sb.append(String.format("Selector Edges:%n"));
-		for (SelectorEdge se : selectorEdges) {
-			sb.append(String.format("%s%n", se));
+		if (selectorEdges.isEmpty()) {
+			sb.append("EMPTY");
+		} else {
+			for (SelectorEdge se : selectorEdges) {
+				sb.append(String.format("%s%n", se));
+			}
 		}
+		sb.append(String.format("%n"));
+
+		sb.append(String.format("Shared nodes%n"));
+		if (isShared.isEmpty()) {
+			sb.append("EMPTY");
+		} else {
+			// Only print out the ones that are true. Note that due to the updates (i.e., flipping from true -> false) we might see entries with false values. We don't print those out.
+			boolean hasNonSharedShapeNodes= false;
+			for (ShapeNode node : isShared.keySet()) {
+				if (isShared.get(node)) {
+					sb.append(String.format("%s%n", node));
+				} else {
+					hasNonSharedShapeNodes= true;
+				}
+			}
+			if (hasNonSharedShapeNodes) {
+				sb.append("Not empty but all shapenodes are not shared");
+			}
+		}
+
 		return sb.toString();
 	}
 }
