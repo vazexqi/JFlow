@@ -35,6 +35,10 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 		return isShared;
 	}
 
+	public boolean isShared(ShapeNode n) {
+		return isShared.get(n);
+	}
+
 	public void addVariableEdge(VariableEdge ve) {
 		variableEdges.add(ve);
 	}
@@ -131,5 +135,42 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 		}
 
 		return sb.toString();
+	}
+
+	///////////////////////////////////////////
+	// Helper functions over static heap graphs
+	///////////////////////////////////////////
+
+	// See pg. 19 of the paper
+	public boolean iis(ShapeNode l) {
+		int count= 0;
+		for (SelectorEdge se : selectorEdges) {
+			if (se.hasAsTarget(l))
+				count++;
+		}
+		return count >= 2;
+	}
+
+	public Set<ShapeNode> pointsToOfVariable(PointerVariable x) {
+		Set<ShapeNode> pointsTo= new HashSet<ShapeNode>();
+
+		for (VariableEdge ve : variableEdges) {
+			if (ve.v.equals(x)) {
+				pointsTo.add(ve.n);
+			}
+		}
+
+		return pointsTo;
+	}
+
+	public Set<ShapeNode> pointsToOfShapeNodeThroughSelector(ShapeNode s, Selector sel) {
+		Set<ShapeNode> pointsTo= new HashSet<ShapeNode>();
+
+		for (SelectorEdge se : selectorEdges) {
+			if (se.hasAsSourceAndSelector(s, sel))
+				pointsTo.add(se.t);
+		}
+
+		return pointsTo;
 	}
 }

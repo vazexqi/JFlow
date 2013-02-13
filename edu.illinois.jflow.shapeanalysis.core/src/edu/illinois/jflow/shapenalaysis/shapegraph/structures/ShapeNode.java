@@ -38,6 +38,10 @@ public final class ShapeNode {
 		return newNode;
 	}
 
+	public boolean containsName(PointerVariable toCheck) {
+		return name.contains(toCheck);
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;

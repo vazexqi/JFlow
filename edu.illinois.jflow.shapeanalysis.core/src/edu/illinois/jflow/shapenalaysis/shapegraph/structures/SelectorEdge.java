@@ -26,6 +26,14 @@ public final class SelectorEdge {
 		this.t= other.t;
 	}
 
+	public boolean hasAsTarget(ShapeNode t) {
+		return this.t.equals(t);
+	}
+
+	public boolean hasAsSourceAndSelector(ShapeNode s, Selector sel) {
+		return this.s.equals(s) && this.sel.equals(sel);
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime= 31;
