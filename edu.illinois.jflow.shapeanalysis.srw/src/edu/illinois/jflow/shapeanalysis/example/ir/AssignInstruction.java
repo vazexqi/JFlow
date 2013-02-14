@@ -48,7 +48,7 @@ public final class AssignInstruction extends FictionalIR<StaticShapeGraph> {
 			for (SelectorEdge se : in.getSelectorEdges()) {
 				ShapeNode newSource= se.s.addNameIfContains(getLhs(), getRhs());
 				ShapeNode newTo= se.t.addNameIfContains(getLhs(), getRhs());
-				next.addSelectorEdge(new SelectorEdge(newSource, sel, newTo));
+				next.addSelectorEdge(new SelectorEdge(newSource, se.sel, newTo));
 			}
 
 			// isShared
