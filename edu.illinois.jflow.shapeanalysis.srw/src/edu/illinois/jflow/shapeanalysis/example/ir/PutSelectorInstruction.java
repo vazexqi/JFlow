@@ -39,12 +39,12 @@ public final class PutSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 
 			// VariableEdges - no change, just copy over
 			for (VariableEdge ve : in.getVariableEdges()) {
-				next.addVariableEdge(new VariableEdge(ve));
+				next.addVariableEdge(ve);
 			}
 
 			// SelectorEdges - copy over old edges
 			for (SelectorEdge se : in.getSelectorEdges()) {
-				next.addSelectorEdge(new SelectorEdge(se));
+				next.addSelectorEdge(se);
 			}
 
 			// SelectorEdges - add new edges
@@ -60,13 +60,16 @@ public final class PutSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 
 			// isShared
 			Set<ShapeNode> pointsToOfY= in.pointsToOfVariable(getRhs());
-			for (ShapeNode s : in.getIsShared().keySet()) {
+			for (ShapeNode s : pointsToOfY) {
 				boolean originalSharing= in.isShared(s);
-				if (pointsToOfY.contains(s)) {
-					next.addIsSharedMapping(s, originalSharing || in.iis(s));
-				} else {
-					next.addIsSharedMapping(s, originalSharing);
+				boolean isIIS= in.iis(s);
+				if (originalSharing || isIIS) {
+					next.addIsSharedMapping(new ShapeNode(s), true);
 				}
+			}
+
+			for (ShapeNode s : in.getIsShared().keySet()) {
+				next.addIsSharedMapping(new ShapeNode(s), in.isShared(s));
 			}
 
 			if (!out.sameValue(next)) {

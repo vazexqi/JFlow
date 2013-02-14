@@ -130,7 +130,7 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 				}
 			}
 			if (hasNonSharedShapeNodes) {
-				sb.append("Not empty but all shapenodes are not shared");
+				sb.append("All shapenodes are not shared");
 			}
 		}
 
@@ -160,7 +160,7 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 
 		for (VariableEdge ve : variableEdges) {
 			if (ve.v.equals(x)) {
-				pointsTo.add(ve.n);
+				pointsTo.add(new ShapeNode(ve.n));
 			}
 		}
 
