@@ -41,7 +41,7 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 			// VariableEdges 
 			// 1) Copy over old edges
 			for (VariableEdge ve : in.getVariableEdges()) {
-				next.addVariableEdge(new VariableEdge(ve));
+				next.addVariableEdge(ve);
 			}
 
 			Set<ShapeNode> allThingsPointedByYThroughSelector= new HashSet<ShapeNode>();
