@@ -3,7 +3,6 @@ package edu.illinois.jflow.shapeanalysis.example.ir;
 import com.ibm.wala.fixpoint.UnaryOperator;
 
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.PointerVariable;
-import edu.illinois.jflow.shapenalaysis.shapegraph.structures.Selector;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.SelectorEdge;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.ShapeNode;
 import edu.illinois.jflow.shapenalaysis.shapegraph.structures.StaticShapeGraph;
@@ -38,7 +37,7 @@ public final class AssignNilInstruction extends FictionalIR<StaticShapeGraph> {
 			for (VariableEdge ve : in.getVariableEdges()) {
 				if (!ve.v.equals(getLhs())) {
 					ShapeNode newName= ve.n.removeName(getLhs());
-					next.addVariableEdge(new VariableEdge(new PointerVariable(ve.v), newName));
+					next.addVariableEdge(new VariableEdge(ve.v, newName));
 				}
 			}
 
@@ -46,7 +45,7 @@ public final class AssignNilInstruction extends FictionalIR<StaticShapeGraph> {
 			for (SelectorEdge se : in.getSelectorEdges()) {
 				ShapeNode newFrom= se.s.removeName(getLhs());
 				ShapeNode newTo= se.t.removeName(getLhs());
-				next.addSelectorEdge(new SelectorEdge(newFrom, new Selector(se.sel), newTo));
+				next.addSelectorEdge(new SelectorEdge(newFrom, se.sel, newTo));
 			}
 
 			// isShared
