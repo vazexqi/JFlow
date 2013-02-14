@@ -37,20 +37,18 @@ public final class AssignInstruction extends FictionalIR<StaticShapeGraph> {
 			// VariablesEdges - Add new bindings for x
 			for (VariableEdge ve : in.getVariableEdges()) {
 				if (ve.n.containsName(getRhs())) {
-					PointerVariable x= new PointerVariable(getLhs());
-					next.addVariableEdge(new VariableEdge(x, ve.n.addNameIfContains(x, getRhs())));
+					next.addVariableEdge(new VariableEdge(getLhs(), ve.n.addNameIfContains(getLhs(), getRhs())));
 				}
 			}
 			// VariableEdges - Update old bindings for everything that y pointed to
 			for (VariableEdge ve : in.getVariableEdges()) {
-				PointerVariable x= new PointerVariable(getLhs());
-				next.addVariableEdge(new VariableEdge(new PointerVariable(ve.v), ve.n.addNameIfContains(x, getRhs())));
+				next.addVariableEdge(new VariableEdge(ve.v, ve.n.addNameIfContains(getLhs(), getRhs())));
 			}
 
 			// SelectorEdges - Update everything that y pointed to also include x
 			for (SelectorEdge se : in.getSelectorEdges()) {
-				ShapeNode newSource= se.s.addNameIfContains(new PointerVariable(getLhs()), getRhs());
-				ShapeNode newTo= se.t.addNameIfContains(new PointerVariable(getLhs()), getRhs());
+				ShapeNode newSource= se.s.addNameIfContains(getLhs(), getRhs());
+				ShapeNode newTo= se.t.addNameIfContains(getLhs(), getRhs());
 				next.addSelectorEdge(new SelectorEdge(newSource, new Selector(se.sel), newTo));
 			}
 
