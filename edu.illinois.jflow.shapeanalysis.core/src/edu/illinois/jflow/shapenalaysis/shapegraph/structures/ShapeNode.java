@@ -90,6 +90,21 @@ public final class ShapeNode {
 		return result;
 	}
 
+	/////////////////////////////////////////////////////////////////////////////
+	// IMPORTANT
+	// The definition of not equals is not just !equals. There is a second clause
+	// that checks for phi. Use this for compatiblity checks in x := y.sel
+	/////////////////////////////////////////////////////////////////////////////
+	public boolean semanticallyNotEquals(ShapeNode other) {
+		boolean isPhiOnly= false;
+
+		if (this.name.size() == 1 && other.name.size() == 1) {
+			isPhiOnly= this.name.contains(phiVariable) && other.name.contains(phiVariable);
+		}
+
+		return !this.equals(other) || isPhiOnly;
+	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)

@@ -93,7 +93,7 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 					}
 
 					//Compatible out
-					for (SelectorEdge candidate : in.selectorEdgesStartingFrom(original.s)) {
+					for (SelectorEdge candidate : in.selectorEdgesStartingFrom(original.t)) {
 						if (compatibleOut(original, candidate, in)) {
 							next.addSelectorEdge(new SelectorEdge(candidate.s.addName(getLhs()), candidate.sel, candidate.t));
 						}
@@ -135,11 +135,10 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 				return false;
 
 			boolean condition0= ShapeNode.isCompatible(ny, nz, nw);
-			// Skip this condition with the above if statement
-			// boolean condition1= !nz.equals(nw);
+			boolean condition1= nz.semanticallyNotEquals(nw);
 			boolean condition2= (ny.equals(nw) && s1.sel.equals(s2.sel)) || in.isShared(nz);
 
-			return condition0 && condition2;
+			return condition0 && condition1 && condition2;
 		}
 
 		// s1 = <ny, sel, nz>
@@ -150,7 +149,7 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 			ShapeNode ny= s1.s;
 			ShapeNode nz= s1.t;
 
-			if (!s2.s.equals(s2.t)) // If they are not equal then it will be handled by compatibleIn
+			if (!s2.s.equals(s2.t)) // If they do not "match" then it will be handled by compatibleIn
 				return false;
 
 			boolean condition0= ShapeNode.isCompatible(ny, nz);
@@ -162,15 +161,15 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 		// s1 = <ny, sel, nz>
 		// s2 = <nz, sel', nw>
 		boolean compatibleOut(SelectorEdge s1, SelectorEdge s2, StaticShapeGraph in) {
-			if (!s1.t.equals(s2.s)) // If they are not the same, then skip, don't handle
+			if (!s1.t.equals(s2.s)) // If they do not "match", then skip, don't handle
 				return false;
 
 			ShapeNode ny= s1.s;
 			ShapeNode nz= s1.t;
 			ShapeNode nw= s2.t;
 			boolean condition0= ShapeNode.isCompatible(ny, nz, nw);
-			boolean condition1= !nz.equals(nw);
-			boolean condition2= !ny.equals(nz) || !s1.sel.equals(s2.sel);
+			boolean condition1= nz.semanticallyNotEquals(nw);
+			boolean condition2= ny.semanticallyNotEquals(nz) || !s1.sel.equals(s2.sel);
 
 			return condition0 && condition1 && condition2;
 		}
