@@ -34,14 +34,14 @@ public final class NewInstruction extends FictionalIR<StaticShapeGraph> {
 
 			// VariableEdges - copy over all old edges and add a new edge for the newly allocated x
 			for (VariableEdge ve : in.getVariableEdges()) {
-				next.addVariableEdge(new VariableEdge(ve));
+				next.addVariableEdge(ve);
 			}
 			PointerVariable x= new PointerVariable(getLhs());
-			next.addVariableEdge(new VariableEdge(x, new ShapeNode(x)));
+			next.addVariableEdge(new VariableEdge(getLhs(), new ShapeNode(x)));
 
 			// SelectorEdges - no change, just copy over
 			for (SelectorEdge se : in.getSelectorEdges()) {
-				next.addSelectorEdge(new SelectorEdge(se));
+				next.addSelectorEdge(se);
 			}
 
 			// isShared - no change since the shared status of the newly allocated x is assumed to be false by default

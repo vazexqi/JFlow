@@ -22,9 +22,8 @@ public final class ShapeNode {
 	}
 
 	public ShapeNode(ShapeNode other) {
-		// Perform deep copy
 		for (PointerVariable p : other.name) {
-			name.add(new PointerVariable(p));
+			name.add(p);
 		}
 	}
 
@@ -52,7 +51,7 @@ public final class ShapeNode {
 		assert !toAdd.equals(phiVariable); // Cannot add a phi variable
 
 		ShapeNode newNode= new ShapeNode(this);
-		newNode.name.add(new PointerVariable(toAdd));
+		newNode.name.add(toAdd);
 		if (newNode.containsName(phiVariable)) {
 			newNode.name.remove(phiVariable);
 		}
