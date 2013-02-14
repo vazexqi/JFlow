@@ -121,15 +121,14 @@ public class StaticShapeGraph extends AbstractVariable<StaticShapeGraph> {
 			sb.append("EMPTY");
 		} else {
 			// Only print out the ones that are true. Note that due to the updates (i.e., flipping from true -> false) we might see entries with false values. We don't print those out.
-			boolean hasNonSharedShapeNodes= false;
+			boolean hasSharedShapeNodes= false;
 			for (ShapeNode node : isShared.keySet()) {
 				if (isShared.get(node)) {
 					sb.append(String.format("%s%n", node));
-				} else {
-					hasNonSharedShapeNodes= true;
+					hasSharedShapeNodes= true;
 				}
 			}
-			if (hasNonSharedShapeNodes) {
+			if (!hasSharedShapeNodes) {
 				sb.append("All shapenodes are not shared");
 			}
 		}

@@ -54,17 +54,23 @@ public final class PutNilInstruction extends FictionalIR<StaticShapeGraph> {
 			}
 
 			// isShared
+			// TODO: This is a bit tricky, maybe refactor to less optimized version?
+
+			// Copy all the old values over first. This is safe since the next for loop is using a && operation.
+			// At worse, it will give a false value, forcing us to store a false value inside the isShared map.
+			for (ShapeNode s : in.getIsShared().keySet()) {
+				next.addIsSharedMapping(new ShapeNode(s), in.isShared(s));
+			}
+
 			Set<ShapeNode> allThingsPointedByXThroughSelector= new HashSet<ShapeNode>();
 			for (ShapeNode s : in.pointsToOfVariable(getLhs())) {
 				allThingsPointedByXThroughSelector.addAll(in.pointsToOfShapeNodeThroughSelector(s, getSel()));
 			}
 
-			for (ShapeNode s : in.getIsShared().keySet()) {
-				if (allThingsPointedByXThroughSelector.contains(s)) {
-					next.addIsSharedMapping(new ShapeNode(s), in.isShared(s) && in.iis(s));
-				} else {
-					next.addIsSharedMapping(new ShapeNode(s), in.isShared(s));
-				}
+			for (ShapeNode s : allThingsPointedByXThroughSelector) {
+				boolean originalSharing= in.isShared(s);
+				boolean isIIS= next.iis(s);
+				next.addIsSharedMapping(new ShapeNode(s), originalSharing && isIIS);
 			}
 
 
