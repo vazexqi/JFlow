@@ -42,7 +42,7 @@ public class ReverseLinkedListNormalizedCFGFactory {
 		instr[4]= new AssignNilInstruction(new PointerVariable("y")); // y := nil
 		instr[5]= new AssignInstruction(new PointerVariable("y"), new PointerVariable("x")); // y := x
 		instr[6]= new AssignNilInstruction(new PointerVariable("t1")); // t1 := nil
-		instr[7]= new GetSelectorInstruction(new PointerVariable("t1"), new Selector("cdr"), new PointerVariable("x")); // t1 := x.cdr
+		instr[7]= new GetSelectorInstruction(new PointerVariable("t1"), new PointerVariable("x"), new Selector("cdr")); // t1 := x.cdr
 		instr[8]= new AssignNilInstruction(new PointerVariable("x")); // x := nil
 		instr[9]= new AssignInstruction(new PointerVariable("x"), new PointerVariable("t1")); // x := t1
 		instr[10]= new PutNilInstruction(new PointerVariable("y"), new Selector("cdr")); // y.cdr := nil

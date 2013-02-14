@@ -16,7 +16,7 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
  * x := y.sel
  */
 public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> {
-	public GetSelectorInstruction(PointerVariable lhs, Selector sel, PointerVariable rhs) {
+	public GetSelectorInstruction(PointerVariable lhs, PointerVariable rhs, Selector sel) {
 		this.lhs= lhs;
 		this.sel= sel;
 		this.rhs= rhs;
