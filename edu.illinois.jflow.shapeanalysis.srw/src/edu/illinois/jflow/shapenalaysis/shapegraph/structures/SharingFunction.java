@@ -18,7 +18,10 @@ public class SharingFunction extends HashMap<ShapeNode, Boolean> {
 	private static final long serialVersionUID= 1L;
 
 	public SharingFunction(SharingFunction other) {
-		super(other);
+		super();
+		for (ShapeNode s : other.keySet()) {
+			put(new ShapeNode(s), other.get(s));
+		}
 	}
 
 	public SharingFunction() {
