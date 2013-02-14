@@ -55,7 +55,7 @@ public final class AssignInstruction extends FictionalIR<StaticShapeGraph> {
 			// isShared
 			for (ShapeNode s : in.getIsShared().keySet()) {
 				Boolean resultofShapeNode= in.isShared(s.removeName(getLhs()));
-				next.getIsShared().put(new ShapeNode(s), resultofShapeNode);
+				next.addIsSharedMapping(new ShapeNode(s), resultofShapeNode);
 			}
 
 			if (!out.sameValue(next)) {
