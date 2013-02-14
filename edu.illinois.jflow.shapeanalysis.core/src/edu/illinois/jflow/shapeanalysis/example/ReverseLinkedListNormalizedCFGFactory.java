@@ -25,7 +25,7 @@ import edu.illinois.jflow.shapenalaysis.shapegraph.structures.VariableEdge;
  * @author nchen
  * 
  */
-public class LinkedListNormalizedCFGFactory {
+public class ReverseLinkedListNormalizedCFGFactory {
 
 	public static FictionalIR<StaticShapeGraph>[] instr;
 
@@ -76,7 +76,7 @@ public class LinkedListNormalizedCFGFactory {
 		graph.addEdge(instr[1], instr[12]);
 
 		// Add initial values 
-		instr[0].setInitialValue(LinkedListNormalizedCFGFactory.initialState());
+		instr[0].setInitialValue(ReverseLinkedListNormalizedCFGFactory.initialState());
 
 		return graph;
 	}

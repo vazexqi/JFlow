@@ -90,23 +90,4 @@ public class ShapeAnalysis {
 			return this;
 		}
 	}
-
-	public static void main(String[] args) {
-		ShapeAnalysisDataflowSolver solver= new ShapeAnalysisDataflowSolver(new ShapeAnalysisFramework(LinkedListNormalizedCFGFactory.createCFG(), new ShapeAnalysisTransferFunctionProvider()));
-		DataflowSolver<FictionalIR<StaticShapeGraph>, StaticShapeGraph> solution= solver.solve();
-
-		FictionalIR<StaticShapeGraph>[] ir= LinkedListNormalizedCFGFactory.instr;
-		for (int i= 0; i < ir.length; i++) {
-			System.out.println("[" + i + "] " + ir[i]);
-			System.out.println("---");
-
-			System.out.println("(IN)");
-			StaticShapeGraph in= solution.getIn(ir[i]);
-			System.out.println(in);
-
-			System.out.println("(OUT)");
-			StaticShapeGraph out= solution.getOut(ir[i]);
-			System.out.println(out);
-		}
-	}
 }
