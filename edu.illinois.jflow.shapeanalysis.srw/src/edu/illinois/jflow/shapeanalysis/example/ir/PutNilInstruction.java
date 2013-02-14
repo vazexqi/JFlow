@@ -40,7 +40,7 @@ public final class PutNilInstruction extends FictionalIR<StaticShapeGraph> {
 
 			// VariableEdges - no change, just copy over
 			for (VariableEdge ve : in.getVariableEdges()) {
-				next.addVariableEdge(new VariableEdge(ve));
+				next.addVariableEdge(ve);
 			}
 
 			// SelectorEdges
@@ -49,7 +49,7 @@ public final class PutNilInstruction extends FictionalIR<StaticShapeGraph> {
 					// Skip this one since it has been nullified
 				} else {
 					// Copy it over
-					next.addSelectorEdge(new SelectorEdge(se.s, se.sel, se.t));
+					next.addSelectorEdge(se);
 				}
 			}
 
