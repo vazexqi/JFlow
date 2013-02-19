@@ -69,7 +69,7 @@ public final class NewInstruction extends FictionalIR<StaticShapeGraph> {
 
 		@Override
 		public String toString() {
-			return "StaticShapeGraph new transfer function";
+			return "[StaticShapeGraph new transfer function] " + NewInstruction.this.toString();
 		}
 
 	}

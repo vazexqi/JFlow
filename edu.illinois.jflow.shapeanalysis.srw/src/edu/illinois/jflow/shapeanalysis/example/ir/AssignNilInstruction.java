@@ -75,7 +75,7 @@ public final class AssignNilInstruction extends FictionalIR<StaticShapeGraph> {
 
 		@Override
 		public String toString() {
-			return "StaticShapeGraph assign nil transfer function";
+			return "[StaticShapeGraph assign nil transfer function] " + AssignNilInstruction.this.toString();
 		}
 
 	}

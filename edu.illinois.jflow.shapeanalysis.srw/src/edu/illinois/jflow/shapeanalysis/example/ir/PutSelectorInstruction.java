@@ -96,7 +96,7 @@ public final class PutSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 
 		@Override
 		public String toString() {
-			return "StaticShapeGraph put nil transfer function";
+			return "[StaticShapeGraph put nil transfer function] " + PutSelectorInstruction.this.toString();
 		}
 
 	}

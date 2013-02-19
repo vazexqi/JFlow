@@ -77,7 +77,7 @@ public final class AssignInstruction extends FictionalIR<StaticShapeGraph> {
 
 		@Override
 		public String toString() {
-			return "StaticShapeGraph assign transfer function";
+			return "[StaticShapeGraph assign transfer function] " + AssignInstruction.this.toString();
 		}
 
 	}

@@ -186,7 +186,7 @@ public final class GetSelectorInstruction extends FictionalIR<StaticShapeGraph> 
 
 		@Override
 		public String toString() {
-			return "StaticShapeGraph get selector transfer function";
+			return "[StaticShapeGraph get selector transfer function] " + GetSelectorInstruction.this.toString();
 		}
 
 	}

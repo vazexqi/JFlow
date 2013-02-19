@@ -94,7 +94,7 @@ public final class PutNilInstruction extends FictionalIR<StaticShapeGraph> {
 
 		@Override
 		public String toString() {
-			return "StaticShapeGraph put nil transfer function";
+			return "[StaticShapeGraph put nil transfer function] " + PutNilInstruction.this.toString();
 		}
 
 	}
