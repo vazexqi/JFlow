@@ -69,11 +69,4 @@ public class SSGMeetOperator extends AbstractMeetOperator<StaticShapeGraph> {
 			return NOT_CHANGED;
 		}
 	}
-
-	@Override
-	public boolean isUnaryNoOp() {
-		return false;
-	}
-
-
 }

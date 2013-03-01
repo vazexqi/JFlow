@@ -197,8 +197,8 @@ Variable Edges:
 [t1,N{y,t1,x}]
 [y,N{y,x}]
 [x,N{y,t1,x}]
-[x,N{y,x}]
 [y,N{y,t1,x}]
+[x,N{y,x}]
 [t,N{t}]
 
 Selector Edges:
@@ -455,13 +455,8 @@ Shared nodes
 All shapenodes are not shared
 (OUT)
 Variable Edges:
-[x,N{x}]
-[y,N{y}]
-
+EMPTY
 Selector Edges:
-<N{y},cdr,N{phi}>
-<N{phi},cdr,N{phi}>
-<N{x},cdr,N{phi}>
-
+EMPTY
 Shared nodes
-All shapenodes are not shared
+EMPTY
