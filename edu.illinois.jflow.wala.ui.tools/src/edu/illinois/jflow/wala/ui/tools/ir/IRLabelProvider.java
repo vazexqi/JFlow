@@ -1,5 +1,6 @@
 package edu.illinois.jflow.wala.ui.tools.ir;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
 import org.eclipse.draw2d.IFigure;
@@ -20,7 +21,6 @@ import com.ibm.wala.ssa.SSAGetCaughtExceptionInstruction;
 import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.ssa.SSAPhiInstruction;
 import com.ibm.wala.ssa.SSAPiInstruction;
-import com.ibm.wala.util.strings.StringStuff;
 
 public class IRLabelProvider extends LabelProvider implements IEntityStyleProvider {
 
@@ -39,11 +39,13 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			BasicBlock bb= (BasicBlock)element;
 			IR ir= irView.getIR();
 
-			StringBuffer result= new StringBuffer();
+			StringBuilder result= new StringBuilder();
 
 			int start= bb.getFirstInstructionIndex();
 			int end= bb.getLastInstructionIndex();
+
 			result.append("BB").append(bb.getNumber());
+
 			if (bb.isEntryBlock()) {
 				result.append(" (en)\n");
 			} else if (bb.isExitBlock()) {
@@ -53,6 +55,7 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 				result.append("<Handler>");
 			}
 			result.append("\n");
+
 			for (Iterator<SSAPhiInstruction> it= bb.iteratePhis(); it.hasNext();) {
 				SSAPhiInstruction phi= it.next();
 				if (phi != null) {
@@ -71,10 +74,11 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			SSAInstruction[] instructions= ir.getInstructions();
 			for (int j= start; j <= end; j++) {
 				if (instructions[j] != null) {
-					StringBuffer x= new StringBuffer(j + "   " + instructions[j].toString(ir.getSymbolTable()));
-					StringStuff.padWithSpaces(x, 35);
-					result.append(x);
-					// result.append(ir.instructionPosition(j));
+					StringBuilder x= new StringBuilder(j + "   " + instructions[j].toString(ir.getSymbolTable()));
+					String padded= String.format("%1$-35s", x.toString());
+					result.append(padded);
+					result.append("\n");
+					result.append(SSAValuesToLocalVariables(instructions[j], j, ir));
 					result.append("\n");
 				}
 			}
@@ -90,6 +94,28 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			return "\n";
 		}
 		return "";
+	}
+
+	private static String SSAValuesToLocalVariables(SSAInstruction instr, int instructionIndex, IR ir) {
+		StringBuilder sb= new StringBuilder();
+
+		int numDefs= instr.getNumberOfDefs();
+		sb.append("[DEF: ");
+		for (int i= 0; i < numDefs; i++) {
+			int def= instr.getDef(i);
+			sb.append(String.format("v%s=%s, ", def, Arrays.toString(ir.getLocalNames(instructionIndex, def))));
+		}
+		sb.append("]");
+
+		int numUses= instr.getNumberOfUses();
+		sb.append("[USE: ");
+		for (int i= 0; i < numUses; i++) {
+			int def= instr.getUse(i);
+			sb.append(String.format("v%s=%s, ", def, Arrays.toString(ir.getLocalNames(instructionIndex, def))));
+		}
+		sb.append("]");
+
+		return sb.toString();
 	}
 
 	@Override
