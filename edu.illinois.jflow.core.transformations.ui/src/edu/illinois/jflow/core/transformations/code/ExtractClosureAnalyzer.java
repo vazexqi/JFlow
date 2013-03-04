@@ -65,15 +65,16 @@ import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.base.JavaStatusContext;
 import org.eclipse.jdt.internal.corext.refactoring.code.LocalTypeAnalyzer;
-import org.eclipse.jdt.internal.corext.refactoring.code.flow.FlowContext;
-import org.eclipse.jdt.internal.corext.refactoring.code.flow.FlowInfo;
-import org.eclipse.jdt.internal.corext.refactoring.code.flow.InOutFlowAnalyzer;
-import org.eclipse.jdt.internal.corext.refactoring.code.flow.InputFlowAnalyzer;
 import org.eclipse.jdt.internal.corext.refactoring.util.CodeAnalyzer;
 import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
+
+import edu.illinois.jflow.core.code.flow.FlowContext;
+import edu.illinois.jflow.core.code.flow.FlowInfo;
+import edu.illinois.jflow.core.code.flow.InOutFlowAnalyzer;
+import edu.illinois.jflow.core.code.flow.InputFlowAnalyzer;
 
 /**
  * Analyzes the "flow" in the selected statements to find potential reads/writes.
