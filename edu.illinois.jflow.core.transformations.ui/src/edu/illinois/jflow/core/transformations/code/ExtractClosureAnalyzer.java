@@ -393,6 +393,8 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 		if (body != lastSelectedNode) {
 			Block block= (Block)body;
+			@SuppressWarnings("unchecked")
+			// This is safe because block.statements() returns a list of statement type
 			List<Statement> statements= block.statements();
 			ASTNode lastStatementInLoop= statements.get(statements.size() - 1);
 			if (lastSelectedNode != lastStatementInLoop)
