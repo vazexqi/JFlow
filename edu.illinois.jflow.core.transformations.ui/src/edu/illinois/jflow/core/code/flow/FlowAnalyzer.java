@@ -821,12 +821,10 @@ abstract class FlowAnalyzer extends GenericVisitor {
 		IBinding binding= node.resolveBinding();
 		if (binding instanceof IVariableBinding) {
 			IVariableBinding variable= (IVariableBinding)binding;
-			if (!variable.isField()) {
-				setFlowInfo(node, new LocalFlowInfo(
-						variable,
-						FlowInfo.READ,
-						fFlowContext));
-			}
+			// TODO: Unsuppress field access
+			/*if (!variable.isField()) {*/
+			setFlowInfo(node, new LocalFlowInfo(variable, FlowInfo.READ, fFlowContext));
+			/*}*/
 		} else if (binding instanceof ITypeBinding) {
 			ITypeBinding type= (ITypeBinding)binding;
 			if (type.isTypeVariable()) {
@@ -857,7 +855,8 @@ abstract class FlowAnalyzer extends GenericVisitor {
 		IVariableBinding binding= node.resolveBinding();
 		LocalFlowInfo nameInfo= null;
 		Expression initializer= node.getInitializer();
-		if (binding != null && !binding.isField() && initializer != null) {
+		// TODO: Unsuppress field access
+		if (/*binding != null && !binding.isField() &&*/initializer != null) {
 			nameInfo= new LocalFlowInfo(binding, FlowInfo.WRITE, fFlowContext);
 		}
 		GenericSequentialFlowInfo info= processSequential(node, node.getType(), initializer);
@@ -995,7 +994,8 @@ abstract class FlowAnalyzer extends GenericVisitor {
 		IVariableBinding binding= node.resolveBinding();
 		LocalFlowInfo nameInfo= null;
 		Expression initializer= node.getInitializer();
-		if (binding != null && !binding.isField() && initializer != null) {
+		// TODO: Unsuppress field access
+		if (/*binding != null && !binding.isField() && */initializer != null) {
 			nameInfo= new LocalFlowInfo(binding, FlowInfo.WRITE, fFlowContext);
 		}
 		GenericSequentialFlowInfo info= processSequential(node, initializer);
