@@ -59,23 +59,34 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			for (Iterator<SSAPhiInstruction> it= bb.iteratePhis(); it.hasNext();) {
 				SSAPhiInstruction phi= it.next();
 				if (phi != null) {
-					result.append("           " + phi.toString(ir.getSymbolTable())).append("\n");
+					result.append(phi.toString(ir.getSymbolTable())).append("\n");
 				}
 			}
 			if (bb instanceof ExceptionHandlerBasicBlock) {
 				ExceptionHandlerBasicBlock ebb= (ExceptionHandlerBasicBlock)bb;
 				SSAGetCaughtExceptionInstruction s= ebb.getCatchInstruction();
 				if (s != null) {
-					result.append("           " + s.toString(ir.getSymbolTable())).append("\n");
+					result.append(s.toString(ir.getSymbolTable())).append("\n");
 				} else {
-					result.append("           " + " No catch instruction. Unreachable?\n");
+					result.append(" No catch instruction. Unreachable?\n");
 				}
 			}
+
 			SSAInstruction[] instructions= ir.getInstructions();
+			IBytecodeMethod method= (IBytecodeMethod)ir.getMethod();
 			for (int j= start; j <= end; j++) {
 				if (instructions[j] != null) {
-					StringBuilder x= new StringBuilder(j + "   " + instructions[j].toString(ir.getSymbolTable()));
-					String padded= String.format("%1$-35s", x.toString());
+					int bytecodeIndex;
+					String x;
+					try {
+						bytecodeIndex= method.getBytecodeIndex(j);
+						int sourceLineNum= method.getLineNumber(bytecodeIndex);
+						x= String.format(j + " [L%03d] " + instructions[j].toString(ir.getSymbolTable()), sourceLineNum);
+					} catch (InvalidClassFileException e) {
+						e.printStackTrace();
+						x= String.format(j + "   " + instructions[j].toString(ir.getSymbolTable()));
+					}
+					String padded= String.format("%1$-35s", x);
 					result.append(padded);
 					result.append("\n");
 					result.append(SSAValuesToLocalVariables(instructions[j], j, ir));
