@@ -49,7 +49,6 @@ public class GeneratePDGAction extends Action {
 					IMethod resolvedMethod= classHierarchy.resolveMethod(method);
 					if (resolvedMethod != null) {
 						AnalysisOptions options= new AnalysisOptions();
-						options.getSSAOptions().setPiNodePolicy(SSAOptions.getAllBuiltInPiNodes());
 						AnalysisCache cache= new AnalysisCache();
 
 						try {
