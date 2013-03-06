@@ -1,4 +1,4 @@
-package edu.illinois.jflow.wala.ui.tools.PDG;
+package edu.illinois.jflow.wala.ui.tools.pdg;
 
 import java.io.IOException;
 import java.util.ArrayList;

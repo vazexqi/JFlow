@@ -28,6 +28,13 @@
             name="WALA IR"
             restorable="true">
       </view>
+      <view
+            category="edu.illinois.jflow.wala.ui.tools.category"
+            class="edu.illinois.jflow.ui.tools.pdg.PDGView"
+            id="edu.illinois.jflow.ui.tools.pdg.pdgview"
+            name="PDG"
+            restorable="true">
+      </view>
    </extension>
 
 </plugin>

@@ -31,4 +31,16 @@ public class Statement {
 	public int getLineNumber() {
 		return lineNumber;
 	}
+
+	public String printInstructions() {
+		StringBuilder sb= new StringBuilder();
+
+		sb.append(String.format("LINE: %d%n", lineNumber));
+		for (SSAInstruction instr : instructions) {
+			sb.append(instr);
+			sb.append("\n");
+		}
+
+		return sb.toString();
+	}
 }

@@ -58,14 +58,6 @@ public class GenerateIRAction extends Action {
 
 						try {
 							IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
-
-							try {
-								ProgramDependenceGraph hack= ProgramDependenceGraph.make(ir);
-								hack.getNumberOfNodes();
-							} catch (InvalidClassFileException e) {
-								e.printStackTrace();
-							}
-
 							Graph<? extends ISSABasicBlock> graph= ir.getControlFlowGraph();
 							graph= CFGSanitizer.sanitize(ir, classHierarchy);
 							IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
