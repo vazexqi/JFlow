@@ -27,9 +27,15 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 
 	private IR ir;
 
+	// Maps a line number (in the text editor) to a statement
 	private Map<Integer, Statement> sourceLineMapping;
 
+	// Maps the particular SSAInstruction to the containing statement
 	private Map<SSAInstruction, Statement> instruction2Statement;
+
+	// Maps the particular SSAInstruction to its index in the IR instruction array
+	// The index is needed for determining the local names
+	private Map<SSAInstruction, Integer> instruction2Index;
 
 	public static ProgramDependenceGraph make(IR ir) throws InvalidClassFileException {
 		ProgramDependenceGraph g= new ProgramDependenceGraph(ir);
@@ -41,6 +47,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 		super("");
 		sourceLineMapping= new HashMap<Integer, Statement>();
 		instruction2Statement= new HashMap<SSAInstruction, Statement>();
+		instruction2Index= new HashMap<SSAInstruction, Integer>();
 		this.ir= ir;
 	}
 
@@ -69,7 +76,9 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 					int SSAVariable= instruction.getDef(def);
 					for (SSAInstruction use : Iterator2Iterable.make(DU.getUses(SSAVariable))) {
 						Statement useStatement= instruction2Statement.get(use);
-						addEdge(defStatement, useStatement, SSAVariableToLocalNameIfPossible(index, ir, SSAVariable));
+						if (useStatement == null)
+							System.err.println("Null statement for instruction: " + use);
+						addEdge(defStatement, useStatement, SSAVariableToLocalNameIfPossible(instruction2Index.get(use), ir, SSAVariable));
 					}
 				}
 			}
@@ -83,7 +92,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 		if (localNames != null) {
 			sb.append(Arrays.toString(localNames));
 		} else {
-			sb.append(Integer.toString(SSAVariable));
+			sb.append(String.format("v%d", SSAVariable));
 		}
 		return sb.toString();
 	}
@@ -93,7 +102,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 		SSAInstruction[] instructions= ir.getInstructions();
 		for (int index= 0; index < instructions.length; index++) {
 			int lineNumber= getLineNumber(index, method);
-			mapInstruction(lineNumber, instructions[index]);
+			mapInstruction(lineNumber, instructions[index], index);
 		}
 	}
 
@@ -116,23 +125,26 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 	 * instruction(s))</li>
 	 * <li>Creates a mapping from instruction to statement for fast access (instruction -&gt;
 	 * statement)</li>
+	 * <li>Creates a mapping from instruction to their index in the IR instruction array.</li>
 	 * </ol>
 	 * 
 	 * @param lineNumber The corresponding line number in the source file
-	 * @param SSAInstruction The instruction we are handling
+	 * @param instruction The instruction we are handling
+	 * @param index The index of the instruction in the IR instruction arra
 	 */
-	private void mapInstruction(int lineNumber, SSAInstruction SSAInstruction) {
+	private void mapInstruction(int lineNumber, SSAInstruction instruction, int index) {
 		if (DEBUG) {
-			System.out.println("LINE: " + lineNumber + ": " + SSAInstruction);
+			System.out.println("LINE: " + lineNumber + ": " + instruction);
 		}
-		if (SSAInstruction != null) {
+		if (instruction != null) {
 			Statement statement= sourceLineMapping.get(lineNumber);
 			if (statement == null) {
 				statement= new Statement(lineNumber);
 				sourceLineMapping.put(lineNumber, statement);
 			}
-			statement.add(SSAInstruction);
-			instruction2Statement.put(SSAInstruction, statement);
+			statement.add(instruction);
+			instruction2Statement.put(instruction, statement);
+			instruction2Index.put(instruction, index);
 		}
 	}
 

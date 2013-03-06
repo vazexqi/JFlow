@@ -16,15 +16,12 @@ import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
 import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
-import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.ssa.ISSABasicBlock;
-import com.ibm.wala.ssa.SSAOptions;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.WalaException;
 import com.ibm.wala.util.graph.Graph;
 
-import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.ui.tools.graph.jdt.util.JavaEditorUtil;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
@@ -53,7 +50,6 @@ public class GenerateIRAction extends Action {
 					IMethod resolvedMethod= classHierarchy.resolveMethod(method);
 					if (resolvedMethod != null) {
 						AnalysisOptions options= new AnalysisOptions();
-						options.getSSAOptions().setPiNodePolicy(SSAOptions.getAllBuiltInPiNodes());
 						AnalysisCache cache= new AnalysisCache();
 
 						try {
