@@ -5,12 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jface.action.Action;
 
+import com.ibm.wala.cast.java.loader.JavaSourceLoaderImpl;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
@@ -22,7 +24,6 @@ import com.ibm.wala.ipa.slicer.SDG;
 import com.ibm.wala.ipa.slicer.Slicer.ControlDependenceOptions;
 import com.ibm.wala.ipa.slicer.Slicer.DataDependenceOptions;
 import com.ibm.wala.ipa.slicer.Statement;
-import com.ibm.wala.types.ClassLoaderReference;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
 import com.ibm.wala.util.Predicate;
@@ -48,8 +49,8 @@ public class GeneratePDG extends Action {
 		if (javaEditor != null) {
 			ICompilationUnit inputAsCompilationUnit= SelectionConverter.getInputAsCompilationUnit(javaEditor);
 			IJavaProject javaProject= inputAsCompilationUnit.getJavaProject();
-			AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(javaProject);
 			try {
+				AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(javaProject);
 				CallGraphBuilder builder= engine.defaultCallGraphBuilder();
 				CallGraph callGraph= engine.buildDefaultCallGraph();
 				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit, engine.getClassHierarchy());
@@ -66,7 +67,7 @@ public class GeneratePDG extends Action {
 
 							@Override
 							public boolean test(Statement node) {
-								if (node.getNode().getMethod().getDeclaringClass().getClassLoader().getReference().equals(ClassLoaderReference.Application)) {
+								if (node.getNode().getMethod().getDeclaringClass().getClassLoader() instanceof JavaSourceLoaderImpl) {
 									if (node.getNode().equals(sdg.getCallGraph().getFakeRootNode())) {
 										return false;
 									} else if (node instanceof MethodExitStatement || node instanceof MethodEntryStatement) {
@@ -87,6 +88,8 @@ public class GeneratePDG extends Action {
 			} catch (CancelException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (CoreException e) {
 				e.printStackTrace();
 			}
 

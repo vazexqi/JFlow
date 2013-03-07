@@ -4,7 +4,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.ibm.wala.classLoader.IBytecodeMethod;
+import com.ibm.wala.cast.java.loader.JavaSourceLoaderImpl.ConcreteJavaMethod;
+import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.DefUse;
 import com.ibm.wala.ssa.IR;
@@ -104,7 +105,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 		SSAInstruction[] instructions= ir.getInstructions();
 
 		//1. Create statements for normal instructions
-		IBytecodeMethod method= (IBytecodeMethod)ir.getMethod();
+		IMethod method= ir.getMethod();
 		for (int index= 0; index < instructions.length; index++) {
 			int lineNumber= getLineNumber(index, method);
 			mapInstruction(lineNumber, instructions[index], index);
@@ -145,9 +146,8 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 		return null;
 	}
 
-	private int getLineNumber(int index, IBytecodeMethod method) throws InvalidClassFileException {
-		int byteCodeIndex= method.getBytecodeIndex(index);
-		int lineNumber= method.getLineNumber(byteCodeIndex);
+	private int getLineNumber(int index, IMethod method) throws InvalidClassFileException {
+		int lineNumber= method.getLineNumber(index);
 		return lineNumber;
 	}
 

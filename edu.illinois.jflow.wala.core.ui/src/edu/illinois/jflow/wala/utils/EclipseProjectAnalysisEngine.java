@@ -14,14 +14,14 @@ import java.util.Set;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.IJavaProject;
 
+import com.ibm.wala.cast.java.client.JDTJavaSourceAnalysisEngine;
+import com.ibm.wala.cast.java.client.impl.ZeroOneContainerCFABuilderFactory;
+import com.ibm.wala.cast.java.ipa.callgraph.AstJavaZeroOneContainerCFABuilder;
+import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
 import com.ibm.wala.classLoader.IClass;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.classLoader.ShrikeCTMethod;
-import com.ibm.wala.client.AbstractAnalysisEngine;
-import com.ibm.wala.ide.util.EclipseAnalysisScopeReader;
 import com.ibm.wala.ide.util.EclipseFileProvider;
-import com.ibm.wala.ide.util.EclipseProjectPath;
-import com.ibm.wala.ide.util.JavaEclipseProjectPath;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
 import com.ibm.wala.ipa.callgraph.AnalysisScope;
@@ -32,10 +32,6 @@ import com.ibm.wala.ipa.callgraph.Entrypoint;
 import com.ibm.wala.ipa.callgraph.MethodTargetSelector;
 import com.ibm.wala.ipa.callgraph.impl.DefaultEntrypoint;
 import com.ibm.wala.ipa.callgraph.impl.Util;
-import com.ibm.wala.ipa.callgraph.propagation.SSAContextInterpreter;
-import com.ibm.wala.ipa.callgraph.propagation.SSAPropagationCallGraphBuilder;
-import com.ibm.wala.ipa.callgraph.propagation.cfa.ZeroXContainerCFABuilder;
-import com.ibm.wala.ipa.callgraph.propagation.cfa.ZeroXInstanceKeys;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ipa.summaries.BypassClassTargetSelector;
 import com.ibm.wala.ipa.summaries.BypassMethodTargetSelector;
@@ -46,6 +42,7 @@ import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.types.TypeName;
 import com.ibm.wala.types.annotations.Annotation;
 import com.ibm.wala.util.collections.HashSetFactory;
+import com.ibm.wala.util.config.FileOfClasses;
 import com.ibm.wala.util.strings.Atom;
 
 import edu.illinois.jflow.wala.core.Activator;
@@ -57,47 +54,32 @@ import edu.illinois.jflow.wala.pointeranalysis.KObjectSensitiveContextSelector;
  * and Stas Negara. Modified by Nicholas Chen.
  * 
  */
-public class EclipseProjectAnalysisEngine extends AbstractAnalysisEngine {
-	protected final IJavaProject javaProject;
+public class EclipseProjectAnalysisEngine extends JDTJavaSourceAnalysisEngine {
 
-	public EclipseProjectAnalysisEngine(IJavaProject javaProject) {
-		this.javaProject= javaProject;
+	public EclipseProjectAnalysisEngine(IJavaProject project) throws IOException, CoreException {
+		super(project);
 	}
 
-	// TODO: Might add this from a preference pane
 	private String retrieveExclusionFile() throws IOException {
-		return new EclipseFileProvider().getFileFromPlugin(Activator.getDefault(), "EclipseDefaultExclusions.txt")
-				.getAbsolutePath();
+		return new EclipseFileProvider().getFileFromPlugin(Activator.getDefault(), "EclipseDefaultExclusions.txt").getAbsolutePath();
 	}
 
 	@Override
 	public void buildAnalysisScope() throws IOException {
-		try {
-			setExclusionsFile(retrieveExclusionFile());
-			JavaEclipseProjectPath eclipseProject= JavaEclipseProjectPath.make(javaProject, EclipseProjectPath.AnalysisScopeType.NO_SOURCE);
-
-			// It is important to include the SYNTHETIC_J2SE_MODEL because it
-			// contains some Java implementation of the basic
-			// native methods. This allows WALA to reason about things like
-			// Threads and System.arraycopy().
-			// https://groups.google.com/forum/?fromgroups#!searchin/wala-sourceforge-net/primordial/wala-sourceforge-net/_HLdzc29AZ8/e3j7vf5dIxUJ
-			AnalysisScope analysisScope= EclipseAnalysisScopeReader.readJavaScopeFromPlugin(SYNTHETIC_J2SE_MODEL, new File(getExclusionsFile()), getClass().getClassLoader(), Activator.getDefault());
-
-
-			scope= eclipseProject.toAnalysisScope(analysisScope);
-		} catch (CoreException e) {
-			e.printStackTrace();
+		super.scope= ePath.toAnalysisScope(makeAnalysisScope());
+		if (getExclusionsFile() != null) {
+			scope.setExclusions(FileOfClasses.createFileOfClasses(new File(retrieveExclusionFile())));
 		}
+	}
+
+	@Override
+	protected Iterable<Entrypoint> makeDefaultEntrypoints(AnalysisScope scope, IClassHierarchy cha) {
+		return Util.makeMainEntrypoints(JavaSourceAnalysisScope.SOURCE, cha);
 	}
 
 	@Override
 	protected CallGraphBuilder getCallGraphBuilder(IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
 		return JFlowAnalysisUtil.getCallGraphBuilder(scope, cha, options, cache);
-	}
-
-	@Override
-	protected Iterable<Entrypoint> makeDefaultEntrypoints(AnalysisScope scope, IClassHierarchy cha) {
-		return JFlowAnalysisUtil.makeAnnotatedEntryPoints(cha);
 	}
 
 }
@@ -114,18 +96,14 @@ class JFlowAnalysisUtil {
 	 * relatively expensive, but can be effective in disambiguating contents of standard collection
 	 * classes.
 	 */
-	static CallGraphBuilder getCallGraphBuilder(AnalysisScope analysisScope, IClassHierarchy classHierarchy, AnalysisOptions analysisOptions, AnalysisCache analysisCache) {
+	static CallGraphBuilder getCallGraphBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
 		ContextSelector contextSelector= new KObjectSensitiveContextSelector();
-		addCustomBypassLogic(analysisScope, classHierarchy, analysisOptions);
-		return makeZeroOneCFAContainerBuilder(analysisScope, classHierarchy, analysisOptions, analysisCache, contextSelector, null);
-	}
+		
+		Util.addDefaultSelectors(options, cha);
+		Util.addDefaultBypassLogic(options, scope, Util.class.getClassLoader(), cha);
+		addCustomBypassLogic(scope, cha, options);
 
-	static SSAPropagationCallGraphBuilder makeZeroOneCFAContainerBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache,
-			ContextSelector customSelector, SSAContextInterpreter customInterpreter) {
-
-		return new ZeroXContainerCFABuilder(cha, options, cache, customSelector, customInterpreter, ZeroXInstanceKeys.ALLOCATIONS | ZeroXInstanceKeys.SMUSH_MANY
-				| ZeroXInstanceKeys.SMUSH_PRIMITIVE_HOLDERS
-				| ZeroXInstanceKeys.SMUSH_STRINGS | ZeroXInstanceKeys.SMUSH_THROWABLES);
+		return (CallGraphBuilder)new AstJavaZeroOneContainerCFABuilder(cha, options, cache, contextSelector, null);
 	}
 
 	/*
@@ -152,41 +130,6 @@ class JFlowAnalysisUtil {
 
 	static BypassMethodTargetSelector getCustomBypassMethodTargetSelector(IClassHierarchy classHierarchy, AnalysisOptions analysisOptions, XMLMethodSummaryReader summary) {
 		return new JFlowBypassMethodTargetSelector(analysisOptions.getMethodTargetSelector(), summary.getSummaries(), summary.getIgnoredPackages(), classHierarchy);
-	}
-
-	static Iterable<Entrypoint> makeAnnotatedEntryPoints(IClassHierarchy classHierarchy) {
-		final HashSet<Entrypoint> result= HashSetFactory.make();
-		Iterator<IClass> classIterator= classHierarchy.iterator();
-		while (classIterator.hasNext()) {
-			IClass klass= classIterator.next();
-			if (!AnalysisUtils.isJDKClass(klass)) {
-				for (IMethod method : klass.getDeclaredMethods()) {
-					try {
-						if (!(method instanceof ShrikeCTMethod)) {
-							throw new RuntimeException("@EntryPoint only works for byte code.");
-						}
-						for (Annotation annotation : ((ShrikeCTMethod)method).getAnnotations(true)) {
-							if (isEntryPointClass(annotation.getType().getName())) {
-								result.add(new DefaultEntrypoint(method, classHierarchy));
-								break;
-							}
-						}
-					} catch (Exception e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-		}
-		return new Iterable<Entrypoint>() {
-			@Override
-			public Iterator<Entrypoint> iterator() {
-				return result.iterator();
-			}
-		};
-	}
-
-	private static boolean isEntryPointClass(TypeName typeName) {
-		return AnalysisUtils.walaTypeNameToJavaName(typeName).matches(".*EntryPoint.*");
 	}
 }
 
