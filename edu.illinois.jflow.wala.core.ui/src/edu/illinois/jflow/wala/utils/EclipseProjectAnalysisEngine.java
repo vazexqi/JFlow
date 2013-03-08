@@ -36,6 +36,7 @@ import com.ibm.wala.ipa.callgraph.propagation.SSAContextInterpreter;
 import com.ibm.wala.ipa.callgraph.propagation.SSAPropagationCallGraphBuilder;
 import com.ibm.wala.ipa.callgraph.propagation.cfa.ZeroXContainerCFABuilder;
 import com.ibm.wala.ipa.callgraph.propagation.cfa.ZeroXInstanceKeys;
+import com.ibm.wala.ipa.callgraph.propagation.cfa.nCFABuilder;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ipa.summaries.BypassClassTargetSelector;
 import com.ibm.wala.ipa.summaries.BypassMethodTargetSelector;
@@ -92,12 +93,9 @@ public class EclipseProjectAnalysisEngine extends AbstractAnalysisEngine {
 
 	@Override
 	protected CallGraphBuilder getCallGraphBuilder(IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
-		return JFlowAnalysisUtil.getCallGraphBuilder(scope, cha, options, cache);
-	}
-
-	@Override
-	protected Iterable<Entrypoint> makeDefaultEntrypoints(AnalysisScope scope, IClassHierarchy cha) {
-		return JFlowAnalysisUtil.makeAnnotatedEntryPoints(cha);
+		Util.addDefaultSelectors(options, cha);
+		Util.addDefaultBypassLogic(options, scope, Util.class.getClassLoader(), cha);
+		return new nCFABuilder(2, cha, options, cache, null, null);
 	}
 
 }

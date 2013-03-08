@@ -17,7 +17,6 @@ import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
-import com.ibm.wala.ssa.SSAOptions;
 import com.ibm.wala.types.MethodReference;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
