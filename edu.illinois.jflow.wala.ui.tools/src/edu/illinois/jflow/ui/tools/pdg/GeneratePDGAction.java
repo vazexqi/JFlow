@@ -2,6 +2,7 @@ package edu.illinois.jflow.ui.tools.pdg;
 
 import java.io.IOException;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
@@ -38,8 +39,8 @@ public class GeneratePDGAction extends Action {
 		if (javaEditor != null) {
 			ICompilationUnit inputAsCompilationUnit= SelectionConverter.getInputAsCompilationUnit(javaEditor);
 			IJavaProject javaProject= inputAsCompilationUnit.getJavaProject();
-			AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(javaProject);
 			try {
+				AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(javaProject);
 				engine.buildAnalysisScope();
 				IClassHierarchy classHierarchy= engine.buildClassHierarchy();
 
@@ -48,7 +49,7 @@ public class GeneratePDGAction extends Action {
 					IMethod resolvedMethod= classHierarchy.resolveMethod(method);
 					if (resolvedMethod != null) {
 						AnalysisOptions options= new AnalysisOptions();
-						AnalysisCache cache= new AnalysisCache();
+						AnalysisCache cache= engine.makeDefaultCache();
 
 						try {
 							IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
@@ -65,6 +66,8 @@ public class GeneratePDGAction extends Action {
 					}
 				}
 			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (CoreException e) {
 				e.printStackTrace();
 			}
 

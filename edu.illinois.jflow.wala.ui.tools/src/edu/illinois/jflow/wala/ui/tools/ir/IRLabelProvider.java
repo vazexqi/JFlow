@@ -13,6 +13,7 @@ import org.eclipse.zest.core.viewers.EntityConnectionData;
 import org.eclipse.zest.core.viewers.IEntityStyleProvider;
 
 import com.ibm.wala.classLoader.IBytecodeMethod;
+import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.ssa.SSACFG.BasicBlock;
@@ -73,19 +74,12 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			}
 
 			SSAInstruction[] instructions= ir.getInstructions();
-			IBytecodeMethod method= (IBytecodeMethod)ir.getMethod();
+			IMethod method= ir.getMethod();
 			for (int j= start; j <= end; j++) {
 				if (instructions[j] != null) {
-					int bytecodeIndex;
 					String x;
-					try {
-						bytecodeIndex= method.getBytecodeIndex(j);
-						int sourceLineNum= method.getLineNumber(bytecodeIndex);
-						x= String.format(j + " [L%03d] " + instructions[j].toString(ir.getSymbolTable()), sourceLineNum);
-					} catch (InvalidClassFileException e) {
-						e.printStackTrace();
-						x= String.format(j + "   " + instructions[j].toString(ir.getSymbolTable()));
-					}
+					int sourceLineNum= method.getLineNumber(j);
+					x= String.format(j + " [L%03d] " + instructions[j].toString(ir.getSymbolTable()), sourceLineNum);
 					String padded= String.format("%1$-35s", x);
 					result.append(padded);
 					result.append("\n");
@@ -165,7 +159,7 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			BasicBlock bb= (BasicBlock)element;
 			IR ir= irView.getIR();
 			IDocument doc= irView.getDocument();
-			IBytecodeMethod method= (IBytecodeMethod)ir.getMethod();
+			IMethod method= ir.getMethod();
 
 			StringBuffer result= new StringBuffer();
 
@@ -174,19 +168,14 @@ public class IRLabelProvider extends LabelProvider implements IEntityStyleProvid
 			SSAInstruction[] instructions= ir.getInstructions();
 			for (int j= start; j <= end; j++) {
 				if (instructions[j] != null) {
+					int sourceLineNum= method.getLineNumber(j);
+					int lineNumber= sourceLineNum - 1; //IDocument indexing is 0-based
 					try {
-						int bytecodeIndex= method.getBytecodeIndex(j);
-						int sourceLineNum= method.getLineNumber(bytecodeIndex);
-						int lineNumber= sourceLineNum - 1; //IDocument indexing is 0-based
-						try {
-							int lineOffset= doc.getLineOffset(lineNumber);
-							int lineLength= doc.getLineLength(lineNumber);
-							String sourceCode= doc.get(lineOffset, lineLength).trim();
-							result.append(sourceCode);
-						} catch (BadLocationException e) {
-						}
-					} catch (InvalidClassFileException e1) {
-						return null;
+						int lineOffset= doc.getLineOffset(lineNumber);
+						int lineLength= doc.getLineLength(lineNumber);
+						String sourceCode= doc.get(lineOffset, lineLength).trim();
+						result.append(sourceCode);
+					} catch (BadLocationException e) {
 					}
 					result.append("\n");
 				}
