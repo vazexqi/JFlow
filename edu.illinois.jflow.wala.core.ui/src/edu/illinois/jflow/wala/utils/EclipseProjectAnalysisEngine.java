@@ -6,8 +6,6 @@ package edu.illinois.jflow.wala.utils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,12 +13,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.IJavaProject;
 
 import com.ibm.wala.cast.java.client.JDTJavaSourceAnalysisEngine;
-import com.ibm.wala.cast.java.client.impl.ZeroOneContainerCFABuilderFactory;
 import com.ibm.wala.cast.java.ipa.callgraph.AstJavaZeroOneContainerCFABuilder;
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
-import com.ibm.wala.classLoader.IClass;
-import com.ibm.wala.classLoader.IMethod;
-import com.ibm.wala.classLoader.ShrikeCTMethod;
 import com.ibm.wala.ide.util.EclipseFileProvider;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
@@ -30,7 +24,6 @@ import com.ibm.wala.ipa.callgraph.ClassTargetSelector;
 import com.ibm.wala.ipa.callgraph.ContextSelector;
 import com.ibm.wala.ipa.callgraph.Entrypoint;
 import com.ibm.wala.ipa.callgraph.MethodTargetSelector;
-import com.ibm.wala.ipa.callgraph.impl.DefaultEntrypoint;
 import com.ibm.wala.ipa.callgraph.impl.Util;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ipa.summaries.BypassClassTargetSelector;
@@ -39,9 +32,6 @@ import com.ibm.wala.ipa.summaries.MethodSummary;
 import com.ibm.wala.ipa.summaries.XMLMethodSummaryReader;
 import com.ibm.wala.types.MemberReference;
 import com.ibm.wala.types.MethodReference;
-import com.ibm.wala.types.TypeName;
-import com.ibm.wala.types.annotations.Annotation;
-import com.ibm.wala.util.collections.HashSetFactory;
 import com.ibm.wala.util.config.FileOfClasses;
 import com.ibm.wala.util.strings.Atom;
 
@@ -98,7 +88,7 @@ class JFlowAnalysisUtil {
 	 */
 	static CallGraphBuilder getCallGraphBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
 		ContextSelector contextSelector= new KObjectSensitiveContextSelector();
-		
+
 		Util.addDefaultSelectors(options, cha);
 		Util.addDefaultBypassLogic(options, scope, Util.class.getClassLoader(), cha);
 		addCustomBypassLogic(scope, cha, options);
@@ -114,8 +104,6 @@ class JFlowAnalysisUtil {
 		if (classLoader == null) {
 			throw new IllegalArgumentException("classLoader is null");
 		}
-
-		Util.addDefaultSelectors(analysisOptions, classHierarchy);
 
 		InputStream inputStream= classLoader.getResourceAsStream(Util.nativeSpec);
 		XMLMethodSummaryReader methodSummaryReader= new XMLMethodSummaryReader(inputStream, analysisScope);
