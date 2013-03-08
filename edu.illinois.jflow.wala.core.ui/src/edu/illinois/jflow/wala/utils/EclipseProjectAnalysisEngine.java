@@ -25,6 +25,8 @@ import com.ibm.wala.ipa.callgraph.ContextSelector;
 import com.ibm.wala.ipa.callgraph.Entrypoint;
 import com.ibm.wala.ipa.callgraph.MethodTargetSelector;
 import com.ibm.wala.ipa.callgraph.impl.Util;
+import com.ibm.wala.ipa.callgraph.propagation.SSAContextInterpreter;
+import com.ibm.wala.ipa.callgraph.propagation.cfa.ZeroXInstanceKeys;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ipa.summaries.BypassClassTargetSelector;
 import com.ibm.wala.ipa.summaries.BypassMethodTargetSelector;
@@ -69,7 +71,7 @@ public class EclipseProjectAnalysisEngine extends JDTJavaSourceAnalysisEngine {
 
 	@Override
 	protected CallGraphBuilder getCallGraphBuilder(IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
-		return JFlowAnalysisUtil.getCallGraphBuilder(scope, cha, options, cache);
+		return (CallGraphBuilder)JFlowAnalysisUtil.getCallGraphBuilder(scope, cha, options, cache);
 	}
 
 }
@@ -86,14 +88,24 @@ class JFlowAnalysisUtil {
 	 * relatively expensive, but can be effective in disambiguating contents of standard collection
 	 * classes.
 	 */
-	static CallGraphBuilder getCallGraphBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
+	static AstJavaZeroOneContainerCFABuilder getCallGraphBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
 		ContextSelector contextSelector= new KObjectSensitiveContextSelector();
 
 		Util.addDefaultSelectors(options, cha);
 		Util.addDefaultBypassLogic(options, scope, Util.class.getClassLoader(), cha);
 		addCustomBypassLogic(scope, cha, options);
 
-		return (CallGraphBuilder)new AstJavaZeroOneContainerCFABuilder(cha, options, cache, contextSelector, null);
+		return new AstJavaZeroOneContainerCFABuilder(cha, options, cache, contextSelector, null) {
+
+			@Override
+			protected ZeroXInstanceKeys makeInstanceKeys(IClassHierarchy cha, AnalysisOptions options, SSAContextInterpreter contextInterpreter) {
+				// Do not smush primitive holders – we do want to distinguish primitive holders
+				ZeroXInstanceKeys zik= new ZeroXInstanceKeys(options, cha, contextInterpreter, ZeroXInstanceKeys.ALLOCATIONS | ZeroXInstanceKeys.SMUSH_STRINGS | ZeroXInstanceKeys.SMUSH_MANY
+						| ZeroXInstanceKeys.SMUSH_THROWABLES);
+				return zik;
+			}
+
+		};
 	}
 
 	/*
