@@ -94,12 +94,6 @@ public class EclipseProjectAnalysisEngine extends AbstractAnalysisEngine {
 	protected CallGraphBuilder getCallGraphBuilder(IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
 		return JFlowAnalysisUtil.getCallGraphBuilder(scope, cha, options, cache);
 	}
-
-	@Override
-	protected Iterable<Entrypoint> makeDefaultEntrypoints(AnalysisScope scope, IClassHierarchy cha) {
-		return JFlowAnalysisUtil.makeAnnotatedEntryPoints(cha);
-	}
-
 }
 
 class JFlowAnalysisUtil {
