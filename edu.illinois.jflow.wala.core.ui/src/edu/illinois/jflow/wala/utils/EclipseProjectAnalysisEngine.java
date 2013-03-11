@@ -117,9 +117,8 @@ class JFlowAnalysisUtil {
 	static SSAPropagationCallGraphBuilder makeZeroOneCFAContainerBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache,
 			ContextSelector customSelector, SSAContextInterpreter customInterpreter) {
 
-		return new ZeroXContainerCFABuilder(cha, options, cache, customSelector, customInterpreter, ZeroXInstanceKeys.ALLOCATIONS | ZeroXInstanceKeys.SMUSH_MANY
-				| ZeroXInstanceKeys.SMUSH_PRIMITIVE_HOLDERS
-				| ZeroXInstanceKeys.SMUSH_STRINGS | ZeroXInstanceKeys.SMUSH_THROWABLES);
+		return new ZeroXContainerCFABuilder(cha, options, cache, customSelector, customInterpreter, ZeroXInstanceKeys.ALLOCATIONS | ZeroXInstanceKeys.SMUSH_MANY | ZeroXInstanceKeys.SMUSH_STRINGS
+				| ZeroXInstanceKeys.SMUSH_THROWABLES);
 	}
 
 	/*
