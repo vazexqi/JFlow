@@ -12,6 +12,7 @@ import com.ibm.wala.ipa.callgraph.Context;
 import com.ibm.wala.ipa.callgraph.ContextKey;
 import com.ibm.wala.ipa.callgraph.ContextSelector;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
+import com.ibm.wala.shrikeBT.IInvokeInstruction.Dispatch;
 import com.ibm.wala.util.intset.EmptyIntSet;
 import com.ibm.wala.util.intset.IntSet;
 import com.ibm.wala.util.intset.IntSetUtil;
@@ -34,7 +35,7 @@ public class KObjectSensitiveContextSelector implements ContextSelector {
 
 	@Override
 	public Context getCalleeTarget(CGNode caller, CallSiteReference site, IMethod callee, InstanceKey[] actualParameters) {
-		if (actualParameters == null || actualParameters.length == 0 || actualParameters[0] == null) {
+		if (actualParameters == null || actualParameters.length == 0 || actualParameters[0] == null || site.getInvocationCode() == Dispatch.STATIC) {
 			// Static method
 			return caller.getContext();
 		}
