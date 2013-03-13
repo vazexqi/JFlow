@@ -42,10 +42,7 @@ public class PDGView extends WalaGraphView {
 
 	@Override
 	protected LayoutAlgorithm setLayout() {
-		TreeLayoutAlgorithm treeLayout= new TreeLayoutAlgorithm(TreeLayoutAlgorithm.TOP_DOWN);
-		treeLayout.setResizing(false);
-		HorizontalShiftAlgorithm horizontalShift= new HorizontalShiftAlgorithm();
-		return new CompositeLayoutAlgorithm(new LayoutAlgorithm[] { treeLayout, horizontalShift });
+		return new TreeLayoutAlgorithm(TreeLayoutAlgorithm.LEFT_RIGHT);
 	}
 
 	public void setDocument(IDocument document) {
