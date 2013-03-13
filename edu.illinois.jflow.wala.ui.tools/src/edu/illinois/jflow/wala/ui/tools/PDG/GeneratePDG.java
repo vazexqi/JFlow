@@ -12,6 +12,8 @@ import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jface.action.Action;
 
+import com.ibm.wala.cast.ipa.modref.AstModRef;
+import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.cast.java.loader.JavaSourceLoaderImpl;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ipa.callgraph.CGNode;
@@ -55,7 +57,7 @@ public class GeneratePDG extends Action {
 				CallGraph callGraph= engine.buildDefaultCallGraph();
 				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit, engine.getClassHierarchy());
 				if (method != null) {
-					final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), DataDependenceOptions.NONE, ControlDependenceOptions.FULL);
+					final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_EXCEPTIONS, ControlDependenceOptions.NONE);
 					Set<CGNode> nodes= callGraph.getNodes(method);
 					if (!nodes.isEmpty()) {
 						// Take the first one for now
