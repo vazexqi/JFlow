@@ -11,17 +11,17 @@ import org.eclipse.zest.core.viewers.IGraphEntityContentProvider;
 
 import com.ibm.wala.util.graph.Graph;
 
-import edu.illinois.jflow.jflow.wala.dataflowanalysis.Statement;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGNode;
 
 public class PDGContentProvider implements IGraphEntityContentProvider {
 
-	private Graph<Statement> graph;
+	private Graph<PDGNode> graph;
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
 		viewer.refresh();
-		graph= (Graph<Statement>)newInput;
+		graph= (Graph<PDGNode>)newInput;
 	}
 
 	@Override
@@ -39,7 +39,7 @@ public class PDGContentProvider implements IGraphEntityContentProvider {
 
 	@Override
 	public Object[] getConnectedTo(Object entity) {
-		Iterator<Statement> succNodes= graph.getSuccNodes((Statement)entity);
+		Iterator<PDGNode> succNodes= graph.getSuccNodes((PDGNode)entity);
 		Set<Object> nodes= new HashSet<Object>();
 		while (succNodes.hasNext()) {
 			nodes.add(succNodes.next());

@@ -14,7 +14,7 @@ import com.ibm.wala.ssa.*;
  * @author nchen
  * 
  */
-public class Statement {
+public class Statement implements PDGNode {
 	private final int lineNumber;
 
 	List<SSAInstruction> instructions;
@@ -32,7 +32,7 @@ public class Statement {
 		return lineNumber;
 	}
 
-	public String printInstructions() {
+	public String toString() {
 		StringBuilder sb= new StringBuilder();
 
 		sb.append(String.format("LINE: %d%n", lineNumber));

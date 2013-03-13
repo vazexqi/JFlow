@@ -4,15 +4,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.ibm.wala.cast.java.loader.JavaSourceLoaderImpl.ConcreteJavaMethod;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.DefUse;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.ssa.ISSABasicBlock;
-import com.ibm.wala.ssa.SSAPhiInstruction;
-import com.ibm.wala.ssa.SSACFG.BasicBlock;
 import com.ibm.wala.ssa.SSAInstruction;
+import com.ibm.wala.ssa.SSAPhiInstruction;
 import com.ibm.wala.util.collections.Iterator2Iterable;
 import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
 
@@ -25,11 +23,15 @@ import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
  * @author nchen
  * 
  */
-public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<Statement, String> {
+public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNode, String> {
+
+	private static final String DEFAULT_LABEL= "";
 
 	public static boolean DEBUG= true;
 
 	private IR ir;
+
+	private Map<Integer, MethodParameter> valueNumber2MethodParameters;
 
 	// Maps a line number (in the text editor) to a statement
 	private Map<Integer, Statement> sourceLineMapping;
@@ -48,7 +50,8 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 	}
 
 	public ProgramDependenceGraph(IR ir) {
-		super("");
+		super(DEFAULT_LABEL);
+		valueNumber2MethodParameters= new HashMap<Integer, MethodParameter>();
 		sourceLineMapping= new HashMap<Integer, Statement>();
 		instruction2Statement= new HashMap<SSAInstruction, Statement>();
 		instruction2Index= new HashMap<SSAInstruction, Integer>();
@@ -71,6 +74,12 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 	private void addDependencyEdges() {
 		DefUse DU= new DefUse(ir);
 
+		// Add dependencies from parameters
+		for (SSAInstruction instruction : instruction2Statement.keySet()) {
+			addDependencyIfApplicable(instruction);
+		}
+
+		// Add dependencies from instructions
 		for (SSAInstruction instruction : instruction2Statement.keySet()) {
 			Statement defStatement= instruction2Statement.get(instruction);
 			for (int def= 0; def < instruction.getNumberOfDefs(); def++) {
@@ -82,6 +91,22 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 					addEdge(defStatement, useStatement, variableName);
 				}
 			}
+		}
+	}
+
+	private void addDependencyIfApplicable(SSAInstruction instruction) {
+		if (instruction.getNumberOfUses() > 0) {
+			for (int use= 0; use < instruction.getNumberOfUses(); use++) {
+				addEdgeIfHasDependency(instruction.getUse(use), instruction);
+			}
+		}
+	}
+
+	private void addEdgeIfHasDependency(int use, SSAInstruction instruction) {
+		MethodParameter methodParameter= valueNumber2MethodParameters.get(use);
+		if (methodParameter != null) {
+			Statement statement= instruction2Statement.get(instruction);
+			addEdge(methodParameter, statement);
 		}
 	}
 
@@ -103,6 +128,11 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 
 	private void createStatementsFromInstructions() throws InvalidClassFileException {
 		SSAInstruction[] instructions= ir.getInstructions();
+
+		//0. Create statements for callee params
+		for (int valueNumber : ir.getParameterValueNumbers()) {
+			valueNumber2MethodParameters.put(valueNumber, new MethodParameter(valueNumber, ir.getParameterType(valueNumber - 1)));
+		}
 
 		//1. Create statements for normal instructions
 		IMethod method= ir.getMethod();
@@ -152,6 +182,10 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<State
 	}
 
 	private void createGraphNodes() {
+		for (MethodParameter methodParameter : valueNumber2MethodParameters.values()) {
+			addNode(methodParameter);
+		}
+
 		for (Statement statement : sourceLineMapping.values()) {
 			addNode(statement);
 		}

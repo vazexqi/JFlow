@@ -11,6 +11,8 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.zest.core.viewers.EntityConnectionData;
 import org.eclipse.zest.core.viewers.IEntityStyleProvider;
 
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.MethodParameter;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGNode;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.Statement;
 
@@ -41,10 +43,16 @@ public class PDGLabelProvider extends LabelProvider implements IEntityStyleProvi
 			}
 			return sb.toString();
 		}
+		if (element instanceof MethodParameter) {
+			StringBuilder sb= new StringBuilder();
+			sb.append("Method Parameter: ");
+			sb.append(element.toString());
+			return sb.toString();
+		}
 		if (element instanceof EntityConnectionData) {
 			EntityConnectionData data= (EntityConnectionData)element;
-			Statement source= (Statement)data.source;
-			Statement dest= (Statement)data.dest;
+			PDGNode source= (PDGNode)data.source;
+			PDGNode dest= (PDGNode)data.dest;
 
 			ProgramDependenceGraph pdg= pdgView.getPDG();
 			Set<? extends String> labels= pdg.getEdgeLabels(source, dest);
@@ -64,7 +72,7 @@ public class PDGLabelProvider extends LabelProvider implements IEntityStyleProvi
 	public IFigure getTooltip(Object entity) {
 		if (entity instanceof Statement) {
 			Statement statement= (Statement)entity;
-			return new Label(statement.printInstructions());
+			return new Label(statement.toString());
 		}
 		return null;
 	}
