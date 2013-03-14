@@ -36,7 +36,7 @@ public class PDGView extends WalaGraphView {
 	protected void fillToolBar() {
 		IMenuManager menuManager= getViewSite().getActionBars().getMenuManager();
 		IToolBarManager toolBarManager= getViewSite().getActionBars().getToolBarManager();
-		toolBarManager.add(new GeneratePDGAction(this));
+		toolBarManager.add(new ViewPDGAction(this));
 		menuManager.add(new ZoomContributionViewItem(this));
 	}
 
