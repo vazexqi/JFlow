@@ -178,6 +178,43 @@ public class PDGTests extends JDTJavaTest {
 	}
 
 	/**
+	 * Tests dependencies to a simple method parameter
+	 */
+	@Test
+	public void testProject5() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "I", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
+
+			// Verify
+			assertEquals("Number of nodes not expected", 4, pdg.getNumberOfNodes());
+
+			// The order of building the nodes is deterministic so we can rely on the nodes being numbered in this manner
+			PDGNode param= pdg.getNode(0);
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode produceC= pdg.getNode(3);
+
+			Set<? extends String> paramToA= pdg.getEdgeLabels(param, produceA);
+			assertEquals("There should only be one edge", 1, paramToA.size());
+			assertTrue("The dependency edge param -> a is missing", paramToA.contains("[param]"));
+
+			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			assertTrue("The dependency edge a -> b is missing", aToB.contains("[a]"));
+
+			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
+			assertEquals("There should only be one edge", 1, bToC.size());
+			assertTrue("The dependency edge b -> c is missing", bToC.contains("[b]"));
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
 	 * Tests dependencies to a container method parameter
 	 */
 	@Test
@@ -222,34 +259,51 @@ public class PDGTests extends JDTJavaTest {
 
 
 	/**
-	 * Tests dependencies to a simple method parameter
+	 * Tests dependencies to a heap object.
+	 * 
+	 * TODO: This is the current behavior but we might want to change how this works to handle
+	 * forwarding.
 	 */
 	@Test
-	public void testProject5() {
+	public void testProject7() {
 		try {
-			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "I", "V");
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
 
 			// Verify
-			assertEquals("Number of nodes not expected", 4, pdg.getNumberOfNodes());
+			assertEquals("Number of nodes not expected", 6, pdg.getNumberOfNodes());
 
 			// The order of building the nodes is deterministic so we can rely on the nodes being numbered in this manner
 			PDGNode param= pdg.getNode(0);
-			PDGNode produceA= pdg.getNode(1);
-			PDGNode produceB= pdg.getNode(2);
-			PDGNode produceC= pdg.getNode(3);
+			PDGNode createList= pdg.getNode(1);
+			PDGNode produceA= pdg.getNode(2);
+			PDGNode addA= pdg.getNode(3);
+			PDGNode produceB= pdg.getNode(4);
+			PDGNode addB= pdg.getNode(5);
 
-			Set<? extends String> paramToA= pdg.getEdgeLabels(param, produceA);
-			assertEquals("There should only be one edge", 1, paramToA.size());
-			assertTrue("The dependency edge param -> a is missing", paramToA.contains("[param]"));
+			Set<? extends String> createListToAddA= pdg.getEdgeLabels(createList, addA);
+			assertEquals("There should only be one edge", 1, createListToAddA.size());
+			assertTrue("The dependency edge createList -> addA is missing", createListToAddA.contains("[list]"));
+
+			Set<? extends String> createListToAddB= pdg.getEdgeLabels(createList, addB);
+			assertEquals("There should only be one edge", 1, createListToAddB.size());
+			assertTrue("The dependency edge createList -> addB is missing", createListToAddB.contains("[list]"));
 
 			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
 			assertEquals("There should only be one edge", 1, aToB.size());
 			assertTrue("The dependency edge a -> b is missing", aToB.contains("[a]"));
 
-			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
-			assertEquals("There should only be one edge", 1, bToC.size());
-			assertTrue("The dependency edge b -> c is missing", bToC.contains("[b]"));
+			Set<? extends String> aToAddA= pdg.getEdgeLabels(produceA, addA);
+			assertEquals("There should only be one edge", 1, aToAddA.size());
+			assertTrue("The dependency edge a -> addA is missing", aToAddA.contains("[a]"));
+
+			Set<? extends String> bToAddB= pdg.getEdgeLabels(produceB, addB);
+			assertEquals("There should only be one edge", 1, bToAddB.size());
+			assertTrue("The dependency edge b -> addB is missing", bToAddB.contains("[b]"));
+
+			// Should have no edges
+			assertTrue(pdg.getPredNodeCount(param) == 0);
+			assertTrue(pdg.getSuccNodeCount(param) == 0);
 
 		} catch (IOException e) {
 			e.printStackTrace();
