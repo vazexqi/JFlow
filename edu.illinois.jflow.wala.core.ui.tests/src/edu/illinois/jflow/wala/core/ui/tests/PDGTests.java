@@ -31,8 +31,10 @@ public class PDGTests extends JDTJavaTest {
 
 	private static final String PROJECT_ZIP= "test-workspace.zip";
 
+	public static final ZippedProjectData PROJECT= new ZippedProjectData(Activator.getDefault(), PROJECT_NAME, PROJECT_ZIP);
+
 	public PDGTests() {
-		super(new ZippedProjectData(Activator.getDefault(), PROJECT_NAME, PROJECT_ZIP));
+		super(PROJECT);
 	}
 
 	//////////
