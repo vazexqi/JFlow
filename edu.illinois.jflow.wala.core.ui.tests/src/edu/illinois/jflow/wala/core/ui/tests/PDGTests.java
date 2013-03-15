@@ -40,7 +40,7 @@ public class PDGTests extends JDTJavaTest {
 	@Test
 	public void testProject1() {
 		try {
-			IR ir= retrieveMethodToBeInspected(TEST_PACKAGE_NAME, getTestName(), "[Ljava/lang/String;", "V");
+			IR ir= retrieveMethodToBeInspected(TEST_PACKAGE_NAME + "/" + singleInputForTest(),  "main", "[Ljava/lang/String;", "V");
 			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
 
 			// Verify
@@ -54,13 +54,13 @@ public class PDGTests extends JDTJavaTest {
 		}
 	}
 
-	private IR retrieveMethodToBeInspected(String packageName, String testName, String methodParameters, String returnType) throws IOException {
+	private IR retrieveMethodToBeInspected(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException {
 		AbstractAnalysisEngine engine= getAnalysisEngine(simplePkgTestEntryPoint(TEST_PACKAGE_NAME), rtJar);
 		engine.buildAnalysisScope();
 		IClassHierarchy classHierarchy= engine.buildClassHierarchy();
 
-		MethodReference makeMethodReference= StringStuff.makeMethodReference(String.format("%s.%s(%s)%s", packageName, testName, methodParameters, returnType));
-		IMethod method= classHierarchy.resolveMethod(makeMethodReference);
+		MethodReference methodRef= descriptorToMethodRef(String.format("Source#%s#%s#(%s)%s", fullyQualifiedClassName, methodName, methodParameters, returnType), classHierarchy);
+		IMethod method= classHierarchy.resolveMethod(methodRef);
 		return engine.getCache().getSSACache().findOrCreateIR(method, Everywhere.EVERYWHERE, new AnalysisOptions().getSSAOptions());
 	}
 
