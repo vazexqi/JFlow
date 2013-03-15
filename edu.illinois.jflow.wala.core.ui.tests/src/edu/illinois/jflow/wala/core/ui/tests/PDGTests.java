@@ -178,7 +178,51 @@ public class PDGTests extends JDTJavaTest {
 	}
 
 	/**
-	 * Tests dependencies to a method parameter
+	 * Tests dependencies to a container method parameter
+	 */
+	@Test
+	public void testProject6() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "Ljava/util/List;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
+
+			// Verify
+			assertEquals("Number of nodes not expected", 4, pdg.getNumberOfNodes());
+
+			// The order of building the nodes is deterministic so we can rely on the nodes being numbered in this manner
+			PDGNode param= pdg.getNode(0);
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode produceC= pdg.getNode(3);
+
+			Set<? extends String> paramToA= pdg.getEdgeLabels(param, produceA);
+			assertEquals("There should only be one edge", 1, paramToA.size());
+			assertTrue("The dependency edge param -> a is missing", paramToA.contains("[param]"));
+
+			// Contains a self loop since we need to retrieve values from the parameter using get(0)
+			Set<? extends String> aToA= pdg.getEdgeLabels(produceA, produceA);
+			assertEquals("There should only be one edge", 1, aToA.size());
+			// This means there is a dependency but it with an internal temp variable that we don't care about
+			assertTrue("The dependency edge a -> b is missing", aToA.contains("[]"));
+
+			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			assertTrue("The dependency edge a -> b is missing", aToB.contains("[a]"));
+
+			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
+			assertEquals("There should only be one edge", 1, bToC.size());
+			assertTrue("The dependency edge b -> c is missing", bToC.contains("[b]"));
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	/**
+	 * Tests dependencies to a simple method parameter
 	 */
 	@Test
 	public void testProject5() {
