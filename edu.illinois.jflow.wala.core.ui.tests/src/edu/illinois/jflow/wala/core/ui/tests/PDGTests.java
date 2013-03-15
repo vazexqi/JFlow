@@ -1,9 +1,11 @@
 package edu.illinois.jflow.wala.core.ui.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import com.ibm.wala.cast.java.test.JDTJavaTest;
 import com.ibm.wala.classLoader.IMethod;
@@ -15,8 +17,9 @@ import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
-import com.ibm.wala.util.strings.StringStuff;
+import com.ibm.wala.util.collections.Iterator2Iterable;
 
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGNode;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 
 public class PDGTests extends JDTJavaTest {
@@ -40,11 +43,16 @@ public class PDGTests extends JDTJavaTest {
 	@Test
 	public void testProject1() {
 		try {
-			IR ir= retrieveMethodToBeInspected(TEST_PACKAGE_NAME + "/" + singleInputForTest(),  "main", "[Ljava/lang/String;", "V");
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
 
 			// Verify
 			assertEquals("Number of nodes not expected", 2, pdg.getNumberOfNodes());
+			for (PDGNode pdgNode : Iterator2Iterable.make(pdg.iterator())) {
+				// Should have no edges
+				assertTrue(pdg.getPredNodeCount(pdgNode) == 0);
+				assertTrue(pdg.getSuccNodeCount(pdgNode) == 0);
+			}
 
 
 		} catch (IOException e) {
@@ -52,6 +60,10 @@ public class PDGTests extends JDTJavaTest {
 		} catch (InvalidClassFileException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private String constructFullyQualifiedClass() {
+		return TEST_PACKAGE_NAME + "/" + singleInputForTest();
 	}
 
 	private IR retrieveMethodToBeInspected(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException {
