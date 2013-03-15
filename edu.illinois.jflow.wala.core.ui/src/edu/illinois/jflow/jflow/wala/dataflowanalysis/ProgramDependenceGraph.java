@@ -230,16 +230,18 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	private void addDependencyIfApplicable(SSAInstruction instruction) {
 		if (instruction.getNumberOfUses() > 0) {
 			for (int use= 0; use < instruction.getNumberOfUses(); use++) {
-				addEdgeIfHasDependency(instruction.getUse(use), instruction);
+				addEdgeIfHasParamDependency(instruction.getUse(use), instruction);
 			}
 		}
 	}
 
-	private void addEdgeIfHasDependency(int use, SSAInstruction instruction) {
+	private void addEdgeIfHasParamDependency(int use, SSAInstruction instruction) {
 		MethodParameter methodParameter= valueNumber2MethodParameters.get(use);
 		if (methodParameter != null) {
 			Statement statement= instruction2Statement.get(instruction);
-			addEdge(methodParameter, statement);
+			Integer instructionIndex= instruction2Index.get(instruction);
+			String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, use);
+			addEdge(methodParameter, statement, variableName);
 		}
 	}
 
