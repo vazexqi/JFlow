@@ -97,6 +97,40 @@ public class PDGTests extends JDTJavaTest {
 		}
 	}
 
+	@Test
+	public void testProject3() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
+
+			// Verify
+			assertEquals("Number of nodes not expected", 4, pdg.getNumberOfNodes());
+
+			// The order of building the nodes is deterministic so we can rely on the nodes being numbered in this manner
+			PDGNode methodParam= pdg.getNode(0);
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode produceC= pdg.getNode(3);
+
+			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			assertTrue("The dependency edge a -> b is missing", aToB.contains("[a]"));
+
+			Set<? extends String> aToC= pdg.getEdgeLabels(produceA, produceC);
+			assertEquals("There should only be one edge", 1, aToC.size());
+			assertTrue("The dependency edge a -> c is missing", aToC.contains("[a]"));
+
+			// Should have no edges
+			assertTrue(pdg.getPredNodeCount(methodParam) == 0);
+			assertTrue(pdg.getSuccNodeCount(methodParam) == 0);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
 	//////////////////
 	// Utility Methods
 	//////////////////
