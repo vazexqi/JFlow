@@ -27,4 +27,9 @@ public class MethodParameter implements PDGNode {
 		sb.append(parameterType.getName());
 		return sb.toString();
 	}
+
+	@Override
+	public String getSimplifiedRepresentation() {
+		return parameterType.getName().toString();
+	}
 }

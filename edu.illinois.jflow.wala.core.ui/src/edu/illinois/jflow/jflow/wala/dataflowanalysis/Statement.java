@@ -17,6 +17,8 @@ import com.ibm.wala.ssa.*;
 public class Statement implements PDGNode {
 	private final int lineNumber;
 
+	private String sourceCode= "";
+
 	List<SSAInstruction> instructions;
 
 	public Statement(int lineNumber) {
@@ -42,5 +44,18 @@ public class Statement implements PDGNode {
 		}
 
 		return sb.toString();
+	}
+
+	public String getSourceCode() {
+		return sourceCode;
+	}
+
+	public void setSourceCode(String sourceCode) {
+		this.sourceCode= sourceCode;
+	}
+
+	@Override
+	public String getSimplifiedRepresentation() {
+		return sourceCode;
 	}
 }

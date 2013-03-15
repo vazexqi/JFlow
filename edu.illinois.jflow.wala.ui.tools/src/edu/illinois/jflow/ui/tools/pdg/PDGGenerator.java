@@ -6,6 +6,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
+import org.eclipse.jface.text.IDocument;
 
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
@@ -37,16 +38,16 @@ public class PDGGenerator {
 		if (method != null) {
 			IMethod resolvedMethod= classHierarchy.resolveMethod(method);
 			if (resolvedMethod != null) {
-
-				return buildPDGFromIMethod(options, cache, resolvedMethod);
+				IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+				return buildPDGFromIMethod(options, cache, resolvedMethod, document);
 			}
 		}
 		return null;
 	}
 
-	public static ProgramDependenceGraph buildPDGFromIMethod(AnalysisOptions options, AnalysisCache cache, IMethod resolvedMethod) throws InvalidClassFileException {
+	public static ProgramDependenceGraph buildPDGFromIMethod(AnalysisOptions options, AnalysisCache cache, IMethod resolvedMethod, IDocument doc) throws InvalidClassFileException {
 		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
-		ProgramDependenceGraph graph= ProgramDependenceGraph.make(ir);
+		ProgramDependenceGraph graph= ProgramDependenceGraph.makeWithSourceCode(ir, doc);
 		return graph;
 	}
 }

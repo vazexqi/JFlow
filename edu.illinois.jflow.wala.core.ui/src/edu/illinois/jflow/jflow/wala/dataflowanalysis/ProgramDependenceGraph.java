@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.DefUse;
@@ -12,6 +15,7 @@ import com.ibm.wala.ssa.ISSABasicBlock;
 import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.ssa.SSAPhiInstruction;
 import com.ibm.wala.util.collections.Iterator2Iterable;
+import com.ibm.wala.util.graph.labeled.NumberedLabeledEdgeManager;
 import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
 
 /**
@@ -43,8 +47,18 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	// The index is needed for determining the local names
 	private Map<SSAInstruction, Integer> instruction2Index;
 
+	// The original doc where this program dependence graph was constructed from
+	private IDocument doc;
+
 	public static ProgramDependenceGraph make(IR ir) throws InvalidClassFileException {
 		ProgramDependenceGraph g= new ProgramDependenceGraph(ir);
+		g.populate();
+		return g;
+	}
+
+	public static ProgramDependenceGraph makeWithSourceCode(IR ir, IDocument doc) throws InvalidClassFileException {
+		ProgramDependenceGraph g= new ProgramDependenceGraph(ir);
+		g.setDocument(doc);
 		g.populate();
 		return g;
 	}
@@ -58,6 +72,10 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		this.ir= ir;
 	}
 
+	private void setDocument(IDocument doc) {
+		this.doc= doc;
+	}
+
 	private void populate() throws InvalidClassFileException {
 		// 1. Get all the "normal" instructions - meaning that we exclude SSAPiInstruction, SSAPhiInstruction and SSAGetCaughtExceptionInstructions
 		// 2. Collect each instruction into the statement object corresponding to its source line number.
@@ -69,61 +87,6 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		// 4. Set up the dependencies between each node.
 		addDependencyEdges();
 
-	}
-
-	private void addDependencyEdges() {
-		DefUse DU= new DefUse(ir);
-
-		// Add dependencies from parameters
-		for (SSAInstruction instruction : instruction2Statement.keySet()) {
-			addDependencyIfApplicable(instruction);
-		}
-
-		// Add dependencies from instructions
-		for (SSAInstruction instruction : instruction2Statement.keySet()) {
-			Statement defStatement= instruction2Statement.get(instruction);
-			for (int def= 0; def < instruction.getNumberOfDefs(); def++) {
-				int SSAVariable= instruction.getDef(def);
-				for (SSAInstruction use : Iterator2Iterable.make(DU.getUses(SSAVariable))) {
-					Statement useStatement= instruction2Statement.get(use);
-					Integer instructionIndex= instruction2Index.get(use);
-					String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, SSAVariable);
-					addEdge(defStatement, useStatement, variableName);
-				}
-			}
-		}
-	}
-
-	private void addDependencyIfApplicable(SSAInstruction instruction) {
-		if (instruction.getNumberOfUses() > 0) {
-			for (int use= 0; use < instruction.getNumberOfUses(); use++) {
-				addEdgeIfHasDependency(instruction.getUse(use), instruction);
-			}
-		}
-	}
-
-	private void addEdgeIfHasDependency(int use, SSAInstruction instruction) {
-		MethodParameter methodParameter= valueNumber2MethodParameters.get(use);
-		if (methodParameter != null) {
-			Statement statement= instruction2Statement.get(instruction);
-			addEdge(methodParameter, statement);
-		}
-	}
-
-	private String SSAVariableToLocalNameIfPossible(Integer instructionIndex, IR ir, int SSAVariable) {
-		StringBuilder sb= new StringBuilder();
-
-		if (instructionIndex == null) {
-			sb.append(String.format("v%d", SSAVariable));
-		} else {
-			String[] localNames= ir.getLocalNames(instructionIndex, SSAVariable);
-			if (localNames != null) {
-				sb.append(Arrays.toString(localNames));
-			} else {
-				sb.append(String.format("v%d", SSAVariable));
-			}
-		}
-		return sb.toString();
 	}
 
 	private void createStatementsFromInstructions() throws InvalidClassFileException {
@@ -213,6 +176,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			Statement statement= sourceLineMapping.get(lineNumber);
 			if (emptyStatementForLine(statement)) {
 				statement= new Statement(lineNumber);
+				attachSourceCodeIfPossible(statement);
 				sourceLineMapping.put(lineNumber, statement);
 			}
 			statement.add(instruction);
@@ -221,18 +185,85 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		}
 	}
 
+	private void attachSourceCodeIfPossible(Statement statement) {
+		if (doc != null) {
+			int sourceLineNumber= statement.getLineNumber();
+			int lineNumber= sourceLineNumber - 1; //IDocument indexing is 0-based
+			try {
+				int lineOffset= doc.getLineOffset(lineNumber);
+				int lineLength= doc.getLineLength(lineNumber);
+				String sourceCode= doc.get(lineOffset, lineLength).trim();
+				statement.setSourceCode(sourceCode);
+			} catch (BadLocationException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	private boolean emptyStatementForLine(Statement statement) {
 		return statement == null;
 	}
 
-	/**
-	 * This method is only valid after the call to populate().
-	 * 
-	 * @param instruction SSAInstruction in our IR
-	 * @return the corresponding statement that contains this instruction
-	 */
-	private int instructionToLineNumber(SSAInstruction instruction) {
-		Statement statement= instruction2Statement.get(instruction);
-		return statement.getLineNumber();
+	private void addDependencyEdges() {
+		DefUse DU= new DefUse(ir);
+
+		// Add dependencies from parameters
+		for (SSAInstruction instruction : instruction2Statement.keySet()) {
+			addDependencyIfApplicable(instruction);
+		}
+
+		// Add dependencies from instructions
+		for (SSAInstruction instruction : instruction2Statement.keySet()) {
+			Statement defStatement= instruction2Statement.get(instruction);
+			for (int def= 0; def < instruction.getNumberOfDefs(); def++) {
+				int SSAVariable= instruction.getDef(def);
+				for (SSAInstruction use : Iterator2Iterable.make(DU.getUses(SSAVariable))) {
+					Statement useStatement= instruction2Statement.get(use);
+					Integer instructionIndex= instruction2Index.get(use);
+					String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, SSAVariable);
+					addEdge(defStatement, useStatement, variableName);
+				}
+			}
+		}
+	}
+
+	private void addDependencyIfApplicable(SSAInstruction instruction) {
+		if (instruction.getNumberOfUses() > 0) {
+			for (int use= 0; use < instruction.getNumberOfUses(); use++) {
+				addEdgeIfHasDependency(instruction.getUse(use), instruction);
+			}
+		}
+	}
+
+	private void addEdgeIfHasDependency(int use, SSAInstruction instruction) {
+		MethodParameter methodParameter= valueNumber2MethodParameters.get(use);
+		if (methodParameter != null) {
+			Statement statement= instruction2Statement.get(instruction);
+			addEdge(methodParameter, statement);
+		}
+	}
+
+	private String SSAVariableToLocalNameIfPossible(Integer instructionIndex, IR ir, int SSAVariable) {
+		StringBuilder sb= new StringBuilder();
+
+		if (instructionIndex == null) {
+			sb.append(String.format("v%d", SSAVariable));
+		} else {
+			String[] localNames= ir.getLocalNames(instructionIndex, SSAVariable);
+			if (localNames != null) {
+				sb.append(Arrays.toString(localNames));
+			} else {
+				sb.append(String.format("v%d", SSAVariable));
+			}
+		}
+		return sb.toString();
+	}
+
+	// For testing purposes to more easily query the underlying graph structure
+	// Do NOT use for general purposes since this might change
+	////////////////////////////////////////////////////////////////////////////
+
+	public NumberedLabeledEdgeManager<PDGNode, String> getEdgeManager() {
+		return super.getEdgeManager();
 	}
 }

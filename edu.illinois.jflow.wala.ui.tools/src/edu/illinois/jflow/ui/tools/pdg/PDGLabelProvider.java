@@ -4,8 +4,6 @@ import java.util.Set;
 
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.Label;
-import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.zest.core.viewers.EntityConnectionData;
@@ -28,19 +26,8 @@ public class PDGLabelProvider extends LabelProvider implements IEntityStyleProvi
 	public String getText(Object element) {
 		if (element instanceof Statement) {
 			StringBuilder sb= new StringBuilder();
-			try {
-				Statement statement= (Statement)element;
-				int sourceLineNum= statement.getLineNumber();
-
-				IDocument doc= pdgView.getDocument();
-				int lineNumber= sourceLineNum - 1; //IDocument indexing is 0-based
-				int lineOffset= doc.getLineOffset(lineNumber);
-				int lineLength= doc.getLineLength(lineNumber);
-				String sourceCode= doc.get(lineOffset, lineLength).trim();
-				sb.append(sourceCode);
-			} catch (BadLocationException e) {
-				sb.append("Unknown line");
-			}
+			Statement statement= (Statement)element;
+			sb.append(statement.getSimplifiedRepresentation());
 			return sb.toString();
 		}
 		if (element instanceof MethodParameter) {
