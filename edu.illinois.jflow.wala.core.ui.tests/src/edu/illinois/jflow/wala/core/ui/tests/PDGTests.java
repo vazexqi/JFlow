@@ -131,6 +131,50 @@ public class PDGTests extends JDTJavaTest {
 		}
 	}
 
+	/**
+	 * Checks what happens when we have a statement that modifies a value (e.g., a += 2;). In SSA
+	 * world a new variable is created so this test is to check that we can still accurately check
+	 * the dependency.
+	 */
+	@Test
+	public void testProject4() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
+
+			// Verify
+			assertEquals("Number of nodes not expected", 5, pdg.getNumberOfNodes());
+
+			// The order of building the nodes is deterministic so we can rely on the nodes being numbered in this manner
+			PDGNode methodParam= pdg.getNode(0);
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode modifyA= pdg.getNode(3);
+			PDGNode produceC= pdg.getNode(4);
+
+			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			assertTrue("The dependency edge a -> b is missing", aToB.contains("[a]"));
+
+			Set<? extends String> aToModifyA= pdg.getEdgeLabels(produceA, modifyA);
+			assertEquals("There should only be one edge", 1, aToModifyA.size());
+			assertTrue("The dependency edge a -> modifyA is missing", aToB.contains("[a]"));
+
+			Set<? extends String> modifyAToC= pdg.getEdgeLabels(modifyA, produceC);
+			assertEquals("There should only be one edge", 1, modifyAToC.size());
+			assertTrue("The dependency edge modifyA -> c is missing", modifyAToC.contains("[a]"));
+
+			// Should have no edges
+			assertTrue(pdg.getPredNodeCount(methodParam) == 0);
+			assertTrue(pdg.getSuccNodeCount(methodParam) == 0);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
 	//////////////////
 	// Utility Methods
 	//////////////////
