@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -61,6 +62,44 @@ public class PDGTests extends JDTJavaTest {
 			e.printStackTrace();
 		}
 	}
+
+	@Test
+	public void testProject2() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir);
+
+			// Verify
+			assertEquals("Number of nodes not expected", 4, pdg.getNumberOfNodes());
+
+			// The order of building the nodes is deterministic so we can rely on the nodes being numbered in this manner
+			PDGNode methodParam= pdg.getNode(0);
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode produceC= pdg.getNode(3);
+
+			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			assertTrue("The dependency edge a -> b is missing", aToB.contains("[a]"));
+
+			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
+			assertEquals("There should only be one edge", 1, bToC.size());
+			assertTrue("The dependency edge b -> c is missing", bToC.contains("[b]"));
+
+			// Should have no edges
+			assertTrue(pdg.getPredNodeCount(methodParam) == 0);
+			assertTrue(pdg.getSuccNodeCount(methodParam) == 0);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	//////////////////
+	// Utility Methods
+	//////////////////
 
 	private String constructFullyQualifiedClass() {
 		return TEST_PACKAGE_NAME + "/" + singleInputForTest();
