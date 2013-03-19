@@ -7,14 +7,20 @@ import java.util.Map;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
+import com.ibm.wala.analysis.typeInference.TypeAbstraction;
+import com.ibm.wala.analysis.typeInference.TypeInference;
+import com.ibm.wala.cast.java.analysis.typeInference.AstJavaTypeInference;
 import com.ibm.wala.classLoader.IMethod;
+import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.DefUse;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.ssa.ISSABasicBlock;
 import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.ssa.SSAPhiInstruction;
+import com.ibm.wala.types.TypeReference;
 import com.ibm.wala.util.collections.Iterator2Iterable;
+import com.ibm.wala.util.debug.Assertions;
 import com.ibm.wala.util.graph.labeled.NumberedLabeledEdgeManager;
 import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
 
@@ -50,26 +56,36 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	// The original doc where this program dependence graph was constructed from
 	private IDocument doc;
 
-	public static ProgramDependenceGraph make(IR ir) throws InvalidClassFileException {
-		ProgramDependenceGraph g= new ProgramDependenceGraph(ir);
+	// Class hierarchy to resolve classes, methods, etc for type inference
+	private IClassHierarchy classHierarchy;
+
+	private AstJavaTypeInference typeInferrer;
+
+	public static ProgramDependenceGraph make(IR ir, IClassHierarchy classHierarchy) throws InvalidClassFileException {
+		ProgramDependenceGraph g= new ProgramDependenceGraph(ir, classHierarchy);
 		g.populate();
 		return g;
 	}
 
-	public static ProgramDependenceGraph makeWithSourceCode(IR ir, IDocument doc) throws InvalidClassFileException {
-		ProgramDependenceGraph g= new ProgramDependenceGraph(ir);
+	public static ProgramDependenceGraph makeWithSourceCode(IR ir, IClassHierarchy classHierarchy, IDocument doc) throws InvalidClassFileException {
+		ProgramDependenceGraph g= new ProgramDependenceGraph(ir, classHierarchy);
 		g.setDocument(doc);
 		g.populate();
 		return g;
 	}
 
-	public ProgramDependenceGraph(IR ir) {
+	public ProgramDependenceGraph(IR ir, IClassHierarchy classHierarchy) {
 		super(DEFAULT_LABEL);
+
 		valueNumber2MethodParameters= new HashMap<Integer, MethodParameter>();
 		sourceLineMapping= new HashMap<Integer, Statement>();
 		instruction2Statement= new HashMap<SSAInstruction, Statement>();
 		instruction2Index= new HashMap<SSAInstruction, Integer>();
+
 		this.ir= ir;
+		this.classHierarchy= classHierarchy;
+
+		typeInferrer= new AstJavaTypeInference(ir, classHierarchy, true);
 	}
 
 	private void setDocument(IDocument doc) {
@@ -247,6 +263,14 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 
 	private String SSAVariableToLocalNameIfPossible(Integer instructionIndex, IR ir, int SSAVariable) {
 		StringBuilder sb= new StringBuilder();
+
+		TypeAbstraction typeAbstraction= typeInferrer.getType(SSAVariable);
+		TypeReference type= typeAbstraction.getTypeReference();
+		if (type != null) {
+			sb.append(String.format("%s ", type.toString()));
+		} else {
+			Assertions.UNREACHABLE("Type inference failed to detect the type for one of our variables!");
+		}
 
 		if (instructionIndex == null) {
 			sb.append(String.format("v%d", SSAVariable));

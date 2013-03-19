@@ -39,15 +39,15 @@ public class PDGGenerator {
 			IMethod resolvedMethod= classHierarchy.resolveMethod(method);
 			if (resolvedMethod != null) {
 				IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
-				return buildPDGFromIMethod(options, cache, resolvedMethod, document);
+				return buildPDGFromIMethod(options, classHierarchy,cache, resolvedMethod, document);
 			}
 		}
 		return null;
 	}
 
-	public static ProgramDependenceGraph buildPDGFromIMethod(AnalysisOptions options, AnalysisCache cache, IMethod resolvedMethod, IDocument doc) throws InvalidClassFileException {
+	public static ProgramDependenceGraph buildPDGFromIMethod(AnalysisOptions options, IClassHierarchy classHierarchy, AnalysisCache cache, IMethod resolvedMethod, IDocument doc) throws InvalidClassFileException {
 		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
-		ProgramDependenceGraph graph= ProgramDependenceGraph.makeWithSourceCode(ir, doc);
+		ProgramDependenceGraph graph= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, doc);
 		return graph;
 	}
 }
