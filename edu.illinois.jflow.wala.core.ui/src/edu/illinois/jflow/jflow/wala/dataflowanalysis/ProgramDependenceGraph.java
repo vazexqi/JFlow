@@ -8,7 +8,6 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
 import com.ibm.wala.analysis.typeInference.TypeAbstraction;
-import com.ibm.wala.analysis.typeInference.TypeInference;
 import com.ibm.wala.cast.java.analysis.typeInference.AstJavaTypeInference;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
@@ -56,9 +55,6 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	// The original doc where this program dependence graph was constructed from
 	private IDocument doc;
 
-	// Class hierarchy to resolve classes, methods, etc for type inference
-	private IClassHierarchy classHierarchy;
-
 	private AstJavaTypeInference typeInferrer;
 
 	public static ProgramDependenceGraph make(IR ir, IClassHierarchy classHierarchy) throws InvalidClassFileException {
@@ -83,7 +79,6 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		instruction2Index= new HashMap<SSAInstruction, Integer>();
 
 		this.ir= ir;
-		this.classHierarchy= classHierarchy;
 
 		typeInferrer= new AstJavaTypeInference(ir, classHierarchy, true);
 	}
