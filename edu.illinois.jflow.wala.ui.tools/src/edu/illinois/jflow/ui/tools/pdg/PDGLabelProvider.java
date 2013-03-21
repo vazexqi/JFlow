@@ -9,6 +9,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.zest.core.viewers.EntityConnectionData;
 import org.eclipse.zest.core.viewers.IEntityStyleProvider;
 
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.DataDependence;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.MethodParameter;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGNode;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
@@ -42,10 +43,10 @@ public class PDGLabelProvider extends LabelProvider implements IEntityStyleProvi
 			PDGNode dest= (PDGNode)data.dest;
 
 			ProgramDependenceGraph pdg= pdgView.getPDG();
-			Set<? extends String> labels= pdg.getEdgeLabels(source, dest);
+			Set<? extends DataDependence> labels= pdg.getEdgeLabels(source, dest);
 
 			StringBuilder sb= new StringBuilder();
-			for (String label : labels) {
+			for (DataDependence label : labels) {
 				sb.append(label);
 				sb.append(" , ");
 			}

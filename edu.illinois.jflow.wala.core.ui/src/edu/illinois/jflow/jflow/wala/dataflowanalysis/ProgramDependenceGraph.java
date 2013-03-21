@@ -32,9 +32,7 @@ import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
  * @author nchen
  * 
  */
-public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNode, String> {
-
-	private static final String DEFAULT_LABEL= "";
+public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNode, DataDependence> {
 
 	public static boolean DEBUG= true;
 
@@ -71,8 +69,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	}
 
 	public ProgramDependenceGraph(IR ir, IClassHierarchy classHierarchy) {
-		super(DEFAULT_LABEL);
-
+		super(NullDataDepedence.make());
 		valueNumber2MethodParameters= new HashMap<Integer, MethodParameter>();
 		sourceLineMapping= new HashMap<Integer, Statement>();
 		instruction2Statement= new HashMap<SSAInstruction, Statement>();
@@ -232,7 +229,8 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 					Statement useStatement= instruction2Statement.get(use);
 					Integer instructionIndex= instruction2Index.get(use);
 					String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, SSAVariable);
-					addEdge(defStatement, useStatement, variableName);
+					TypeReference variableType= SSAVariableToTypeIfPossible(SSAVariable);
+					addEdge(defStatement, useStatement, new DataDependence(defStatement, useStatement, variableType, variableName));
 				}
 			}
 		}
@@ -252,21 +250,13 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			Statement statement= instruction2Statement.get(instruction);
 			Integer instructionIndex= instruction2Index.get(instruction);
 			String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, use);
-			addEdge(methodParameter, statement, variableName);
+			TypeReference variableType= SSAVariableToTypeIfPossible(use);
+			addEdge(methodParameter, statement, new DataDependence(methodParameter, statement, variableType, variableName));
 		}
 	}
 
 	private String SSAVariableToLocalNameIfPossible(Integer instructionIndex, IR ir, int SSAVariable) {
 		StringBuilder sb= new StringBuilder();
-
-		TypeAbstraction typeAbstraction= typeInferrer.getType(SSAVariable);
-		TypeReference type= typeAbstraction.getTypeReference();
-		if (type != null) {
-			sb.append(String.format("%s ", type.toString()));
-		} else {
-			Assertions.UNREACHABLE("Type inference failed to detect the type for one of our variables!");
-		}
-
 		if (instructionIndex == null) {
 			sb.append(String.format("v%d", SSAVariable));
 		} else {
@@ -280,11 +270,23 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		return sb.toString();
 	}
 
+	private TypeReference SSAVariableToTypeIfPossible(int SSAVariable) {
+		TypeAbstraction typeAbstraction= typeInferrer.getType(SSAVariable);
+		TypeReference type= typeAbstraction.getTypeReference();
+		if (type != null) {
+			return type;
+		} else {
+			// This should not happen, if it does then we must debug what went wrong
+			Assertions.UNREACHABLE("Type inference failed to detect the type for one of our variables!");
+			return null;
+		}
+	}
+
 	// For testing purposes to more easily query the underlying graph structure
 	// Do NOT use for general purposes since this might change
 	////////////////////////////////////////////////////////////////////////////
 
-	public NumberedLabeledEdgeManager<PDGNode, String> getEdgeManager() {
-		return super.getEdgeManager();
-	}
+//	public NumberedLabeledEdgeManager<PDGNode, String> getEdgeManager() {
+//		return super.getEdgeManager();
+//	}
 }
