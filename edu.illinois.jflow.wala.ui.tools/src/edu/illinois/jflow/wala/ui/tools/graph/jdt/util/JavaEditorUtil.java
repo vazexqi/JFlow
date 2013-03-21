@@ -6,15 +6,15 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.NodeFinder;
-import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.ui.SharedASTProvider;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PlatformUI;
 
+import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
 import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
-import com.ibm.wala.classLoader.IClassLoader;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.types.MethodReference;
 
@@ -38,17 +38,10 @@ public class JavaEditorUtil {
 		NodeFinder nodeFinder= new NodeFinder(ast, selection.getOffset(), selection.getLength());
 		ASTNode coveringNode= nodeFinder.getCoveringNode();
 
-		// 3) If we have the right selection, convert it to a MethodReference
-		if (coveringNode instanceof SimpleName && coveringNode.getParent() instanceof MethodDeclaration) {
-			MethodDeclaration methodDeclaration= (MethodDeclaration)coveringNode.getParent();
-			if (methodDeclaration.getName() == coveringNode) {
-				IClassLoader[] loaders= classHierarchy.getLoaders();
-				IClassLoader lastLoader= loaders[loaders.length - 1];
-				JDTIdentityMapper mapper= new JDTIdentityMapper(lastLoader.getReference(), ast.getAST());
-				return mapper.getMethodRef(methodDeclaration.resolveBinding());
-			}
-		}
+		// 3) From the selected node, get the closest MethodDeclaration
+		MethodDeclaration methodDeclaration= (MethodDeclaration)ASTNodes.getParent(coveringNode, MethodDeclaration.class);
+		JDTIdentityMapper mapper= new JDTIdentityMapper(JavaSourceAnalysisScope.SOURCE, ast.getAST());
+		return mapper.getMethodRef(methodDeclaration.resolveBinding());
 
-		return null;
 	}
 }
