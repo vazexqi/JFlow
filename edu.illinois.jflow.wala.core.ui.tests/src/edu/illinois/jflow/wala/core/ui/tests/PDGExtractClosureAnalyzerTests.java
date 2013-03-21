@@ -11,8 +11,11 @@ import org.junit.Test;
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
+import com.ibm.wala.types.TypeReference;
 
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.DataDependence;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGNode;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 
 public class PDGExtractClosureAnalyzerTests extends JFlowTest {
@@ -28,7 +31,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 
 	@Override
 	String getTestPackageName() {
-		return "pdg";
+		return "analyzer";
 	}
 
 	//////////
@@ -51,6 +54,38 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			assertEquals("There should not be any input dependencies", 0, analyzer.getInputDataDependences().size());
 			assertEquals("There should not be any output dependencies", 0, analyzer.getOutputDataDependences().size());
 
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void testProject2() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+			List<Integer> lines= new ArrayList<Integer>();
+			lines.add(6);
+			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
+			analyzer.analyzeSelection();
+
+			// Verify
+			assertEquals("There should not be any input dependencies", 1, analyzer.getInputDataDependences().size());
+			assertEquals("There should not be any output dependencies", 1, analyzer.getOutputDataDependences().size());
+
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode produceC= pdg.getNode(3);
+
+			DataDependence input= analyzer.getInputDataDependences().get(0);
+			DataDependence expectedInput= new DataDependence(produceA, produceB, TypeReference.Int, "[a]");
+			assertEquals("a->b input dependence doesn't match", expectedInput, input);
+
+			DataDependence output= analyzer.getOutputDataDependences().get(0);
+			DataDependence expectedOutput= new DataDependence(produceB, produceC, TypeReference.Int, "[b]");
+			assertEquals("b->c input dependence doesn't match", expectedOutput, output);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
