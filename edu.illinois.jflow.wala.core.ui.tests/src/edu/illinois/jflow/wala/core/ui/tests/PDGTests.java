@@ -18,8 +18,10 @@ import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
+import com.ibm.wala.types.TypeReference;
 import com.ibm.wala.util.collections.Iterator2Iterable;
 
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.DataDependence;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGNode;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 
@@ -84,13 +86,17 @@ public class PDGTests extends JDTJavaTest {
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode produceC= pdg.getNode(3);
 
-			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
-			assertEquals("There should only be one edge", 1, aToB.size());
-			assertTrue("The dependency edge a -> b is missing", aToB.contains("<Primordial,I> [a]"));
+			TypeReference intType= TypeReference.Int;
 
-			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
+			Set<? extends DataDependence> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			DataDependence aToBExpected= new DataDependence(produceA, produceB, intType, "[a]");
+			assertTrue("The dependency edge a -> b is missing", aToB.contains(aToBExpected));
+
+			Set<? extends DataDependence> bToC= pdg.getEdgeLabels(produceB, produceC);
 			assertEquals("There should only be one edge", 1, bToC.size());
-			assertTrue("The dependency edge b -> c is missing", bToC.contains("<Primordial,I> [b]"));
+			DataDependence bToCExpected= new DataDependence(produceB, produceC, intType, "[b]");
+			assertTrue("The dependency edge b -> c is missing", bToC.contains(bToCExpected));
 
 			// Should have no edges
 			assertTrue(pdg.getPredNodeCount(methodParam) == 0);
@@ -118,13 +124,17 @@ public class PDGTests extends JDTJavaTest {
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode produceC= pdg.getNode(3);
 
-			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
-			assertEquals("There should only be one edge", 1, aToB.size());
-			assertTrue("The dependency edge a -> b is missing", aToB.contains("<Primordial,I> [a]"));
+			TypeReference intType= TypeReference.Int;
 
-			Set<? extends String> aToC= pdg.getEdgeLabels(produceA, produceC);
+			Set<? extends DataDependence> aToB= pdg.getEdgeLabels(produceA, produceB);
+			assertEquals("There should only be one edge", 1, aToB.size());
+			DataDependence aToBExpected= new DataDependence(produceA, produceB, intType, "[a]");
+			assertTrue("The dependency edge a -> b is missing", aToB.contains(aToBExpected));
+
+			Set<? extends DataDependence> aToC= pdg.getEdgeLabels(produceA, produceC);
 			assertEquals("There should only be one edge", 1, aToC.size());
-			assertTrue("The dependency edge a -> c is missing", aToC.contains("<Primordial,I> [a]"));
+			DataDependence aToCExpected= new DataDependence(produceA, produceC, intType, "[a]");
+			assertTrue("The dependency edge a -> c is missing", aToC.contains(aToCExpected));
 
 			// Should have no edges
 			assertTrue(pdg.getPredNodeCount(methodParam) == 0);
@@ -158,17 +168,22 @@ public class PDGTests extends JDTJavaTest {
 			PDGNode modifyA= pdg.getNode(3);
 			PDGNode produceC= pdg.getNode(4);
 
-			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			TypeReference intType= TypeReference.Int;
+
+			Set<? extends DataDependence> aToB= pdg.getEdgeLabels(produceA, produceB);
 			assertEquals("There should only be one edge", 1, aToB.size());
-			assertTrue("The dependency edge a -> b is missing", aToB.contains("<Primordial,I> [a]"));
+			DataDependence aToBExpected= new DataDependence(produceA, produceB, intType, "[a]");
+			assertTrue("The dependency edge a -> b is missing", aToB.contains(aToBExpected));
 
-			Set<? extends String> aToModifyA= pdg.getEdgeLabels(produceA, modifyA);
+			Set<? extends DataDependence> aToModifyA= pdg.getEdgeLabels(produceA, modifyA);
 			assertEquals("There should only be one edge", 1, aToModifyA.size());
-			assertTrue("The dependency edge a -> modifyA is missing", aToB.contains("<Primordial,I> [a]"));
+			DataDependence aToModifyAExpected= new DataDependence(produceA, modifyA, intType, "[a]");
+			assertTrue("The dependency edge a -> modifyA is missing", aToModifyA.contains(aToModifyAExpected));
 
-			Set<? extends String> modifyAToC= pdg.getEdgeLabels(modifyA, produceC);
+			Set<? extends DataDependence> modifyAToC= pdg.getEdgeLabels(modifyA, produceC);
 			assertEquals("There should only be one edge", 1, modifyAToC.size());
-			assertTrue("The dependency edge modifyA -> c is missing", modifyAToC.contains("<Primordial,I> [a]"));
+			DataDependence aToCExpected= new DataDependence(modifyA, produceC, intType, "[a]");
+			assertTrue("The dependency edge modifyA -> c is missing", modifyAToC.contains(aToCExpected));
 
 			// Should have no edges
 			assertTrue(pdg.getPredNodeCount(methodParam) == 0);
@@ -199,17 +214,22 @@ public class PDGTests extends JDTJavaTest {
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode produceC= pdg.getNode(3);
 
-			Set<? extends String> paramToA= pdg.getEdgeLabels(param, produceA);
+			TypeReference intType= TypeReference.Int;
+
+			Set<? extends DataDependence> paramToA= pdg.getEdgeLabels(param, produceA);
 			assertEquals("There should only be one edge", 1, paramToA.size());
-			assertTrue("The dependency edge param -> a is missing", paramToA.contains("<Primordial,I> [param]"));
+			DataDependence paramToAExpected= new DataDependence(param, produceA, intType, "[param]");
+			assertTrue("The dependency edge param -> a is missing", paramToA.contains(paramToAExpected));
 
-			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			Set<? extends DataDependence> aToB= pdg.getEdgeLabels(produceA, produceB);
 			assertEquals("There should only be one edge", 1, aToB.size());
-			assertTrue("The dependency edge a -> b is missing", aToB.contains("<Primordial,I> [a]"));
+			DataDependence aToBExpected= new DataDependence(produceA, produceB, intType, "[a]");
+			assertTrue("The dependency edge a -> b is missing", aToB.contains(aToBExpected));
 
-			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
+			Set<? extends DataDependence> bToC= pdg.getEdgeLabels(produceB, produceC);
 			assertEquals("There should only be one edge", 1, bToC.size());
-			assertTrue("The dependency edge b -> c is missing", bToC.contains("<Primordial,I> [b]"));
+			DataDependence bToCExpected= new DataDependence(produceB, produceC, intType, "[b]");
+			assertTrue("The dependency edge b -> c is missing", bToC.contains(bToCExpected));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -234,26 +254,37 @@ public class PDGTests extends JDTJavaTest {
 			PDGNode param= pdg.getNode(0);
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
+
 			PDGNode produceC= pdg.getNode(3);
 
-			Set<? extends String> paramToA= pdg.getEdgeLabels(param, produceA);
+			TypeReference primitiveInttype= TypeReference.Int;
+			TypeReference listType= TypeReference.JavaUtilList;
+			TypeReference objectType= TypeReference.JavaLangObject;
+			TypeReference integerType= TypeReference.JavaLangInteger;
+
+			Set<? extends DataDependence> paramToA= pdg.getEdgeLabels(param, produceA);
 			assertEquals("There should only be one edge", 1, paramToA.size());
-			assertTrue("The dependency edge param -> a is missing", paramToA.contains("<Primordial,Ljava/util/List> [param]"));
+			DataDependence paramToAExpected= new DataDependence(param, produceA, listType, "[param]");
+			assertTrue("The dependency edge param -> a is missing", paramToA.contains(paramToAExpected));
 
 			// Contains a self loop since we need to retrieve values from the parameter using get(0)
-			Set<? extends String> aToA= pdg.getEdgeLabels(produceA, produceA);
+			Set<? extends DataDependence> aToA= pdg.getEdgeLabels(produceA, produceA);
 			assertEquals("There should only be one edge", 2, aToA.size());
 			// This means there is a dependency but it with an internal temp variable that we don't care about
-			assertTrue("The dependency edge a -> b is missing", aToA.contains("<Primordial,Ljava/lang/Object> []"));
-			assertTrue("The dependency edge a -> b is missing", aToA.contains("<Primordial,Ljava/lang/Integer> []"));
+			DataDependence aToAObject= new DataDependence(produceA, produceA, objectType, "[]");
+			DataDependence aToAInteger= new DataDependence(produceA, produceA, integerType, "[]");
+			assertTrue("The dependency edge a -> b is missing", aToA.contains(aToAObject));
+			assertTrue("The dependency edge a -> b is missing", aToA.contains(aToAInteger));
 
-			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			Set<? extends DataDependence> aToB= pdg.getEdgeLabels(produceA, produceB);
 			assertEquals("There should only be one edge", 1, aToB.size());
-			assertTrue("The dependency edge a -> b is missing", aToB.contains("<Primordial,I> [a]"));
+			DataDependence aToBExpected= new DataDependence(produceA, produceB, primitiveInttype, "[a]");
+			assertTrue("The dependency edge a -> b is missing", aToB.contains(aToBExpected));
 
-			Set<? extends String> bToC= pdg.getEdgeLabels(produceB, produceC);
+			Set<? extends DataDependence> bToC= pdg.getEdgeLabels(produceB, produceC);
 			assertEquals("There should only be one edge", 1, bToC.size());
-			assertTrue("The dependency edge b -> c is missing", bToC.contains("<Primordial,I> [b]"));
+			DataDependence bToCExpected= new DataDependence(produceB, produceC, primitiveInttype, "[b]");
+			assertTrue("The dependency edge b -> c is missing", bToC.contains(bToCExpected));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -261,7 +292,6 @@ public class PDGTests extends JDTJavaTest {
 			e.printStackTrace();
 		}
 	}
-
 
 	/**
 	 * Tests dependencies to a heap object.
@@ -286,25 +316,33 @@ public class PDGTests extends JDTJavaTest {
 			PDGNode produceB= pdg.getNode(4);
 			PDGNode addB= pdg.getNode(5);
 
-			Set<? extends String> createListToAddA= pdg.getEdgeLabels(createList, addA);
+			TypeReference intType= TypeReference.Int;
+			TypeReference arrayListType= TypeReference.JavaUtilArrayList;
+
+			Set<? extends DataDependence> createListToAddA= pdg.getEdgeLabels(createList, addA);
 			assertEquals("There should only be one edge", 1, createListToAddA.size());
-			assertTrue("The dependency edge createList -> addA is missing", createListToAddA.contains("<Primordial,Ljava/util/ArrayList> [list]"));
+			DataDependence createListToAddAExpected= new DataDependence(createList, addA, arrayListType, "[list]");
+			assertTrue("The dependency edge createList -> addA is missing", createListToAddA.contains(createListToAddAExpected));
 
-			Set<? extends String> createListToAddB= pdg.getEdgeLabels(createList, addB);
+			Set<? extends DataDependence> createListToAddB= pdg.getEdgeLabels(createList, addB);
 			assertEquals("There should only be one edge", 1, createListToAddB.size());
-			assertTrue("The dependency edge createList -> addB is missing", createListToAddB.contains("<Primordial,Ljava/util/ArrayList> [list]"));
+			DataDependence createListToAddBExpected= new DataDependence(createList, addB, arrayListType, "[list]");
+			assertTrue("The dependency edge createList -> addB is missing", createListToAddB.contains(createListToAddBExpected));
 
-			Set<? extends String> aToB= pdg.getEdgeLabels(produceA, produceB);
+			Set<? extends DataDependence> aToB= pdg.getEdgeLabels(produceA, produceB);
 			assertEquals("There should only be one edge", 1, aToB.size());
-			assertTrue("The dependency edge a -> b is missing", aToB.contains("<Primordial,I> [a]"));
+			DataDependence aToBExpected= new DataDependence(produceA, produceB, intType, "[a]");
+			assertTrue("The dependency edge a -> b is missing", aToB.contains(aToBExpected));
 
-			Set<? extends String> aToAddA= pdg.getEdgeLabels(produceA, addA);
+			Set<? extends DataDependence> aToAddA= pdg.getEdgeLabels(produceA, addA);
 			assertEquals("There should only be one edge", 1, aToAddA.size());
-			assertTrue("The dependency edge a -> addA is missing", aToAddA.contains("<Primordial,I> [a]"));
+			DataDependence aToAddAExpected= new DataDependence(produceA, addA, intType, "[a]");
+			assertTrue("The dependency edge a -> addA is missing", aToAddA.contains(aToAddAExpected));
 
-			Set<? extends String> bToAddB= pdg.getEdgeLabels(produceB, addB);
+			Set<? extends DataDependence> bToAddB= pdg.getEdgeLabels(produceB, addB);
 			assertEquals("There should only be one edge", 1, bToAddB.size());
-			assertTrue("The dependency edge b -> addB is missing", bToAddB.contains("<Primordial,I> [b]"));
+			DataDependence bToAddBExpected= new DataDependence(produceB, addB, intType, "[b]");
+			assertTrue("The dependency edge b -> addB is missing", bToAddB.contains(bToAddBExpected));
 
 			// Should have no edges
 			assertTrue(pdg.getPredNodeCount(param) == 0);

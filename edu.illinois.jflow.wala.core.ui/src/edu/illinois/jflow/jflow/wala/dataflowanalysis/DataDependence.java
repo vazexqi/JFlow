@@ -62,9 +62,24 @@ public class DataDependence {
 		if (variableType == null) {
 			if (other.variableType != null)
 				return false;
-		} else if (!variableType.equals(other.variableType))
+		} else if (!hasEqualVariableType(other))
 			return false;
 		return true;
+	}
+
+	/**
+	 * We redefine how we are comparing our variableTypes because the default equals in
+	 * TypeReference compares only by pointer equality and we want to compare the references of its
+	 * fields.
+	 * 
+	 * Why does pointer comparison of fields (i.e., using ==) work? Because there is only one
+	 * singleton reference for primitive types.
+	 * 
+	 * @param other
+	 * @return
+	 */
+	private boolean hasEqualVariableType(DataDependence other) {
+		return variableType.getClassLoader() == other.variableType.getClassLoader() && variableType.getName() == other.variableType.getName();
 	}
 
 	@Override
