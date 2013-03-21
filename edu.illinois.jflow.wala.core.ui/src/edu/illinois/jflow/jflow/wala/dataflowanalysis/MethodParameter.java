@@ -32,4 +32,10 @@ public class MethodParameter implements PDGNode {
 	public String getSimplifiedRepresentation() {
 		return parameterType.getName().toString();
 	}
+
+	@Override
+	public boolean isOnLine(int lineNumber) {
+		// By default all MethodParameters have no line numbers so we always return false
+		return false;
+	}
 }

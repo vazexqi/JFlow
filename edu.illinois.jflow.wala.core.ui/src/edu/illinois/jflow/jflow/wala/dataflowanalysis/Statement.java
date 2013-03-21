@@ -58,4 +58,9 @@ public class Statement implements PDGNode {
 	public String getSimplifiedRepresentation() {
 		return sourceCode;
 	}
+
+	@Override
+	public boolean isOnLine(int lineNumber) {
+		return this.lineNumber == lineNumber;
+	}
 }

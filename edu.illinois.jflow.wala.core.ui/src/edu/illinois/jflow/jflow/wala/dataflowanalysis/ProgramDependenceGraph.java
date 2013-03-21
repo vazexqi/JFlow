@@ -20,7 +20,6 @@ import com.ibm.wala.ssa.SSAPhiInstruction;
 import com.ibm.wala.types.TypeReference;
 import com.ibm.wala.util.collections.Iterator2Iterable;
 import com.ibm.wala.util.debug.Assertions;
-import com.ibm.wala.util.graph.labeled.NumberedLabeledEdgeManager;
 import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
 
 /**
@@ -281,12 +280,4 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			return null;
 		}
 	}
-
-	// For testing purposes to more easily query the underlying graph structure
-	// Do NOT use for general purposes since this might change
-	////////////////////////////////////////////////////////////////////////////
-
-//	public NumberedLabeledEdgeManager<PDGNode, String> getEdgeManager() {
-//		return super.getEdgeManager();
-//	}
 }

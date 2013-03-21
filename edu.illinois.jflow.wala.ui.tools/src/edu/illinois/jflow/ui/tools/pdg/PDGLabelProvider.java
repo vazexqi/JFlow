@@ -47,7 +47,7 @@ public class PDGLabelProvider extends LabelProvider implements IEntityStyleProvi
 
 			StringBuilder sb= new StringBuilder();
 			for (DataDependence label : labels) {
-				sb.append(label);
+				sb.append(label.getSimplifiedRepresentation());
 				sb.append(" , ");
 			}
 

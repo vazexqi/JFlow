@@ -82,11 +82,20 @@ public class DataDependence {
 		return variableType.getClassLoader() == other.variableType.getClassLoader() && variableType.getName() == other.variableType.getName();
 	}
 
-	@Override
-	public String toString() {
+	public String getSimplifiedRepresentation() {
 		return variableType.toString() + " " + variableName;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder sb= new StringBuilder();
+		sb.append(source.getSimplifiedRepresentation());
+		sb.append(" -- ");
+		sb.append(variableType.toString() + " " + variableName);
+		sb.append(" -->");
+		sb.append(dest.getSimplifiedRepresentation());
+		return sb.toString();
+	}
 }
 
 // Does nothing but is just a placeholder to represent an object that empty dependence in the PDG.
