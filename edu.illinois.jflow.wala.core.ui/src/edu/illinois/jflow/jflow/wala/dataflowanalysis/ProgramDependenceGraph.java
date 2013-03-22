@@ -19,6 +19,7 @@ import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.ssa.SSAPhiInstruction;
 import com.ibm.wala.types.TypeReference;
 import com.ibm.wala.util.collections.Iterator2Iterable;
+import com.ibm.wala.util.collections.Pair;
 import com.ibm.wala.util.debug.Assertions;
 import com.ibm.wala.util.graph.labeled.SlowSparseNumberedLabeledGraph;
 
@@ -126,7 +127,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			Statement statement= instruction2Statement.get(instruction);
 
 			for (SSAPhiInstruction phi : Iterator2Iterable.make(bb.iteratePhis())) {
-				statement.add(phi);
+				statement.add(Pair.make(phi, Statement.UNKNOWN_INSTRUCTION_INDEX));
 				instruction2Statement.put(phi, statement);
 			}
 		}
@@ -182,11 +183,11 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		if (instruction != null) {
 			Statement statement= sourceLineMapping.get(lineNumber);
 			if (emptyStatementForLine(statement)) {
-				statement= new Statement(lineNumber);
+				statement= new Statement(lineNumber, ir);
 				attachSourceCodeIfPossible(statement);
 				sourceLineMapping.put(lineNumber, statement);
 			}
-			statement.add(instruction);
+			statement.add(Pair.make(instruction, index));
 			instruction2Statement.put(instruction, statement);
 			instruction2Index.put(instruction, index);
 		}
@@ -226,8 +227,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 				int SSAVariable= instruction.getDef(def);
 				for (SSAInstruction use : Iterator2Iterable.make(DU.getUses(SSAVariable))) {
 					Statement useStatement= instruction2Statement.get(use);
-					Integer instructionIndex= instruction2Index.get(use);
-					String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, SSAVariable);
+					String variableName= SSAVariableToLocalNameIfPossible(use, SSAVariable, ir);
 					TypeReference variableType= SSAVariableToTypeIfPossible(SSAVariable);
 					addEdge(defStatement, useStatement, new DataDependence(defStatement, useStatement, variableType, variableName));
 				}
@@ -247,14 +247,14 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		MethodParameter methodParameter= valueNumber2MethodParameters.get(use);
 		if (methodParameter != null) {
 			Statement statement= instruction2Statement.get(instruction);
-			Integer instructionIndex= instruction2Index.get(instruction);
-			String variableName= SSAVariableToLocalNameIfPossible(instructionIndex, ir, use);
+			String variableName= SSAVariableToLocalNameIfPossible(instruction, use, ir);
 			TypeReference variableType= SSAVariableToTypeIfPossible(use);
 			addEdge(methodParameter, statement, new DataDependence(methodParameter, statement, variableType, variableName));
 		}
 	}
 
-	private String SSAVariableToLocalNameIfPossible(Integer instructionIndex, IR ir, int SSAVariable) {
+	private String SSAVariableToLocalNameIfPossible(SSAInstruction instruction, int SSAVariable, IR ir) {
+		Integer instructionIndex= instruction2Index.get(instruction);
 		StringBuilder sb= new StringBuilder();
 		if (instructionIndex == null) {
 			sb.append(String.format("v%d", SSAVariable));

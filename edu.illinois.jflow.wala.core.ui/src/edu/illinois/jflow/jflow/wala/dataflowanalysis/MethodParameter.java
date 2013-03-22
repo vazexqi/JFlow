@@ -1,5 +1,8 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.ibm.wala.types.TypeReference;
 
 /**
@@ -37,5 +40,10 @@ public class MethodParameter implements PDGNode {
 	public boolean isOnLine(int lineNumber) {
 		// By default all MethodParameters have no line numbers so we always return false
 		return false;
+	}
+
+	@Override
+	public List<String> defs() {
+		return new ArrayList<String>();
 	}
 }

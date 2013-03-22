@@ -15,9 +15,11 @@ public class PDGExtractClosureAnalyzer {
 
 	private List<PDGNode> selectedStatements= new ArrayList<PDGNode>(); // The actual selected statements (PDGNodes) in the editor
 
-	private List<DataDependence> inputDataDependences;
+	private List<DataDependence> inputDataDependences; // Think of these as method parameters
 
-	private List<DataDependence> outputDataDependences;
+	private List<DataDependence> outputDataDependences; // Think of these as method return value(S) <-- yes possibly values!
+
+	private List<String> closureLocalVariableNames;
 
 	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, int selectionStart, int selectionLength) {
 		this.pdg= pdg;
@@ -40,6 +42,7 @@ public class PDGExtractClosureAnalyzer {
 		computeSelectedStatements();
 		inputDataDependences= computeInput();
 		outputDataDependences= computeOutput();
+		closureLocalVariableNames= computeLocalVariables();
 	}
 
 	public List<DataDependence> getInputDataDependences() {
@@ -48,6 +51,10 @@ public class PDGExtractClosureAnalyzer {
 
 	public List<DataDependence> getOutputDataDependences() {
 		return outputDataDependences;
+	}
+
+	public List<String> getClosureLocalVariableNames() {
+		return closureLocalVariableNames;
 	}
 
 	private void computeSelectedStatements() {
@@ -92,6 +99,14 @@ public class PDGExtractClosureAnalyzer {
 			}
 		}
 		return inputs;
+	}
+
+	private List<String> computeLocalVariables() {
+		List<String> localVariables= new ArrayList<String>();
+		for (PDGNode node : selectedStatements) {
+			localVariables.addAll(node.defs());
+		}
+		return localVariables;
 	}
 
 	private List<Integer> calculateSelectedLines(IDocument doc, int selectionStart, int selectionLength) {

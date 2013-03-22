@@ -48,7 +48,7 @@ public class ViewPDGAction extends Action {
 				analyzer.analyzeSelection();
 				List<DataDependence> inputDataDependences= analyzer.getInputDataDependences();
 				List<DataDependence> outputDataDependences= analyzer.getOutputDataDependences();
-
+				List<String> closureLocalVariableNames= analyzer.getClosureLocalVariableNames();
 				System.out.println("Done");
 
 			} catch (IOException e) {
