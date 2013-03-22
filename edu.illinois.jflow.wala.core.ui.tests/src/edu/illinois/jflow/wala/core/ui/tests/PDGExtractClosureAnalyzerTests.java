@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
@@ -98,9 +99,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 		try {
 			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
-			List<Integer> lines= new ArrayList<Integer>();
-			lines.add(6);
-			lines.add(7);
+			List<Integer> lines= Arrays.asList(6, 7);
 			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
 			analyzer.analyzeSelection();
 
