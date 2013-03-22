@@ -2,6 +2,7 @@ package edu.illinois.jflow.ui.tools.pdg;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -48,7 +49,7 @@ public class ViewPDGAction extends Action {
 				analyzer.analyzeSelection();
 				List<DataDependence> inputDataDependences= analyzer.getInputDataDependences();
 				List<DataDependence> outputDataDependences= analyzer.getOutputDataDependences();
-				List<String> closureLocalVariableNames= analyzer.getClosureLocalVariableNames();
+				Set<String> closureLocalVariableNames= analyzer.getClosureLocalVariableNames();
 				System.out.println("Done");
 
 			} catch (IOException e) {

@@ -1,10 +1,12 @@
 package edu.illinois.jflow.wala.core.ui.tests;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import org.junit.Test;
@@ -54,6 +56,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify
 			assertEquals("There should not be any input dependencies", 0, analyzer.getInputDataDependences().size());
 			assertEquals("There should not be any output dependencies", 0, analyzer.getOutputDataDependences().size());
+			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -75,6 +78,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify
 			assertEquals("There should be 1 input dependencies", 1, analyzer.getInputDataDependences().size());
 			assertEquals("There should be 1 output dependencies", 1, analyzer.getOutputDataDependences().size());
+			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
@@ -106,6 +110,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify
 			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
 			assertEquals("There should 1 output dependencies", 1, analyzer.getOutputDataDependences().size());
+			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
@@ -148,6 +153,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify
 			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
 			assertEquals("There should 1 output dependencies", 1, analyzer.getOutputDataDependences().size());
+			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
@@ -167,6 +173,84 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			DataDependence output= analyzer.getOutputDataDependences().get(0);
 			DataDependence expectedOutput= new DataDependence(plusEqualsA, produceC, TypeReference.Int, "[a]");
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput, output);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void testProject5() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+			List<Integer> lines= Arrays.asList(10, 11);
+			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
+			analyzer.analyzeSelection();
+
+			// Verify
+			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
+			assertEquals("There should 2 output dependencies", 2, analyzer.getOutputDataDependences().size());
+			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
+
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode plusEqualsA= pdg.getNode(3);
+			PDGNode consumeC= pdg.getNode(4);
+
+			// This one is tricky and I want to check that it is right. 
+			// Basically all the dependencies are on 'a' but 'a' has been modified several times
+			DataDependence input1= analyzer.getInputDataDependences().get(0);
+			DataDependence expectedInput1= new DataDependence(produceA, produceB, TypeReference.Int, "[a]");
+			assertEquals("a->b input dependence doesn't match", expectedInput1, input1);
+
+			DataDependence input2= analyzer.getInputDataDependences().get(1);
+			DataDependence expectedInput2= new DataDependence(produceA, plusEqualsA, TypeReference.Int, "[a]");
+			assertEquals("a->a+= input dependence doesn't match", expectedInput2, input2);
+
+			DataDependence output1= analyzer.getOutputDataDependences().get(0);
+			DataDependence expectedOutput1= new DataDependence(produceB, consumeC, TypeReference.Int, "[b]");
+			assertEquals("b -> c input dependence doesn't match", expectedOutput1, output1);
+
+			DataDependence output2= analyzer.getOutputDataDependences().get(1);
+			DataDependence expectedOutput2= new DataDependence(plusEqualsA, consumeC, TypeReference.Int, "[a]");
+			assertEquals("a+=->c input dependence doesn't match", expectedOutput2, output2);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void testProject6() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+			List<Integer> lines= Arrays.asList(10, 11, 12);
+			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
+			analyzer.analyzeSelection();
+
+			// Verify
+			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
+			assertEquals("There should 0 output dependencies", 0, analyzer.getOutputDataDependences().size());
+			assertTrue("There should be two local variable [b,c] for the method", analyzer.getClosureLocalVariableNames().containsAll(new HashSet<String>(Arrays.asList("b", "c"))));
+
+			PDGNode produceA= pdg.getNode(1);
+			PDGNode produceB= pdg.getNode(2);
+			PDGNode plusEqualsA= pdg.getNode(3);
+
+			// This one is tricky and I want to check that it is right. 
+			// Basically all the dependencies are on 'a' but 'a' has been modified several times
+			DataDependence input1= analyzer.getInputDataDependences().get(0);
+			DataDependence expectedInput1= new DataDependence(produceA, produceB, TypeReference.Int, "[a]");
+			assertEquals("a->b input dependence doesn't match", expectedInput1, input1);
+
+			DataDependence input2= analyzer.getInputDataDependences().get(1);
+			DataDependence expectedInput2= new DataDependence(produceA, plusEqualsA, TypeReference.Int, "[a]");
+			assertEquals("a->a+= input dependence doesn't match", expectedInput2, input2);
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
