@@ -1,5 +1,10 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.ibm.wala.types.TypeReference;
 
 /**
@@ -95,6 +100,22 @@ public class DataDependence {
 		sb.append(" -->");
 		sb.append(dest.getSimplifiedRepresentation());
 		return sb.toString();
+	}
+
+	public List<String> getLocalVariableNames() {
+		List<String> names= new ArrayList<String>();
+
+		if (variableName != "null") {
+			Pattern p= Pattern.compile("\\[(.*?)\\]");
+			Matcher m= p.matcher(variableName);
+			m.find();
+			String[] rawNames= m.group(1).split(",");
+			for (String rawName : rawNames) {
+				names.add(rawName.trim());
+			}
+		}
+
+		return names;
 	}
 }
 

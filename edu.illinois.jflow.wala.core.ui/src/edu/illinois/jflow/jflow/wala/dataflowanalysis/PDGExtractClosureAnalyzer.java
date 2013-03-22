@@ -1,7 +1,9 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -19,7 +21,7 @@ public class PDGExtractClosureAnalyzer {
 
 	private List<DataDependence> outputDataDependences; // Think of these as method return value(S) <-- yes possibly values!
 
-	private List<String> closureLocalVariableNames;
+	private Set<String> closureLocalVariableNames;
 
 	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, int selectionStart, int selectionLength) {
 		this.pdg= pdg;
@@ -42,7 +44,16 @@ public class PDGExtractClosureAnalyzer {
 		computeSelectedStatements();
 		inputDataDependences= computeInput();
 		outputDataDependences= computeOutput();
-		closureLocalVariableNames= computeLocalVariables();
+		closureLocalVariableNames= filterMethodParameters(computeLocalVariables());
+	}
+
+	private Set<String> filterMethodParameters(Set<String> localVariables) {
+		Set<String> parameterNames= new HashSet<String>();
+		for (DataDependence data : inputDataDependences) {
+			parameterNames.addAll(data.getLocalVariableNames());
+		}
+		localVariables.removeAll(parameterNames); // Anything that is passed in as a parameter should not be redeclared
+		return localVariables;
 	}
 
 	public List<DataDependence> getInputDataDependences() {
@@ -53,7 +64,7 @@ public class PDGExtractClosureAnalyzer {
 		return outputDataDependences;
 	}
 
-	public List<String> getClosureLocalVariableNames() {
+	public Set<String> getClosureLocalVariableNames() {
 		return closureLocalVariableNames;
 	}
 
@@ -101,8 +112,8 @@ public class PDGExtractClosureAnalyzer {
 		return inputs;
 	}
 
-	private List<String> computeLocalVariables() {
-		List<String> localVariables= new ArrayList<String>();
+	private Set<String> computeLocalVariables() {
+		Set<String> localVariables= new HashSet<String>();
 		for (PDGNode node : selectedStatements) {
 			localVariables.addAll(node.defs());
 		}
