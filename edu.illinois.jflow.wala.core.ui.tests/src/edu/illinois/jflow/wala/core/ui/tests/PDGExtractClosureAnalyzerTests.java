@@ -13,9 +13,10 @@ import java.util.Map;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
-import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
@@ -48,28 +49,41 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 		return "analyzer";
 	}
 
-	private CompilationUnit getCompilationUnit(IJavaProject javaProject) {
-		try {
-			// JDT likes . separators whereas Wala likes / separators
-			String walaQualifiedName= constructFullyQualifiedClass();
-			String jdtQualifiedName= walaQualifiedName.replace('/', '.');
-			IType type= javaProject.findType(jdtQualifiedName);
-			if (type != null) {
-				ICompilationUnit iCUnit= type.getCompilationUnit();
-				if (iCUnit != null) {
-					final ASTParser parser= ASTParser.newParser(AST.JLS4);
-					parser.setKind(ASTParser.K_COMPILATION_UNIT);
-					parser.setSource(iCUnit);
-					parser.setResolveBindings(true); // Must set to true since this is what we are testing
-					CompilationUnit unit= (CompilationUnit)parser.createAST(new NullProgressMonitor());
-					return unit;
-				}
+	private CompilationUnit getCompilationUnit() {
+		IType type= getTypeForCurrentTestProject(JdtUtil.getJavaProject(PROJECT_NAME));
+		if (type != null) {
+			ICompilationUnit iCUnit= type.getCompilationUnit();
+			if (iCUnit != null) {
+				final ASTParser parser= ASTParser.newParser(AST.JLS4);
+				parser.setKind(ASTParser.K_COMPILATION_UNIT);
+				parser.setSource(iCUnit);
+				parser.setResolveBindings(true); // Must set to true since this is what we are testing
+				CompilationUnit unit= (CompilationUnit)parser.createAST(new NullProgressMonitor());
+				return unit;
 			}
-		} catch (JavaModelException e) {
-			e.printStackTrace();
 		}
 
 		return null;
+	}
+
+	private IType getTypeForCurrentTestProject(IJavaProject javaProject) {
+		return JdtUtil.findJavaClassInProjects(getFullyQualifiedNameForCurrentTestProject(), Arrays.asList(javaProject));
+	}
+
+	private String getFullyQualifiedNameForCurrentTestProject() {
+		// JDT likes . separators whereas Wala likes / separators
+		String walaQualifiedName= constructFullyQualifiedClass();
+		String jdtQualifiedName= walaQualifiedName.replace('/', '.');
+		return jdtQualifiedName;
+	}
+
+	private ASTNode getMethodDeclaration(CompilationUnit cUnit, String selector) {
+		IType type= getTypeForCurrentTestProject(JdtUtil.getJavaProject(PROJECT_NAME));
+		String name= JdtUtil.parseForName(selector, type);
+		String[] parameters= JdtUtil.parseForParameterTypes(selector);
+		IMethod method= type.getMethod(name, parameters);
+		ASTNode methodNode= cUnit.findDeclaringNode(method.getKey());
+		return methodNode;
 	}
 
 	//////////
@@ -100,6 +114,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 		}
 	}
 
+
 	@Test
 	public void testProject2() {
 		try {
@@ -129,8 +144,10 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			assertEquals("b->c input dependence doesn't match", expectedOutput, output);
 
 			// Verify that we can reconcile with JDT with bindings
-			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			CompilationUnit cUnit= getCompilationUnit();
+			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
 			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project2;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
@@ -176,8 +193,10 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput, output);
 
 			// Verify that we can reconcile with JDT with bindings
-			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			CompilationUnit cUnit= getCompilationUnit();
+			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
 			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project3;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
@@ -227,8 +246,10 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput, output);
 
 			// Verify that we can reconcile with JDT with bindings
-			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			CompilationUnit cUnit= getCompilationUnit();
+			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
 			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project4;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
@@ -278,8 +299,10 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput2, output2);
 
 			// Verify that we can reconcile with JDT with bindings
-			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			CompilationUnit cUnit= getCompilationUnit();
+			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
 			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project5;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
@@ -320,8 +343,9 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			assertEquals("a->a+= input dependence doesn't match", expectedInput2, input2);
 
 			// Verify that we can reconcile with JDT with bindings
-			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			CompilationUnit cUnit= getCompilationUnit();
+			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
 
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
