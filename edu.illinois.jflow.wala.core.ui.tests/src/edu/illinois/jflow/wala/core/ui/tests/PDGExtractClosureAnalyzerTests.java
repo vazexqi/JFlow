@@ -8,10 +8,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.junit.Test;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
+import com.ibm.wala.ide.util.JdtUtil;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.TypeReference;
@@ -35,6 +46,30 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 	@Override
 	String getTestPackageName() {
 		return "analyzer";
+	}
+
+	private CompilationUnit getCompilationUnit(IJavaProject javaProject) {
+		try {
+			// JDT likes . separators whereas Wala likes / separators
+			String walaQualifiedName= constructFullyQualifiedClass();
+			String jdtQualifiedName= walaQualifiedName.replace('/', '.');
+			IType type= javaProject.findType(jdtQualifiedName);
+			if (type != null) {
+				ICompilationUnit iCUnit= type.getCompilationUnit();
+				if (iCUnit != null) {
+					final ASTParser parser= ASTParser.newParser(AST.JLS4);
+					parser.setKind(ASTParser.K_COMPILATION_UNIT);
+					parser.setSource(iCUnit);
+					parser.setResolveBindings(true); // Must set to true since this is what we are testing
+					CompilationUnit unit= (CompilationUnit)parser.createAST(new NullProgressMonitor());
+					return unit;
+				}
+			}
+		} catch (JavaModelException e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 	//////////
@@ -75,11 +110,12 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
 			analyzer.analyzeSelection();
 
-			// Verify
+			// Verify simple properties
 			assertEquals("There should be 1 input dependencies", 1, analyzer.getInputDataDependences().size());
 			assertEquals("There should be 1 output dependencies", 1, analyzer.getOutputDataDependences().size());
 			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
+			// Verify structure
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode produceC= pdg.getNode(3);
@@ -91,6 +127,13 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			DataDependence output= analyzer.getOutputDataDependences().get(0);
 			DataDependence expectedOutput= new DataDependence(produceB, produceC, TypeReference.Int, "[b]");
 			assertEquals("b->c input dependence doesn't match", expectedOutput, output);
+
+			// Verify that we can reconcile with JDT with bindings
+			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			IBinding bindingForB= bindings.get("b");
+			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
+			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project2;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
@@ -107,11 +150,12 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
 			analyzer.analyzeSelection();
 
-			// Verify
+			// Verify simple properties
 			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
 			assertEquals("There should 1 output dependencies", 1, analyzer.getOutputDataDependences().size());
 			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
+			// Verify structure
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode plusEqualsA= pdg.getNode(3);
@@ -130,6 +174,13 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			DataDependence output= analyzer.getOutputDataDependences().get(0);
 			DataDependence expectedOutput= new DataDependence(plusEqualsA, produceC, TypeReference.Int, "[a]");
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput, output);
+
+			// Verify that we can reconcile with JDT with bindings
+			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			IBinding bindingForB= bindings.get("b");
+			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
+			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project3;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
@@ -150,11 +201,12 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
 			analyzer.analyzeSelection();
 
-			// Verify
+			// Verify simple properties
 			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
 			assertEquals("There should 1 output dependencies", 1, analyzer.getOutputDataDependences().size());
 			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
+			// Verify structure
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode plusEqualsA= pdg.getNode(3);
@@ -173,6 +225,13 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			DataDependence output= analyzer.getOutputDataDependences().get(0);
 			DataDependence expectedOutput= new DataDependence(plusEqualsA, produceC, TypeReference.Int, "[a]");
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput, output);
+
+			// Verify that we can reconcile with JDT with bindings
+			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			IBinding bindingForB= bindings.get("b");
+			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
+			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project4;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
@@ -189,11 +248,12 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
 			analyzer.analyzeSelection();
 
-			// Verify
+			// Verify simple properties
 			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
 			assertEquals("There should 2 output dependencies", 2, analyzer.getOutputDataDependences().size());
 			assertTrue("There should be one local variable [b] for the method", analyzer.getClosureLocalVariableNames().contains("b"));
 
+			// Verify structure
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode plusEqualsA= pdg.getNode(3);
@@ -216,6 +276,13 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			DataDependence output2= analyzer.getOutputDataDependences().get(1);
 			DataDependence expectedOutput2= new DataDependence(plusEqualsA, consumeC, TypeReference.Int, "[a]");
 			assertEquals("a+=->c input dependence doesn't match", expectedOutput2, output2);
+
+			// Verify that we can reconcile with JDT with bindings
+			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+			IBinding bindingForB= bindings.get("b");
+			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
+			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project5;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
@@ -232,11 +299,12 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
 			analyzer.analyzeSelection();
 
-			// Verify
+			// Verify simple properties
 			assertEquals("There should 2 input dependencies", 2, analyzer.getInputDataDependences().size());
 			assertEquals("There should 0 output dependencies", 0, analyzer.getOutputDataDependences().size());
 			assertTrue("There should be two local variable [b,c] for the method", analyzer.getClosureLocalVariableNames().containsAll(new HashSet<String>(Arrays.asList("b", "c"))));
 
+			// Verify structure
 			PDGNode produceA= pdg.getNode(1);
 			PDGNode produceB= pdg.getNode(2);
 			PDGNode plusEqualsA= pdg.getNode(3);
@@ -250,6 +318,18 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			DataDependence input2= analyzer.getInputDataDependences().get(1);
 			DataDependence expectedInput2= new DataDependence(produceA, plusEqualsA, TypeReference.Int, "[a]");
 			assertEquals("a->a+= input dependence doesn't match", expectedInput2, input2);
+
+			// Verify that we can reconcile with JDT with bindings
+			CompilationUnit cUnit= getCompilationUnit(JdtUtil.getJavaProject(PROJECT_NAME));
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(cUnit, analyzer.getClosureLocalVariableNames());
+
+			IBinding bindingForB= bindings.get("b");
+			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
+			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project6;.main([Ljava/lang/String;)V#b", bindingForB.getKey());
+
+			IBinding bindingForC= bindings.get("c");
+			assertTrue("Expected a binding for variable c but got null instead", bindingForC != null);
+			assertEquals("The key for the binding doesn't match", "Lanalyzer/Project6;.main([Ljava/lang/String;)V#c", bindingForC.getKey());
 
 		} catch (IOException e) {
 			e.printStackTrace();
