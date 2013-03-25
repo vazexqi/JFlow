@@ -144,9 +144,13 @@ public class PDGExtractClosureAnalyzer {
 		return lines;
 	}
 
+	public Map<String, IBinding> transformNamesToBindings(ASTNode node, Set<String> names) {
+		return BindingsFinder.findBindings(node, names);
+	}
+
 	public Map<String, IBinding> transformDataDependencesToIBindings(ASTNode node, Collection<DataDependence> dependencies) {
 		Set<String> names= extractNamesFromDependencies(dependencies);
-		return BindingsFinder.findBindings(node, names);
+		return transformNamesToBindings(node, names);
 	}
 
 	private Set<String> extractNamesFromDependencies(Collection<DataDependence> dependencies) {
