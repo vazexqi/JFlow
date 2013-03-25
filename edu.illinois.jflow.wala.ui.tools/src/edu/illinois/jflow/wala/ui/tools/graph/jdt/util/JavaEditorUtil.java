@@ -15,7 +15,6 @@ import org.eclipse.ui.PlatformUI;
 
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
 import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
-import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.types.MethodReference;
 
 @SuppressWarnings("restriction")
@@ -28,7 +27,7 @@ public class JavaEditorUtil {
 		return null;
 	}
 
-	public static MethodReference findSelectedMethodDeclaration(JavaEditor javaEditor, ICompilationUnit inputAsCompilationUnit, IClassHierarchy classHierarchy) {
+	public static MethodReference findSelectedMethodDeclaration(JavaEditor javaEditor, ICompilationUnit inputAsCompilationUnit) {
 		ITextSelection selection= (ITextSelection)javaEditor.getSelectionProvider().getSelection();
 
 		// 1) Get the ast for the editor

@@ -33,7 +33,7 @@ public class PDGGenerator {
 		AnalysisOptions options= new AnalysisOptions();
 		AnalysisCache cache= engine.makeDefaultCache();
 
-		MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit, classHierarchy);
+		MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit);
 
 		if (method != null) {
 			IMethod resolvedMethod= classHierarchy.resolveMethod(method);
