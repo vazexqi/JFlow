@@ -1,14 +1,20 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
 import com.ibm.wala.util.collections.Iterator2Iterable;
+
+import edu.illinois.jflow.source.utils.BindingsFinder;
 
 public class PDGExtractClosureAnalyzer {
 	private ProgramDependenceGraph pdg;
@@ -136,5 +142,20 @@ public class PDGExtractClosureAnalyzer {
 		}
 
 		return lines;
+	}
+
+	public Map<String, IBinding> transformDataDependencesToIBindings(ASTNode node, Collection<DataDependence> dependencies) {
+		Set<String> names= extractNamesFromDependencies(dependencies);
+		return BindingsFinder.findBindings(node, names);
+	}
+
+	private Set<String> extractNamesFromDependencies(Collection<DataDependence> dependencies) {
+		Set<String> names= new HashSet<String>();
+
+		for (DataDependence dependence : dependencies) {
+			names.addAll(dependence.getLocalVariableNames());
+		}
+
+		return names;
 	}
 }
