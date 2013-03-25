@@ -55,7 +55,7 @@ public class GeneratePDG extends Action {
 				AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(javaProject);
 				CallGraphBuilder builder= engine.defaultCallGraphBuilder();
 				CallGraph callGraph= engine.buildDefaultCallGraph();
-				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit, engine.getClassHierarchy());
+				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit);
 				if (method != null) {
 					final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_EXCEPTIONS, ControlDependenceOptions.NONE);
 					Set<CGNode> nodes= callGraph.getNodes(method);

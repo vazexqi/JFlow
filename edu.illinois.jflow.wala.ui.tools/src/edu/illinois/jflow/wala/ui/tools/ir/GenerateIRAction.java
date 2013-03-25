@@ -46,7 +46,7 @@ public class GenerateIRAction extends Action {
 				engine.buildAnalysisScope();
 				IClassHierarchy classHierarchy= engine.buildClassHierarchy();
 
-				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit, classHierarchy);
+				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit);
 				if (method != null) {
 					IMethod resolvedMethod= classHierarchy.resolveMethod(method);
 					if (resolvedMethod != null) {

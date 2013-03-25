@@ -5,6 +5,7 @@
  */
 package edu.illinois.jflow.core.transformations.code;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -66,15 +67,35 @@ import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
 import org.eclipse.jdt.internal.corext.util.Messages;
+import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.core.refactoring.TextFileChange;
 import org.eclipse.ltk.core.refactoring.participants.ResourceChangeChecker;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
+
+import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
+import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
+import com.ibm.wala.classLoader.IMethod;
+import com.ibm.wala.client.AbstractAnalysisEngine;
+import com.ibm.wala.ipa.callgraph.AnalysisCache;
+import com.ibm.wala.ipa.callgraph.AnalysisOptions;
+import com.ibm.wala.ipa.callgraph.impl.Everywhere;
+import com.ibm.wala.ipa.cha.IClassHierarchy;
+import com.ibm.wala.shrikeCT.InvalidClassFileException;
+import com.ibm.wala.ssa.IR;
+import com.ibm.wala.types.MethodReference;
+
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
+import edu.illinois.jflow.wala.ui.tools.graph.jdt.util.JavaEditorUtil;
+import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
 /**
  * Extracts a closure in a compilation unit based on a text selection range.
@@ -160,6 +181,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private ExtractClosureAnalyzer fAnalyzer;
 
 	private List<ParameterInfo> fParameterInfos;
+
+	private PDGExtractClosureAnalyzer fPDGAnalyzer;
 
 	private static final String EMPTY= ""; //$NON-NLS-1$
 
@@ -251,6 +274,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 		fSelectionStart= fAnalyzer.getSelection().getOffset();
 		fSelectionLength= fAnalyzer.getSelection().getLength();
 
+		try {
+			createPDGAnalyzer();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+
 		result.merge(fAnalyzer.checkInitialConditions(fImportRewriter));
 		if (result.hasFatalError())
 			return result;
@@ -261,6 +292,37 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private ASTVisitor createVisitor() throws CoreException {
 		fAnalyzer= new ExtractClosureAnalyzer(fCUnit, Selection.createFromStartLength(fSelectionStart, fSelectionLength));
 		return fAnalyzer;
+	}
+
+	private void createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException {
+		// Set up the analysis engine
+		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
+		engine.buildAnalysisScope();
+		final IClassHierarchy classHierarchy= engine.buildClassHierarchy();
+		final AnalysisOptions options= new AnalysisOptions();
+		final AnalysisCache cache= engine.makeDefaultCache();
+
+		// Get the IR for the selected method
+		MethodDeclaration methodDeclaration= (MethodDeclaration)fAnalyzer.getEnclosingBodyDeclaration();
+		JDTIdentityMapper mapper= new JDTIdentityMapper(JavaSourceAnalysisScope.SOURCE, fAST);
+		MethodReference methodRef= mapper.getMethodRef(methodDeclaration.resolveBinding());
+
+		final IMethod resolvedMethod= classHierarchy.resolveMethod(methodRef);
+		Display.getDefault().syncExec(new Runnable() {
+			@Override
+			public void run() {
+				JavaEditor javaEditor= JavaEditorUtil.getActiveJavaEditor();
+				IDocument doc= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+				IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
+				ProgramDependenceGraph pdg;
+				try {
+					pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, doc);
+					fPDGAnalyzer= new PDGExtractClosureAnalyzer(pdg, doc, fSelectionStart, fSelectionLength);
+				} catch (InvalidClassFileException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	/**
