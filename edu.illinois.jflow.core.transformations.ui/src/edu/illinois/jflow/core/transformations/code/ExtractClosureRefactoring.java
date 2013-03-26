@@ -7,6 +7,7 @@ package edu.illinois.jflow.core.transformations.code;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -37,6 +38,7 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -264,7 +266,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 		fSelectionLength= fAnalyzer.getSelection().getLength();
 
 		try {
-			createPDGAnalyzer();
+			fPDGAnalyzer= createPDGAnalyzer();
+			fPDGAnalyzer.analyzeSelection();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
@@ -283,7 +286,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return fAnalyzer;
 	}
 
-	private void createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException {
+	private PDGExtractClosureAnalyzer createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException {
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
@@ -299,7 +302,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		final IMethod resolvedMethod= classHierarchy.resolveMethod(methodRef);
 		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, fDoc);
-		fPDGAnalyzer= new PDGExtractClosureAnalyzer(pdg, fDoc, fSelectionStart, fSelectionLength);
+		return new PDGExtractClosureAnalyzer(pdg, fDoc, fSelectionStart, fSelectionLength);
 	}
 
 	/**
@@ -623,14 +626,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Locals that are not passed as an arguments since the extracted method only
 		// writes to them
-		IVariableBinding[] methodLocals= fAnalyzer.getMethodLocals();
-		for (int i= 0; i < methodLocals.length; i++) {
-			if (methodLocals[i] != null) {
-				// This is safe since Block.statements() returns a list of Statement
-				@SuppressWarnings("unchecked")
-				List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
-				methodBlockStatements.add(createDeclaration(methodLocals[i], null));
-			}
+		Map<String, IBinding> transformNamesToBindings= fPDGAnalyzer.transformNamesToBindings(fRoot, fPDGAnalyzer.getClosureLocalVariableNames());
+		Collection<IBinding> methodLocals= transformNamesToBindings.values();
+		for (IBinding binding : methodLocals) {
+			@SuppressWarnings("unchecked")
+			List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
+			methodBlockStatements.add(createDeclaration((IVariableBinding)binding, null));
 		}
 
 		// Update the bindings to the parameters
