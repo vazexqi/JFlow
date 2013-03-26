@@ -144,6 +144,32 @@ public class PDGExtractClosureAnalyzer {
 		return lines;
 	}
 
+	public List<IVariableBinding> getLocalVariableBindings(ASTNode methodDeclaration) {
+		Map<String, IBinding> bindingsMap= transformNamesToBindings(methodDeclaration, getClosureLocalVariableNames());
+		return convertIBindingToIVariableBindingList(bindingsMap.values());
+	}
+
+	public List<IVariableBinding> getOutputBindings(ASTNode methodDeclaration) {
+		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(methodDeclaration, outputDataDependences);
+		return convertIBindingToIVariableBindingList(bindingsMap.values());
+	}
+
+	public List<IVariableBinding> getInputBindings(ASTNode methodDeclaration) {
+		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(methodDeclaration, inputDataDependences);
+		return convertIBindingToIVariableBindingList(bindingsMap.values());
+	}
+
+	private List<IVariableBinding> convertIBindingToIVariableBindingList(Collection<IBinding> values) {
+		List<IVariableBinding> bindings= new ArrayList<IVariableBinding>();
+		for (IBinding binding : values) {
+			bindings.add((IVariableBinding)binding);
+		}
+		return bindings;
+	}
+
+	// These methods are mostly for testing where we want to use the map to retrieve the particular binding
+	// for a variable name. It is often easier to just iterate through the bindings using the methods above
+	// e.g., getLocalVariableBindings, getOutputBindings, getInputBindings.
 	public Map<String, IBinding> transformNamesToBindings(ASTNode node, Set<String> names) {
 		return BindingsFinder.findBindings(node, names);
 	}

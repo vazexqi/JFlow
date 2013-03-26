@@ -7,7 +7,6 @@ package edu.illinois.jflow.core.transformations.code;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -38,7 +37,6 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -626,12 +624,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Locals that are not passed as an arguments since the extracted method only
 		// writes to them
-		Map<String, IBinding> transformNamesToBindings= fPDGAnalyzer.transformNamesToBindings(fRoot, fPDGAnalyzer.getClosureLocalVariableNames());
-		Collection<IBinding> methodLocals= transformNamesToBindings.values();
-		for (IBinding binding : methodLocals) {
+		List<IVariableBinding> methodLocals= fPDGAnalyzer.getLocalVariableBindings(fAnalyzer.getEnclosingBodyDeclaration());
+		for (IVariableBinding binding : methodLocals) {
 			@SuppressWarnings("unchecked")
 			List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
-			methodBlockStatements.add(createDeclaration((IVariableBinding)binding, null));
+			methodBlockStatements.add(createDeclaration(binding, null));
 		}
 
 		// Update the bindings to the parameters
