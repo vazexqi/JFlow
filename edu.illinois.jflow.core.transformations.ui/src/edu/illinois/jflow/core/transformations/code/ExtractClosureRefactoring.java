@@ -686,19 +686,21 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	private void initializeParameterInfos() {
-		IVariableBinding[] arguments= fAnalyzer.getArguments();
-		fParameterInfos= new ArrayList<ParameterInfo>(arguments.length);
+		// XXX: This is incomplete
+		List<IVariableBinding> arguments= fPDGAnalyzer.getInputBindings(fAnalyzer.getEnclosingBodyDeclaration());
+		fParameterInfos= new ArrayList<ParameterInfo>(arguments.size());
 		ASTNode root= fAnalyzer.getEnclosingBodyDeclaration();
+
 		ParameterInfo vararg= null;
-		for (int i= 0; i < arguments.length; i++) {
-			IVariableBinding argument= arguments[i];
+		int index= 0;
+		for (IVariableBinding argument : arguments) {
 			if (argument == null)
 				continue;
 			VariableDeclaration declaration= ASTNodes.findVariableDeclaration(argument, root);
 			boolean isVarargs= declaration instanceof SingleVariableDeclaration
 					? ((SingleVariableDeclaration)declaration).isVarargs()
 					: false;
-			ParameterInfo info= new ParameterInfo(argument, getType(declaration, isVarargs), argument.getName(), i);
+			ParameterInfo info= new ParameterInfo(argument, getType(declaration, isVarargs), argument.getName(), index++);
 			if (isVarargs) {
 				vararg= info;
 			} else {
