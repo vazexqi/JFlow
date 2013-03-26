@@ -67,7 +67,6 @@ import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
 import org.eclipse.jdt.internal.corext.util.Messages;
-import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ltk.core.refactoring.Change;
@@ -75,7 +74,6 @@ import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.core.refactoring.TextFileChange;
 import org.eclipse.ltk.core.refactoring.participants.ResourceChangeChecker;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
@@ -94,7 +92,6 @@ import com.ibm.wala.types.MethodReference;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
-import edu.illinois.jflow.wala.ui.tools.graph.jdt.util.JavaEditorUtil;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
 /**
@@ -184,6 +181,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private PDGExtractClosureAnalyzer fPDGAnalyzer;
 
+	private IDocument fDoc;
+
 	private static final String EMPTY= ""; //$NON-NLS-1$
 
 	// This section is specific to the API for GPars Dataflow
@@ -214,26 +213,16 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * Creates a new extract closure refactoring
 	 * 
 	 * @param unit the compilation unit, or <code>null</code> if invoked by scripting
+	 * @param doc the document of the current editor
 	 * @param selectionStart selection start
 	 * @param selectionLength selection end
 	 */
-	public ExtractClosureRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength) {
+	public ExtractClosureRefactoring(ICompilationUnit unit, IDocument doc, int selectionStart, int selectionLength) {
 		fCUnit= unit;
+		fDoc= doc;
 		fRoot= null;
 		fSelectionStart= selectionStart;
 		fSelectionLength= selectionLength;
-	}
-
-	/**
-	 * Creates a new extract closure refactoring (for quick assist)
-	 * 
-	 * @param astRoot the AST root of an AST created from a compilation unit
-	 * @param selectionStart start
-	 * @param selectionLength length
-	 */
-	public ExtractClosureRefactoring(CompilationUnit astRoot, int selectionStart, int selectionLength) {
-		this((ICompilationUnit)astRoot.getTypeRoot(), selectionStart, selectionLength);
-		fRoot= astRoot;
 	}
 
 	@Override
@@ -308,21 +297,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 		MethodReference methodRef= mapper.getMethodRef(methodDeclaration.resolveBinding());
 
 		final IMethod resolvedMethod= classHierarchy.resolveMethod(methodRef);
-		Display.getDefault().syncExec(new Runnable() {
-			@Override
-			public void run() {
-				JavaEditor javaEditor= JavaEditorUtil.getActiveJavaEditor();
-				IDocument doc= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
-				IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
-				ProgramDependenceGraph pdg;
-				try {
-					pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, doc);
-					fPDGAnalyzer= new PDGExtractClosureAnalyzer(pdg, doc, fSelectionStart, fSelectionLength);
-				} catch (InvalidClassFileException e) {
-					e.printStackTrace();
-				}
-			}
-		});
+		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, fDoc);
+		fPDGAnalyzer= new PDGExtractClosureAnalyzer(pdg, fDoc, fSelectionStart, fSelectionLength);
 	}
 
 	/**
