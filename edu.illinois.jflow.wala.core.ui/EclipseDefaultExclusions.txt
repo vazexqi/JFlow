@@ -4,3 +4,9 @@ sun\/awt\/.*
 sun\/swing\/.*
 com\/sun\/.*
 sun\/.*
+groovy\/.*
+groovyjarjaranltr\/.*
+groovyjarjarasm\/.*
+groovyjarjarcommonscli\/.*
+org.codehaus.groovy\/.*
+groovyx\/.*
