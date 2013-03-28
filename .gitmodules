@@ -7,3 +7,9 @@
 [submodule "jdt/org.eclipse.jdt"]
 	path = jdt/org.eclipse.jdt
 	url = git@github.com:eclipse/eclipse.jdt.core.git
+[submodule "eclipse/eclipse.platform.text"]
+	path = eclipse/eclipse.platform.text.git
+	url = git@github.com:eclipse/eclipse.platform.text.git
+[submodule "eclipse/eclipse.platform.releng"]
+	path = eclipse/eclipse.platform.releng.git
+	url = git@github.com:eclipse/eclipse.platform.releng.git
