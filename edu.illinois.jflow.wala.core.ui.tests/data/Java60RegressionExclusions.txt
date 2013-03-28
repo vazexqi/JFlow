@@ -9,3 +9,9 @@ org\/openide\/.*
 com\/ibm\/crypto\/.*
 com\/ibm\/security\/.*
 org\/apache\/xerces\/.*
+groovy\/.*
+groovyjarjaranltr\/.*
+groovyjarjarasm\/.*
+groovyjarjarcommonscli\/.*
+org.codehaus.groovy\/.*
+groovyx\/.*
