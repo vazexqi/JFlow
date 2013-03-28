@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: %Bundle-Name
+Bundle-SymbolicName: edu.illinois.jflow.core.transformations.ui.tests
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: edu.illinois.jflow.core.transformations.ui.tests.Activator
+Bundle-Vendor: %Bundle-Vendor
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ edu.illinois.jflow.core.transformations.ui;bundle-version="1.0.0",
+ org.eclipse.jdt.ui.tests.refactoring;bundle-version="3.8.0",
+ org.junit4;bundle-version="4.8.1"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
