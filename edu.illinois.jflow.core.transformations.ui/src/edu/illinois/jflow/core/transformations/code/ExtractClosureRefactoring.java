@@ -624,7 +624,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Locals that are not passed as an arguments since the extracted method only
 		// writes to them
-		List<IVariableBinding> methodLocals= fPDGAnalyzer.getLocalVariableBindings(fAnalyzer.getEnclosingBodyDeclaration());
+		List<IVariableBinding> unfilteredMethodLocals= fPDGAnalyzer.getLocalVariableBindings(fAnalyzer.getEnclosingBodyDeclaration());
+		List<IVariableBinding> methodLocals= removeSelectedDeclarations(unfilteredMethodLocals);
 		for (IVariableBinding binding : methodLocals) {
 			@SuppressWarnings("unchecked")
 			List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
@@ -643,11 +644,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 			argumentPosition++;
 		}
 
-		ListRewrite source= fRewriter.getListRewrite(
-				selectedNodes[0].getParent(),
-				(ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
-		ASTNode toMove= source.createMoveTarget(
-				selectedNodes[0], selectedNodes[selectedNodes.length - 1], null, editGroup);
+		ListRewrite source= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
+		ASTNode toMove= source.createMoveTarget(selectedNodes[0], selectedNodes[selectedNodes.length - 1], null, editGroup);
 		statements.insertLast(toMove, editGroup);
 
 		// Add the potential writes at the end (in case multiple writes have occurred and we only want the latest values)  
@@ -662,6 +660,17 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 
 		return methodBlock;
+	}
+
+	private List<IVariableBinding> removeSelectedDeclarations(List<IVariableBinding> unfilteredMethodLocals) {
+		List<IVariableBinding> result= new ArrayList<IVariableBinding>();
+		Selection selection= fAnalyzer.getSelection();
+		for (IVariableBinding binding : unfilteredMethodLocals) {
+			ASTNode decl= ((CompilationUnit)fAnalyzer.getEnclosingBodyDeclaration().getRoot()).findDeclaringNode(binding);
+			if (!selection.covers(decl))
+				result.add(binding);
+		}
+		return result;
 	}
 
 	private ASTNode createCastParameters(ParameterInfo parameter, int argumentsPosition) {

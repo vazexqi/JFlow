@@ -6,6 +6,7 @@ public class Project1 {
 		/*[*/
 		int b = producer(a);
 		int c = producer(b);
+		System.out.println("a: " + a + ", c: " + c);
 		/*]*/
 	}
 
