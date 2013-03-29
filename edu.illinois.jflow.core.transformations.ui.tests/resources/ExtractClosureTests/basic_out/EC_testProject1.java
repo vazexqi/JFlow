@@ -1,8 +1,8 @@
-package extractclosure;
+package basic_out;
 
 import groovyx.gpars.DataflowMessagingRunnable;
 
-public class Project1 {
+public class EC_testProject1 {
 	public static void main(String[] args) {
 		int a = producer(1);
 		new DataflowMessagingRunnable(1) {
