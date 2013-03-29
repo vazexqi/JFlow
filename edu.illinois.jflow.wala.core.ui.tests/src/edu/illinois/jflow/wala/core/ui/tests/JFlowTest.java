@@ -8,8 +8,6 @@ import com.ibm.wala.cast.java.test.JDTJavaTest;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
-import com.ibm.wala.ipa.callgraph.AnalysisOptions;
-import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
@@ -35,7 +33,7 @@ public abstract class JFlowTest extends JDTJavaTest {
 
 		MethodReference methodRef= descriptorToMethodRef(String.format("Source#%s#%s#(%s)%s", fullyQualifiedClassName, methodName, methodParameters, returnType), classHierarchy);
 		IMethod method= classHierarchy.resolveMethod(methodRef);
-		return engine.getCache().getSSACache().findOrCreateIR(method, Everywhere.EVERYWHERE, new AnalysisOptions().getSSAOptions());
+		return engine.getCache().getIR(method);
 	}
 
 }
