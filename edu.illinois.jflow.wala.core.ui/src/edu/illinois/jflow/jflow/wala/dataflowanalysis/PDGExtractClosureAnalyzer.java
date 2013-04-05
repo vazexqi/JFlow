@@ -18,6 +18,8 @@ import com.ibm.wala.util.collections.Iterator2Iterable;
 import edu.illinois.jflow.source.utils.BindingsFinder;
 
 public class PDGExtractClosureAnalyzer {
+	private static final String THIS_PARAMETER= "this";
+
 	private ProgramDependenceGraph pdg;
 
 	private List<Integer> selectedLines; // This is 1-based following how things "look" in the editor
@@ -177,6 +179,7 @@ public class PDGExtractClosureAnalyzer {
 
 	public Map<String, IBinding> transformDataDependencesToIBindings(ASTNode node, Collection<DataDependence> dependencies) {
 		Set<String> names= extractNamesFromDependencies(dependencies);
+		names.remove(THIS_PARAMETER); // Filter out the "this" parameter.
 		return transformNamesToBindings(node, names);
 	}
 
