@@ -20,33 +20,39 @@ import com.ibm.wala.util.debug.Assertions;
 public class BindingsFinder {
 	Map<String, IBinding> names2Bindings= new HashMap<String, IBinding>();
 
-	private ASTNode node;
+	private ASTNode[] nodes;
 
 	private Set<String> names;
 
-	public static Map<String, IBinding> findBindings(ASTNode node, Set<String> names) {
-		BindingsFinder bfc= new BindingsFinder(node, names);
+	public static Map<String, IBinding> findBindings(ASTNode[] nodes, Set<String> names) {
+		BindingsFinder bfc= new BindingsFinder(nodes, names);
 		bfc.findAllBindings();
 		return bfc.names2Bindings;
 
 	}
 
-	private BindingsFinder(ASTNode node, Set<String> names) {
-		this.node= node;
+	private BindingsFinder(ASTNode[] nodes, Set<String> names) {
+		this.nodes= nodes;
 		this.names= names;
 	}
 
 	private void findAllBindings() {
 		for (String name : names) {
 			SimpleNameBindingFinder finder= new SimpleNameBindingFinder(name);
-			node.accept(finder);
-
-			List<IBinding> bindings= new ArrayList<IBinding>(finder.getBindings());
-
-			// Sanity check to ensure that nothing went wrong
-			Assertions.productionAssertion(bindings.size() == 1, "Cannot resolve the binding from JDT. Investigate!");
-
-			names2Bindings.put(name, bindings.get(0));
+			for (ASTNode node : nodes) {
+				node.accept(finder);
+				List<IBinding> bindings= new ArrayList<IBinding>(finder.getBindings());
+				if (bindings != null) {
+					if (bindings.size() == 1) {
+						names2Bindings.put(name, bindings.get(0));
+						break; // Found it, no need to look through anymore
+					}
+					else if (bindings.size() >= 1) {
+						Assertions.UNREACHABLE("Found more than one relevant binding!");
+					}
+				}
+			}
+			Assertions.productionAssertion(names2Bindings.get(name) != null, String.format("Missing binding for %s.", name));
 		}
 
 	}

@@ -147,18 +147,18 @@ public class PDGExtractClosureAnalyzer {
 		return lines;
 	}
 
-	public List<IVariableBinding> getLocalVariableBindings(ASTNode methodDeclaration) {
-		Map<String, IBinding> bindingsMap= transformNamesToBindings(methodDeclaration, getClosureLocalVariableNames());
+	public List<IVariableBinding> getLocalVariableBindings(ASTNode[] selectedNodes) {
+		Map<String, IBinding> bindingsMap= transformNamesToBindings(selectedNodes, getClosureLocalVariableNames());
 		return convertIBindingToIVariableBindingList(bindingsMap.values());
 	}
 
-	public List<IVariableBinding> getOutputBindings(ASTNode methodDeclaration) {
-		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(methodDeclaration, outputDataDependences);
+	public List<IVariableBinding> getOutputBindings(ASTNode[] selectedNodes) {
+		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(selectedNodes, outputDataDependences);
 		return convertIBindingToIVariableBindingList(bindingsMap.values());
 	}
 
-	public List<IVariableBinding> getInputBindings(ASTNode methodDeclaration) {
-		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(methodDeclaration, inputDataDependences);
+	public List<IVariableBinding> getInputBindings(ASTNode[] selectedNodes) {
+		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(selectedNodes, inputDataDependences);
 		return convertIBindingToIVariableBindingList(bindingsMap.values());
 	}
 
@@ -173,14 +173,14 @@ public class PDGExtractClosureAnalyzer {
 	// These methods are mostly for testing where we want to use the map to retrieve the particular binding
 	// for a variable name. It is often easier to just iterate through the bindings using the methods above
 	// e.g., getLocalVariableBindings, getOutputBindings, getInputBindings.
-	public Map<String, IBinding> transformNamesToBindings(ASTNode node, Set<String> names) {
-		return BindingsFinder.findBindings(node, names);
+	public Map<String, IBinding> transformNamesToBindings(ASTNode[] nodes, Set<String> names) {
+		return BindingsFinder.findBindings(nodes, names);
 	}
 
-	public Map<String, IBinding> transformDataDependencesToIBindings(ASTNode node, Collection<DataDependence> dependencies) {
+	public Map<String, IBinding> transformDataDependencesToIBindings(ASTNode[] nodes, Collection<DataDependence> dependencies) {
 		Set<String> names= extractNamesFromDependencies(dependencies);
 		names.remove(THIS_PARAMETER); // Filter out the "this" parameter.
-		return transformNamesToBindings(node, names);
+		return transformNamesToBindings(nodes, names);
 	}
 
 	private Set<String> extractNamesFromDependencies(Collection<DataDependence> dependencies) {

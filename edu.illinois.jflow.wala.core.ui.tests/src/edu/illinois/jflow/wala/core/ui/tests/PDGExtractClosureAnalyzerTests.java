@@ -146,7 +146,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify that we can reconcile with JDT with bindings
 			CompilationUnit cUnit= getCompilationUnit();
 			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(new ASTNode[] { methodNode }, analyzer.getClosureLocalVariableNames());
 
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
@@ -195,7 +195,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify that we can reconcile with JDT with bindings
 			CompilationUnit cUnit= getCompilationUnit();
 			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(new ASTNode[] { methodNode }, analyzer.getClosureLocalVariableNames());
 
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
@@ -248,7 +248,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify that we can reconcile with JDT with bindings
 			CompilationUnit cUnit= getCompilationUnit();
 			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(new ASTNode[] { methodNode }, analyzer.getClosureLocalVariableNames());
 
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
@@ -301,7 +301,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify that we can reconcile with JDT with bindings
 			CompilationUnit cUnit= getCompilationUnit();
 			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(new ASTNode[] { methodNode }, analyzer.getClosureLocalVariableNames());
 
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);
@@ -345,7 +345,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 			// Verify that we can reconcile with JDT with bindings
 			CompilationUnit cUnit= getCompilationUnit();
 			ASTNode methodNode= getMethodDeclaration(cUnit, "main([Ljava/lang/String;)");
-			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(methodNode, analyzer.getClosureLocalVariableNames());
+			Map<String, IBinding> bindings= analyzer.transformNamesToBindings(new ASTNode[] { methodNode }, analyzer.getClosureLocalVariableNames());
 
 			IBinding bindingForB= bindings.get("b");
 			assertTrue("Expected a binding for variable b but got null instead", bindingForB != null);

@@ -417,7 +417,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private void updateExceptions(BodyDeclaration declaration, TextEditGroup closureEditGroup) {
 		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
-		if (fPDGAnalyzer.getOutputBindings(fAnalyzer.getEnclosingBodyDeclaration()).size() != 0) {
+		if (fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes()).size() != 0) {
 			MethodDeclaration method= (MethodDeclaration)declaration;
 			// This is safe since MethodDeclaration THROWN_EXCEPTIONS_PROPERTY returns a list of Name
 			@SuppressWarnings("unchecked")
@@ -434,7 +434,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private List<ASTNode> createTempVariablesForChannels(BodyDeclaration declaration, TextEditGroup closureEditGroup, IProgressMonitor pm) {
 		List<ASTNode> nodes= new ArrayList<ASTNode>();
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialReads : fPDGAnalyzer.getOutputBindings(fAnalyzer.getEnclosingBodyDeclaration())) {
+		for (IVariableBinding potentialReads : fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes())) {
 			VariableDeclarationStatement tempVariable= createDeclaration(potentialReads, createChannelRead(channelNumber));
 			nodes.add(tempVariable);
 			channelNumber++;
@@ -453,7 +453,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private void addDataflowChannels(BodyDeclaration declaration, Block sentinel, ListRewrite sentinelRewriter, TextEditGroup closureEditGroup, IProgressMonitor pm) {
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
 		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
-			for (IVariableBinding potentialReads : fPDGAnalyzer.getOutputBindings(fAnalyzer.getEnclosingBodyDeclaration())) {
+			for (IVariableBinding potentialReads : fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes())) {
 				// Use string generation since this is a single statement
 				String channel= "final DataflowQueue<" + resolveType(potentialReads) + "> " + GENERIC_CHANNEL_NAME + channelNumber + "= new DataflowQueue<" + resolveType(potentialReads) + ">();";
 				ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
@@ -624,7 +624,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Locals that are not passed as an arguments since the extracted method only
 		// writes to them
-		List<IVariableBinding> unfilteredMethodLocals= fPDGAnalyzer.getLocalVariableBindings(fAnalyzer.getEnclosingBodyDeclaration());
+		List<IVariableBinding> unfilteredMethodLocals= fPDGAnalyzer.getLocalVariableBindings(fAnalyzer.getSelectedNodes());
 		List<IVariableBinding> methodLocals= removeSelectedDeclarations(unfilteredMethodLocals);
 		for (IVariableBinding binding : methodLocals) {
 			@SuppressWarnings("unchecked")
@@ -650,7 +650,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Add the potential writes at the end (in case multiple writes have occurred and we only want the latest values)  
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialWrites : fPDGAnalyzer.getOutputBindings(fAnalyzer.getEnclosingBodyDeclaration())) {
+		for (IVariableBinding potentialWrites : fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes())) {
 			// Use string generation since this is a single statement
 			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");";
 			ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
@@ -696,7 +696,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private void initializeParameterInfos() {
 		// XXX: This is incomplete
-		List<IVariableBinding> arguments= fPDGAnalyzer.getInputBindings(fAnalyzer.getEnclosingBodyDeclaration());
+		List<IVariableBinding> arguments= fPDGAnalyzer.getInputBindings(fAnalyzer.getSelectedNodes());
 		fParameterInfos= new ArrayList<ParameterInfo>(arguments.size());
 		ASTNode root= fAnalyzer.getEnclosingBodyDeclaration();
 
