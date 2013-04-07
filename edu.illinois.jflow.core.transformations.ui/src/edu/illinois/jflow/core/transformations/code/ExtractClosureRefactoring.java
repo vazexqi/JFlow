@@ -291,6 +291,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	private PDGExtractClosureAnalyzer createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
+		long point1= System.currentTimeMillis();
+
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
@@ -298,10 +300,21 @@ public class ExtractClosureRefactoring extends Refactoring {
 		final AnalysisOptions options= new AnalysisOptions();
 		final AnalysisCache cache= engine.makeDefaultCache();
 
+		long point2= System.currentTimeMillis();
+
 		// Set up mod-ref analysis
 		CallGraphBuilder builder= engine.defaultCallGraphBuilder();
 		CallGraph callGraph= engine.buildDefaultCallGraph();
-		final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_EXCEPTIONS, ControlDependenceOptions.NONE);
+
+		long point3= System.currentTimeMillis();
+
+		final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_BASE_NO_EXCEPTIONS, ControlDependenceOptions.NONE);
+
+		long point4= System.currentTimeMillis();
+
+		System.err.println("Time for CHA: " + (point2 - point1) + " ms.");
+		System.err.println("Time for CallGraph " + (point3 - point2) + " ms.");
+		System.err.println("Time for MODREF: " + (point4 - point3) + " ms.");
 
 		// Get the IR for the selected method
 		MethodDeclaration methodDeclaration= (MethodDeclaration)fAnalyzer.getEnclosingBodyDeclaration();
