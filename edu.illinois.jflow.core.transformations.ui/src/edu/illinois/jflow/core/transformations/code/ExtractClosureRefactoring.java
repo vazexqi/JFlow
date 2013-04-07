@@ -79,16 +79,23 @@ import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
 
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
+import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
+import com.ibm.wala.ipa.callgraph.CallGraph;
+import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
 import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
+import com.ibm.wala.ipa.slicer.SDG;
+import com.ibm.wala.ipa.slicer.Slicer.ControlDependenceOptions;
+import com.ibm.wala.ipa.slicer.Slicer.DataDependenceOptions;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
+import com.ibm.wala.util.CancelException;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
@@ -266,9 +273,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 		try {
 			fPDGAnalyzer= createPDGAnalyzer();
 			fPDGAnalyzer.analyzeSelection();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InvalidClassFileException e) {
+		} catch (Exception e) {
+			// Just print the stack trace – not going to handle any specific case now
 			e.printStackTrace();
 		}
 
@@ -284,13 +290,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return fAnalyzer;
 	}
 
-	private PDGExtractClosureAnalyzer createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException {
+	private PDGExtractClosureAnalyzer createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
 		final IClassHierarchy classHierarchy= engine.buildClassHierarchy();
 		final AnalysisOptions options= new AnalysisOptions();
 		final AnalysisCache cache= engine.makeDefaultCache();
+
+		// Set up mod-ref analysis
+		CallGraphBuilder builder= engine.defaultCallGraphBuilder();
+		CallGraph callGraph= engine.buildDefaultCallGraph();
+		final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_EXCEPTIONS, ControlDependenceOptions.NONE);
 
 		// Get the IR for the selected method
 		MethodDeclaration methodDeclaration= (MethodDeclaration)fAnalyzer.getEnclosingBodyDeclaration();
