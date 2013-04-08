@@ -10,8 +10,11 @@ import java.util.List;
 import org.junit.Test;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
+import com.ibm.wala.ipa.callgraph.CallGraph;
+import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
+import com.ibm.wala.util.CancelException;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PipelineStage;
@@ -239,6 +242,30 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void testProject2_checkHeapAnalysis() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+			List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 23 }, { 27 }, { 31, 32 } });
+			PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+			CallGraphBuilder builder= engine.defaultCallGraphBuilder();
+			CallGraph callGraph= engine.buildDefaultCallGraph();
+
+			checker.computeHeapDependency(callGraph, builder.getPointerAnalysis());
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (CancelException e) {
 			e.printStackTrace();
 		}
 	}

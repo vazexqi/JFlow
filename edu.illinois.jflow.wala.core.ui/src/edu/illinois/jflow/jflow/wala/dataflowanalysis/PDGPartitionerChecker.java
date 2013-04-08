@@ -5,6 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
+import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.CallGraph;
+import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
+import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
+import com.ibm.wala.util.intset.OrdinalSet;
+
 /**
  * Acts as a facade to check the validity of the selected statements. Checks in sequence:
  * <ol>
@@ -22,6 +29,12 @@ public class PDGPartitionerChecker {
 	private List<PipelineStage> stages= new ArrayList<PipelineStage>();
 
 	private Map<PDGNode, Integer> node2stage= new HashMap<PDGNode, Integer>();
+
+	private AstJavaModRef modref;
+
+	private Map<CGNode, OrdinalSet<PointerKey>> mod;
+
+	private Map<CGNode, OrdinalSet<PointerKey>> ref;
 
 	public static PDGPartitionerChecker makePartitionChecker(ProgramDependenceGraph pdg, List<List<Integer>> selections) {
 		PDGPartitionerChecker temp= new PDGPartitionerChecker(pdg);
@@ -70,6 +83,21 @@ public class PDGPartitionerChecker {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Sets up and starts the heap dependency analysis.
+	 * 
+	 * We intentionally separate heap analysis from scalar analysis because it is expensive. Thus we
+	 * perform as much feasibility checks using intraprocedural checks first before turning this on.
+	 * 
+	 * @param callgraph
+	 * @param pointerAnalysis
+	 */
+	public void computeHeapDependency(CallGraph callgraph, PointerAnalysis pointerAnalysis) {
+		this.modref= new AstJavaModRef();
+		mod= modref.computeMod(callgraph, pointerAnalysis);
+		ref= modref.computeRef(callgraph, pointerAnalysis);
 	}
 
 	// For querying
