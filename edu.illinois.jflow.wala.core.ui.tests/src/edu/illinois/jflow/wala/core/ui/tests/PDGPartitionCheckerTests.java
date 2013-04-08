@@ -124,6 +124,65 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		}
 	}
 
+	@Test
+	public void testProject3_checkPartitionsWithoutHeapAnalysis() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+			List<List<Integer>> selections= selectionFromArray(new int[][] { { 16 }, { 19 }, { 23 }, { 27, 28 } });
+			PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+			// The following are quick sanity checks. They don't test in detail, nor should they.
+			// The deeper tests are done in the PDGExtractClosureAnalyzerTests
+
+			/*
+			[ -- <Source,[Lpartitionchecker/Datum> [data] -->]
+			[ -- <Primordial,I> [i] -->,  -- <Primordial,I> [i] -->,  -- <Primordial,I> [i] -->]
+			 [i]
+
+			[ -- <Source,[Lpartitionchecker/Datum> [data] -->,  -- <Primordial,I> [i] -->]
+			[ -- <Primordial,I> [field] -->]
+			[field]
+
+			[ -- <Primordial,I> [field] -->]
+			[ -- <Primordial,I> [manipulatedField] -->]
+			[manipulatedField]
+
+			[ -- <Primordial,I> [manipulatedField] -->,  -- <Source,[Lpartitionchecker/Datum> [data] -->,  -- <Primordial,I> [i] -->,  -- <Source,[Lpartitionchecker/Datum> [data] -->,  -- <Primordial,I> [i] -->]
+			[]
+			[]
+			 */
+
+			// Check stage0, i.e., Generator
+			PipelineStage generator= checker.getGenerator();
+			assertTrue(generator.getInputDataDependences().size() == 1); // Uses the data local variable
+			assertTrue(generator.getOutputDataDependences().size() == 3); // Provides d to the following stages
+			assertTrue(generator.getClosureLocalVariableNames().size() == 1);// Defines d
+
+			// Check stage1
+			PipelineStage stage1= checker.getStage(1);
+			assertTrue(stage1.getInputDataDependences().size() == 2); // Uses i, data
+			assertTrue(stage1.getOutputDataDependences().size() == 1); // Provides field
+			assertTrue(stage1.getClosureLocalVariableNames().size() == 1); // Defines field
+
+			// Check stage2
+			PipelineStage stage2= checker.getStage(2);
+			assertTrue(stage2.getInputDataDependences().size() == 1); // Uses field
+			assertTrue(stage2.getOutputDataDependences().size() == 1); // Provides manipulatedField
+			assertTrue(stage2.getClosureLocalVariableNames().size() == 1); // Defines manipulatedField
+
+			// Check stage3
+			PipelineStage stage3= checker.getStage(3);
+			assertTrue(stage3.getInputDataDependences().size() == 5); // Uses data, data (again), manipulatedField, i and i(again)
+			assertTrue(stage3.getOutputDataDependences().size() == 0);
+			assertTrue(stage3.getClosureLocalVariableNames().size() == 0);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		}
+	}
+
 	private List<List<Integer>> selectionFromArray(int[][] lines) {
 		List<List<Integer>> selections= new ArrayList<List<Integer>>();
 		for (int[] stageLines : lines) {
