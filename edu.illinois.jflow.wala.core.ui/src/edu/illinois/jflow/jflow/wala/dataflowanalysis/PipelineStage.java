@@ -27,6 +27,15 @@ public class PipelineStage {
 
 	private Set<String> closureLocalVariableNames;
 
+	/*
+	 * Convenience method to create a new pipeline stage and begin the analysis immediately
+	 */
+	public static PipelineStage makePipelineStage(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
+		PipelineStage temp= new PipelineStage(pdg, selectedLines);
+		temp.analyzeSelection();
+		return temp;
+	}
+
 	public PipelineStage(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
 		this.pdg= pdg;
 		this.selectedLines= selectedLines;

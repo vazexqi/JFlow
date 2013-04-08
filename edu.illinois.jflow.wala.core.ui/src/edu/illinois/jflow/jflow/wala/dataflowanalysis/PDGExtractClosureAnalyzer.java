@@ -26,12 +26,9 @@ import edu.illinois.jflow.source.utils.BindingsFinder;
 public class PDGExtractClosureAnalyzer {
 	private static final String THIS_PARAMETER= "this";
 
-	private ProgramDependenceGraph pdg;
-
 	private PipelineStage stage;
 
 	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, int selectionStart, int selectionLength) {
-		this.pdg= pdg;
 		List<Integer> selectedLines= calculateSelectedLines(doc, selectionStart, selectionLength);
 		stage= new PipelineStage(pdg, selectedLines);
 	}
@@ -40,7 +37,6 @@ public class PDGExtractClosureAnalyzer {
 	 * This is mainly for testing purposes where we can test the line selections without the IDocument (UI-based)
 	 */
 	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
-		this.pdg= pdg;
 		stage= new PipelineStage(pdg, selectedLines);
 	}
 
