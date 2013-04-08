@@ -13,28 +13,27 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
-import com.ibm.wala.util.collections.Iterator2Iterable;
-
 import edu.illinois.jflow.source.utils.BindingsFinder;
 
+/**
+ * Delegates to PipelineStage to do the analysis internally with Wala IR. This is mostly a wrapper
+ * for compatability between JDT and WALA. It has a way to return IBindings which is what the
+ * refactoring operates on.
+ * 
+ * @author nchen
+ * 
+ */
 public class PDGExtractClosureAnalyzer {
 	private static final String THIS_PARAMETER= "this";
 
 	private ProgramDependenceGraph pdg;
 
-	private List<Integer> selectedLines; // This is 1-based following how things "look" in the editor
-
-	private List<PDGNode> selectedStatements= new ArrayList<PDGNode>(); // The actual selected statements (PDGNodes) in the editor
-
-	private List<DataDependence> inputDataDependences; // Think of these as method parameters
-
-	private List<DataDependence> outputDataDependences; // Think of these as method return value(S) <-- yes possibly values!
-
-	private Set<String> closureLocalVariableNames;
+	private PipelineStage stage;
 
 	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, int selectionStart, int selectionLength) {
 		this.pdg= pdg;
-		selectedLines= calculateSelectedLines(doc, selectionStart, selectionLength);
+		List<Integer> selectedLines= calculateSelectedLines(doc, selectionStart, selectionLength);
+		stage= new PipelineStage(pdg, selectedLines);
 	}
 
 	/*
@@ -42,7 +41,7 @@ public class PDGExtractClosureAnalyzer {
 	 */
 	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
 		this.pdg= pdg;
-		this.selectedLines= selectedLines;
+		stage= new PipelineStage(pdg, selectedLines);
 	}
 
 	/**
@@ -50,83 +49,20 @@ public class PDGExtractClosureAnalyzer {
 	 * output dependencies for the selected lines and the "outside" world.
 	 */
 	public void analyzeSelection() {
-		computeSelectedStatements();
-		inputDataDependences= computeInput();
-		outputDataDependences= computeOutput();
-		closureLocalVariableNames= filterMethodParameters(computeLocalVariables());
-	}
+		stage.analyzeSelection();
 
-	private Set<String> filterMethodParameters(Set<String> localVariables) {
-		Set<String> parameterNames= new HashSet<String>();
-		for (DataDependence data : inputDataDependences) {
-			parameterNames.addAll(data.getLocalVariableNames());
-		}
-		localVariables.removeAll(parameterNames); // Anything that is passed in as a parameter should not be redeclared
-		return localVariables;
 	}
 
 	public List<DataDependence> getInputDataDependences() {
-		return inputDataDependences;
+		return stage.getInputDataDependences();
 	}
 
 	public List<DataDependence> getOutputDataDependences() {
-		return outputDataDependences;
+		return stage.getOutputDataDependences();
 	}
 
 	public Set<String> getClosureLocalVariableNames() {
-		return closureLocalVariableNames;
-	}
-
-	private void computeSelectedStatements() {
-		for (PDGNode node : Iterator2Iterable.make(pdg.iterator())) {
-			for (Integer line : selectedLines) {
-				if (node.isOnLine(line))
-					selectedStatements.add(node);
-			}
-		}
-	}
-
-	private boolean notPartOfInternalNodes(PDGNode node) {
-		for (PDGNode internalNode : selectedStatements) {
-			if (internalNode == node)
-				return false;
-		}
-		return true;
-	}
-
-	// Get all successor nodes that do not belong to the set of selected lines
-	private List<DataDependence> computeOutput() {
-		List<DataDependence> outputs= new ArrayList<DataDependence>();
-
-		for (PDGNode node : selectedStatements) {
-			for (PDGNode succ : Iterator2Iterable.make(pdg.getSuccNodes(node))) {
-				if (notPartOfInternalNodes(succ))
-					outputs.addAll(pdg.getEdgeLabels(node, succ));
-			}
-		}
-
-		return outputs;
-	}
-
-	// Get all the predecessor nodes that do not belong to the set of selected lines
-	private List<DataDependence> computeInput() {
-		List<DataDependence> inputs= new ArrayList<DataDependence>();
-
-		for (PDGNode node : selectedStatements) {
-			for (PDGNode pred : Iterator2Iterable.make(pdg.getPredNodes(node))) {
-				if (notPartOfInternalNodes(pred))
-					inputs.addAll(pdg.getEdgeLabels(pred, node));
-			}
-		}
-		return inputs;
-	}
-
-	private Set<String> computeLocalVariables() {
-		Set<String> localVariables= new HashSet<String>();
-		for (PDGNode node : selectedStatements) {
-			localVariables.addAll(node.defs());
-		}
-		return localVariables;
+		return stage.getClosureLocalVariableNames();
 	}
 
 	private List<Integer> calculateSelectedLines(IDocument doc, int selectionStart, int selectionLength) {
@@ -153,12 +89,12 @@ public class PDGExtractClosureAnalyzer {
 	}
 
 	public List<IVariableBinding> getOutputBindings(ASTNode[] selectedNodes) {
-		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(selectedNodes, outputDataDependences);
+		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(selectedNodes, getOutputDataDependences());
 		return convertIBindingToIVariableBindingList(bindingsMap.values());
 	}
 
 	public List<IVariableBinding> getInputBindings(ASTNode[] selectedNodes) {
-		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(selectedNodes, inputDataDependences);
+		Map<String, IBinding> bindingsMap= transformDataDependencesToIBindings(selectedNodes, getInputDataDependences());
 		return convertIBindingToIVariableBindingList(bindingsMap.values());
 	}
 
