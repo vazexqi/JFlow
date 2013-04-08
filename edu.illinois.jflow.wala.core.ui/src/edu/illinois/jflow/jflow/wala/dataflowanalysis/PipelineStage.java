@@ -122,4 +122,8 @@ public class PipelineStage {
 		return closureLocalVariableNames;
 	}
 
+	public List<PDGNode> getSelectedStatements() {
+		return selectedStatements;
+	}
+
 }

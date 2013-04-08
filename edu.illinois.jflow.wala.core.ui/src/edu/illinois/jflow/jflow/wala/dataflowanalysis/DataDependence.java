@@ -108,10 +108,13 @@ public class DataDependence {
 		if (variableName != "null") {
 			Pattern p= Pattern.compile("\\[(.*?)\\]");
 			Matcher m= p.matcher(variableName);
-			m.find();
-			String[] rawNames= m.group(1).split(",");
-			for (String rawName : rawNames) {
-				names.add(rawName.trim());
+			if (m.find()) {
+				String[] rawNames= m.group(1).split(",");
+				for (String rawName : rawNames) {
+					names.add(rawName.trim());
+				}
+			} else {
+				names.add(variableName);
 			}
 		}
 
