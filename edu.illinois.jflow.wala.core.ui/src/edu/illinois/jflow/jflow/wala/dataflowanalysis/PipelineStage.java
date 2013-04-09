@@ -3,6 +3,7 @@ package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.ibm.wala.ipa.callgraph.CGNode;
@@ -13,6 +14,7 @@ import com.ibm.wala.ipa.modref.ModRef;
 import com.ibm.wala.ipa.slicer.HeapExclusions;
 import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.util.collections.Iterator2Iterable;
+import com.ibm.wala.util.intset.OrdinalSet;
 
 /**
  * Represents the stage of a pipeline. It will contain information about the stage, e.g., what needs
@@ -157,8 +159,8 @@ public class PipelineStage {
 	// Though this might look more complicated, we intentionally split this up (not doing modref upfront).
 	// This facilitates a staged approach to determining feasibility of each pipeline stage and also makes
 	// it easier to test in isolation.
-	void computeHeapDependencies(CGNode cgNode, PointerAnalysis pointerAnalysis, ModRef modref) {
-		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef(cgNode, pointerAnalysis, modref);
+	void computeHeapDependencies(CGNode cgNode, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
+		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef(cgNode, pointerAnalysis, modref, mod, ref);
 		pipelineStageModRef.computeHeapDependencies();
 	}
 
@@ -173,7 +175,7 @@ public class PipelineStage {
 
 		private HeapExclusions exclusions; //TODO: Might want to make use of this to filter out JDK classes
 
-		public PipelineStageModRef(CGNode cgNode, PointerAnalysis pointerAnalysis, ModRef modref) {
+		public PipelineStageModRef(CGNode cgNode, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
 			this.cgNode= cgNode;
 			this.pointerAnalysis= pointerAnalysis;
 			this.modref= modref;
@@ -199,6 +201,12 @@ public class PipelineStage {
 			}
 		}
 	}
+
+	/*
+	 * REMEMBER that we are not doing anything flow-sensitive inside the method bodies. Thus, we are not
+	 * really tracking (R,W) (W,R) or (W,W) pairs – those require flow sensitivity. Instead, we are computing
+	 * the "interference" of heap accesses and warning if there is a potential that there could be a race.
+	 */
 
 	public Set<PointerKey> getRefs() {
 		return refs;

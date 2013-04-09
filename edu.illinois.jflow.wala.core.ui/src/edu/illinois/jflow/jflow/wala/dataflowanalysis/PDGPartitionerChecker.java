@@ -4,12 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
+import com.ibm.wala.types.MethodReference;
+import com.ibm.wala.util.debug.Assertions;
 import com.ibm.wala.util.intset.OrdinalSet;
 
 /**
@@ -35,6 +38,8 @@ public class PDGPartitionerChecker {
 	private Map<CGNode, OrdinalSet<PointerKey>> mod;
 
 	private Map<CGNode, OrdinalSet<PointerKey>> ref;
+
+	private CallGraph callGraph;
 
 	public static PDGPartitionerChecker makePartitionChecker(ProgramDependenceGraph pdg, List<List<Integer>> selections) {
 		PDGPartitionerChecker temp= new PDGPartitionerChecker(pdg);
@@ -95,12 +100,31 @@ public class PDGPartitionerChecker {
 	 * @param pointerAnalysis
 	 */
 	public void computeHeapDependency(CallGraph callGraph, PointerAnalysis pointerAnalysis) {
+		setupModRefInfrastructure(callGraph, pointerAnalysis);
+		CGNode cgNode= getCurrentCGNode();
+		for (PipelineStage stage : stages) {
+			stage.computeHeapDependencies(cgNode, pointerAnalysis, modref, mod, ref);
+
+		}
+	}
+
+	// TODO: Investigate how we can get the correct context for the current CGNode. 
+	//	Right now we are relying on the fact that there is a single context and using that
+	private CGNode getCurrentCGNode() {
+		MethodReference reference= pdg.getIr().getMethod().getReference();
+		Set<CGNode> nodes= callGraph.getNodes(reference);
+
+		Assertions.productionAssertion(nodes.size() == 1, "Expected a single corresponding CGNode, but got either 0 or more");
+
+		CGNode node= nodes.iterator().next(); // Quick way to get first element of set with single entry since set doesn't implement get();
+		return node;
+	}
+
+	private void setupModRefInfrastructure(CallGraph callGraph, PointerAnalysis pointerAnalysis) {
+		this.callGraph= callGraph;
 		this.modref= new AstJavaModRef();
-		mod= modref.computeMod(callGraph, pointerAnalysis);
-		ref= modref.computeRef(callGraph, pointerAnalysis);
-		ArrayList<CGNode> nodes= new ArrayList<CGNode>(callGraph.getNodes(pdg.getIr().getMethod().getReference()));
-		mod.get(nodes.get(0));
-		ref.get(nodes.get(0));
+		this.mod= modref.computeMod(callGraph, pointerAnalysis);
+		this.ref= modref.computeRef(callGraph, pointerAnalysis);
 	}
 
 	// For querying

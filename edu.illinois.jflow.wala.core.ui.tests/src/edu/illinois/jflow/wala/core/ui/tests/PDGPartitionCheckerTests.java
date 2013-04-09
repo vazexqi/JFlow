@@ -246,18 +246,71 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		}
 	}
 
+	/*
+	 * This is a sanity check because there was a time when including the GPars library (even if we excluded the packages from the analysis)
+	 * confused the modref analysis. This simplistic test case is here to ensure that if something bogus happens again, we can detect it early.
+	 */
 	@Test
-	public void testProject2_checkHeapAnalysis() {
+	public void testProject0_checkHeapAnalysis() {
 		try {
 			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
-			List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 23 }, { 27 }, { 31, 32 } });
+			List<List<Integer>> selections= selectionFromArray(new int[][] { { 7, 8, 9, 10 } });
+			PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+			CallGraph callGraph= engine.buildDefaultCallGraph();
+
+			checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+
+			PipelineStage generator= checker.getGenerator();
+			assertTrue(generator.getRefs().size() == 2); // There are two references to fields: p1.field and p2.field
+			assertTrue(generator.getMods().size() == 0);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidClassFileException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (CancelException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Project1 directly accesses heap variables without method calls - so we are testing for direct
+	 * accesses to heap
+	 */
+	@Test
+	public void testProject1_checkHeapAnalysis() {
+		try {
+			IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+			ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+			List<List<Integer>> selections= selectionFromArray(new int[][] { { 21 }, { 24 }, { 28 }, { 32 } });
 			PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 
 			CallGraphBuilder builder= engine.defaultCallGraphBuilder();
 			CallGraph callGraph= engine.buildDefaultCallGraph();
 
 			checker.computeHeapDependency(callGraph, builder.getPointerAnalysis());
+
+			PipelineStage generator= checker.getGenerator();
+			generator.getRefs();
+			generator.getMods();
+
+			// Check stage1
+			PipelineStage stage1= checker.getStage(1);
+			assertTrue(stage1.getRefs().size() == 1);
+			assertTrue(stage1.getMods().size() == 0);
+
+			// Check stage2
+			PipelineStage stage2= checker.getStage(2);
+			assertTrue(stage2.getRefs().size() == 0);
+			assertTrue(stage2.getMods().size() == 0);
+
+			// Check stage3
+			PipelineStage stage3= checker.getStage(3);
+			assertTrue(stage3.getRefs().size() == 0);
+			assertTrue(stage3.getMods().size() == 1);
 
 		} catch (IOException e) {
 			e.printStackTrace();
