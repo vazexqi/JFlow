@@ -95,4 +95,12 @@ public class Statement implements PDGNode {
 		}
 		return defs;
 	}
+
+	public List<SSAInstruction> retrieveAllSSAInstructions() {
+		List<SSAInstruction> ssaInstructions= new ArrayList<SSAInstruction>();
+		for (Pair<? extends SSAInstruction, Integer> pair : instructions) {
+			ssaInstructions.add(pair.fst);
+		}
+		return ssaInstructions;
+	}
 }

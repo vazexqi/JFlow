@@ -174,7 +174,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	 * 
 	 * @param lineNumber The corresponding line number in the source file
 	 * @param instruction The instruction we are handling
-	 * @param index The index of the instruction in the IR instruction arra
+	 * @param index The index of the instruction in the IR instruction array
 	 */
 	private void mapInstruction(int lineNumber, SSAInstruction instruction, int index) {
 		if (DEBUG) {
@@ -279,5 +279,9 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			Assertions.UNREACHABLE("Type inference failed to detect the type for one of our variables!");
 			return null;
 		}
+	}
+
+	public IR getIr() {
+		return ir;
 	}
 }

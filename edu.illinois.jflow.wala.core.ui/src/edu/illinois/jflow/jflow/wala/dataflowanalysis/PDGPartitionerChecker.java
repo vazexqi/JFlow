@@ -91,13 +91,16 @@ public class PDGPartitionerChecker {
 	 * We intentionally separate heap analysis from scalar analysis because it is expensive. Thus we
 	 * perform as much feasibility checks using intraprocedural checks first before turning this on.
 	 * 
-	 * @param callgraph
+	 * @param callGraph
 	 * @param pointerAnalysis
 	 */
-	public void computeHeapDependency(CallGraph callgraph, PointerAnalysis pointerAnalysis) {
+	public void computeHeapDependency(CallGraph callGraph, PointerAnalysis pointerAnalysis) {
 		this.modref= new AstJavaModRef();
-		mod= modref.computeMod(callgraph, pointerAnalysis);
-		ref= modref.computeRef(callgraph, pointerAnalysis);
+		mod= modref.computeMod(callGraph, pointerAnalysis);
+		ref= modref.computeRef(callGraph, pointerAnalysis);
+		ArrayList<CGNode> nodes= new ArrayList<CGNode>(callGraph.getNodes(pdg.getIr().getMethod().getReference()));
+		mod.get(nodes.get(0));
+		ref.get(nodes.get(0));
 	}
 
 	// For querying
