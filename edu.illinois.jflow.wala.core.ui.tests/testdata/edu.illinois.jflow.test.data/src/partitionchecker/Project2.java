@@ -12,29 +12,28 @@ import java.util.List;
 public class Project2 {
 	public static void main(String[] args) {
 		List<Datum> data = new ArrayList<Datum>();
-		data.add(new Datum(1));
-		data.add(new Datum(2));
-		data.add(new Datum(3));
-		data.add(new Datum(4));
+		data.add(new Datum(new Integer(1)));
+		data.add(new Datum(new Integer(2)));
+		data.add(new Datum(new Integer(3)));
+		data.add(new Datum(new Integer(4)));
 
 		for (Datum d : data) {
 
 			// Begin Stage1
-			int field = d.getField();
+			Integer field = d.getField();
 			// End Stage1
 
 			// Begin Stage2
-			int manipulatedField = produce(field);
+			Integer manipulatedField = produce(field);
 			// End Stage2
 
 			// Begin Stage3
 			d.setField(manipulatedField);
-			System.out.println(d);
 			// End Stage3
 		}
 	}
 
-	static int produce(int input) {
+	static Integer produce(Integer input) {
 		return input + 2;
 	}
 }
