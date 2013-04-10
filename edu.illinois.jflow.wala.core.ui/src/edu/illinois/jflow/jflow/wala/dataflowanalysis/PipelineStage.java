@@ -6,12 +6,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ibm.wala.classLoader.CallSiteReference;
 import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
 import com.ibm.wala.ipa.modref.ModRef;
 import com.ibm.wala.ipa.slicer.HeapExclusions;
+import com.ibm.wala.ssa.SSAAbstractInvokeInstruction;
 import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.util.collections.Iterator2Iterable;
 import com.ibm.wala.util.intset.OrdinalSet;
@@ -159,8 +162,8 @@ public class PipelineStage {
 	// Though this might look more complicated, we intentionally split this up (not doing modref upfront).
 	// This facilitates a staged approach to determining feasibility of each pipeline stage and also makes
 	// it easier to test in isolation.
-	void computeHeapDependencies(CGNode cgNode, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
-		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef(cgNode, pointerAnalysis, modref, mod, ref);
+	void computeHeapDependencies(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
+		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef(cgNode, callGraph, pointerAnalysis, modref, mod, ref);
 		pipelineStageModRef.computeHeapDependencies();
 	}
 
@@ -173,12 +176,21 @@ public class PipelineStage {
 
 		private DelegatingExtendedHeapModel heapModel;
 
+		private CallGraph callGraph;
+
+		private Map<CGNode, OrdinalSet<PointerKey>> mod;
+
+		private Map<CGNode, OrdinalSet<PointerKey>> ref;
+
 		private HeapExclusions exclusions; //TODO: Might want to make use of this to filter out JDK classes
 
-		public PipelineStageModRef(CGNode cgNode, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
+		public PipelineStageModRef(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
 			this.cgNode= cgNode;
+			this.callGraph= callGraph;
 			this.pointerAnalysis= pointerAnalysis;
 			this.modref= modref;
+			this.mod= mod;
+			this.ref= ref;
 			this.heapModel= new DelegatingExtendedHeapModel(pointerAnalysis.getHeapModel());
 		}
 
@@ -190,14 +202,38 @@ public class PipelineStage {
 		private void computeMods() {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
 			for (SSAInstruction instruction : instructions) {
+				// These are direct modifications x.f = <something>
 				mods.addAll(modref.getMod(cgNode, heapModel, pointerAnalysis, instruction, null));
+
+				// These are indirect modifications through calls
+				if (instruction instanceof SSAAbstractInvokeInstruction) {
+					SSAAbstractInvokeInstruction call= (SSAAbstractInvokeInstruction)instruction;
+					CallSiteReference callSite= call.getCallSite();
+					Set<CGNode> possibleTargets= callGraph.getPossibleTargets(cgNode, callSite);
+					for (CGNode target : possibleTargets) {
+						OrdinalSet<PointerKey> ordinalSet= mod.get(target);
+						mods.addAll(OrdinalSet.toCollection(ordinalSet));
+					}
+				}
 			}
 		}
 
 		private void computeRefs() {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
 			for (SSAInstruction instruction : instructions) {
+				// These are direct references x.f
 				refs.addAll(modref.getRef(cgNode, heapModel, pointerAnalysis, instruction, null));
+
+				// These are indirect modifications through calls
+				if (instruction instanceof SSAAbstractInvokeInstruction) {
+					SSAAbstractInvokeInstruction call= (SSAAbstractInvokeInstruction)instruction;
+					CallSiteReference callSite= call.getCallSite();
+					Set<CGNode> possibleTargets= callGraph.getPossibleTargets(cgNode, callSite);
+					for (CGNode target : possibleTargets) {
+						OrdinalSet<PointerKey> ordinalSet= ref.get(target);
+						refs.addAll(OrdinalSet.toCollection(ordinalSet));
+					}
+				}
 			}
 		}
 	}

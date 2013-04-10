@@ -25,6 +25,7 @@ import com.ibm.wala.ipa.callgraph.impl.Util;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
+import com.ibm.wala.util.CancelException;
 
 import edu.illinois.jflow.wala.utils.JFlowAnalysisUtil;
 
@@ -78,15 +79,21 @@ public abstract class JFlowTest extends JDTJavaTest {
 		}
 	}
 
-	protected IR retrieveMethodToBeInspected(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException {
+	protected IR retrieveMethodToBeInspected(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException,
+			CancelException {
 		IMethod method= retrieveMethod(fullyQualifiedClassName, methodName, methodParameters, returnType);
 		return engine.getCache().getIR(method);
 	}
 
-	protected IMethod retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException {
+	protected IMethod retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException, CancelException {
 		engine= getAnalysisEngine(simplePkgTestEntryPoint(getTestPackageName()), rtJar);
-		engine.buildAnalysisScope();
-		IClassHierarchy classHierarchy= engine.buildClassHierarchy();
+
+		// This will build the call graph – it's a small price to pay for our test cases or 
+		// else we run into the trouble of having multiple Class Hierarchies, Analysis Scope, Analysis Cache floating around
+		// which will cause subtle bugs when we do comparisons
+		engine.defaultCallGraphBuilder();
+
+		IClassHierarchy classHierarchy= engine.getClassHierarchy();
 
 		MethodReference methodRef= descriptorToMethodRef(String.format("Source#%s#%s#(%s)%s", fullyQualifiedClassName, methodName, methodParameters, returnType), classHierarchy);
 		IMethod method= classHierarchy.resolveMethod(methodRef);

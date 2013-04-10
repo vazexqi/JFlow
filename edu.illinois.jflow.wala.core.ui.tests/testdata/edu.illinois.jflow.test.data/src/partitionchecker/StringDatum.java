@@ -1,9 +1,9 @@
 package partitionchecker;
 
-class Datum {
-	Integer field;
+class StringDatum {
+	String field;
 
-	public Datum(Integer field) {
+	public StringDatum(String field) {
 		this.field = field;
 	}
 
@@ -12,11 +12,11 @@ class Datum {
 		return "Datum [field=" + field + "]";
 	}
 
-	public Integer getField() {
+	public String getField() {
 		return field;
 	}
 
-	public void setField(Integer field) {
+	public void setField(String field) {
 		this.field = field;
 	}
 

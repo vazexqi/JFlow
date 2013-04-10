@@ -18,15 +18,15 @@ public class Project2LoopCarriedDependency {
 		data.add(new Datum(3));
 		data.add(new Datum(4));
 
-		int loopCarriedDependency = 0;
+		Integer loopCarriedDependency = 0;
 		for (Datum d : data) {
 
 			// Begin Stage1
-			int field = d.getField();
+			Integer field = d.getField();
 			// End Stage1
 
 			// Begin Stage2
-			int manipulatedField = produce(loopCarriedDependency + field);
+			Integer manipulatedField = produce(loopCarriedDependency + field);
 			// End Stage2
 
 			// Begin Stage3
@@ -36,7 +36,7 @@ public class Project2LoopCarriedDependency {
 		}
 	}
 
-	static int produce(int input) {
+	static Integer produce(Integer input) {
 		return input + 2;
 	}
 }

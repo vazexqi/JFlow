@@ -10,4 +10,8 @@ public class Project5 {
 	static int producer(int input) {
 		return input + 2;
 	}
+
+	public static void main(String[] args) {
+		// Does nothing, needed to initiate call graph
+	}
 }

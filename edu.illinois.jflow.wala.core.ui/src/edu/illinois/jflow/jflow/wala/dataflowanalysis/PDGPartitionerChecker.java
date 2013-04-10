@@ -103,7 +103,7 @@ public class PDGPartitionerChecker {
 		setupModRefInfrastructure(callGraph, pointerAnalysis);
 		CGNode cgNode= getCurrentCGNode();
 		for (PipelineStage stage : stages) {
-			stage.computeHeapDependencies(cgNode, pointerAnalysis, modref, mod, ref);
+			stage.computeHeapDependencies(cgNode, callGraph, pointerAnalysis, modref, mod, ref);
 
 		}
 	}
