@@ -95,7 +95,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		// Check stage0, i.e., Generator
 		PipelineStage generator= checker.getGenerator();
 		assertTrue(generator.getInputDataDependences().size() == 1); // Uses the data local variable
-		assertTrue(generator.getOutputDataDependences().size() == 3); // Provides d to the following stages
+		assertTrue(generator.getOutputDataDependences().size() == 2); // Provides d to the following stages
 		assertTrue(generator.getClosureLocalVariableNames().size() == 1);// Defines d
 
 		// Check stage1
@@ -112,7 +112,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 		// Check stage3
 		PipelineStage stage3= checker.getStage(3);
-		assertTrue(stage3.getInputDataDependences().size() == 3); // Uses d, d (again) and manipulatedField
+		assertTrue(stage3.getInputDataDependences().size() == 2); // Uses d, d (again) and manipulatedField
 		assertTrue(stage3.getOutputDataDependences().size() == 0);
 		assertTrue(stage3.getClosureLocalVariableNames().size() == 0);
 	}
