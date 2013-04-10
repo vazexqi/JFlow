@@ -13,5 +13,6 @@ public class Project5 {
 
 	public static void main(String[] args) {
 		// Does nothing, needed to initiate call graph
+		entry(0);
 	}
 }

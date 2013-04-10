@@ -19,8 +19,11 @@ import com.ibm.wala.ide.util.EclipseFileProvider;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
 import com.ibm.wala.ipa.callgraph.AnalysisScope;
+import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
 import com.ibm.wala.ipa.callgraph.Entrypoint;
+import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.callgraph.impl.Util;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ssa.IR;
@@ -32,6 +35,8 @@ import edu.illinois.jflow.wala.utils.JFlowAnalysisUtil;
 public abstract class JFlowTest extends JDTJavaTest {
 
 	protected AbstractAnalysisEngine engine;
+
+	protected CallGraph callGraph;
 
 	abstract String getTestPackageName();
 
@@ -82,16 +87,14 @@ public abstract class JFlowTest extends JDTJavaTest {
 	protected IR retrieveMethodToBeInspected(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException,
 			CancelException {
 		IMethod method= retrieveMethod(fullyQualifiedClassName, methodName, methodParameters, returnType);
-		return engine.getCache().getIR(method);
+		CGNode node= callGraph.getNode(method, Everywhere.EVERYWHERE);
+		return node.getIR();
 	}
 
 	protected IMethod retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException, CancelException {
 		engine= getAnalysisEngine(simplePkgTestEntryPoint(getTestPackageName()), rtJar);
 
-		// This will build the call graph – it's a small price to pay for our test cases or 
-		// else we run into the trouble of having multiple Class Hierarchies, Analysis Scope, Analysis Cache floating around
-		// which will cause subtle bugs when we do comparisons
-		engine.defaultCallGraphBuilder();
+		callGraph= engine.buildDefaultCallGraph();
 
 		IClassHierarchy classHierarchy= engine.getClassHierarchy();
 
