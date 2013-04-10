@@ -26,7 +26,7 @@ public class Project2LoopCarriedDependency {
 			// End Stage1
 
 			// Begin Stage2
-			Integer manipulatedField = produce(loopCarriedDependency + field);
+			Integer manipulatedField = produce(field);
 			// End Stage2
 
 			// Begin Stage3
