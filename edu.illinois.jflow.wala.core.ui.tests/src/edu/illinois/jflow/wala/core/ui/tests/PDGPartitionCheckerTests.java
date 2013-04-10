@@ -10,8 +10,6 @@ import java.util.List;
 import org.junit.Test;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
-import com.ibm.wala.ipa.callgraph.CallGraph;
-import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.util.CancelException;
@@ -214,8 +212,6 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 7, 8, 9, 10 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 
-		CallGraph callGraph= engine.buildDefaultCallGraph();
-
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 
 		PipelineStage generator= checker.getGenerator();
@@ -230,8 +226,6 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 7, 8, 9, 10 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
-
-		CallGraph callGraph= engine.buildDefaultCallGraph();
 
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 
@@ -251,86 +245,10 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 18 }, { 21 }, { 25 }, { 29 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 
-		CallGraphBuilder builder= engine.defaultCallGraphBuilder();
-		CallGraph callGraph= engine.buildDefaultCallGraph();
-
-		checker.computeHeapDependency(callGraph, builder.getPointerAnalysis());
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 
 		PipelineStage generator= checker.getGenerator();
-		generator.getRefs();
-		generator.getMods();
-
-		// Check stage1
-		PipelineStage stage1= checker.getStage(1);
-//		assertTrue(stage1.getRefs().size() == 1);
-//		assertTrue(stage1.getMods().size() == 0);
-
-		// Check stage2
-		PipelineStage stage2= checker.getStage(2);
-//		assertTrue(stage2.getRefs().size() == 0);
-//		assertTrue(stage2.getMods().size() == 0);
-
-		// Check stage3
-		PipelineStage stage3= checker.getStage(3);
-//		assertTrue(stage3.getRefs().size() == 0);
-//		assertTrue(stage3.getMods().size() == 1);
-	}
-
-	/**
-	 * Project1 directly accesses heap variables without method calls - so we are testing for direct
-	 * accesses to heap
-	 */
-	@Test
-	public void testProject1a_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
-		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
-		List<List<Integer>> selections= selectionFromArray(new int[][] { { 23 }, { 26 }, { 30 }, { 34 } });
-		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
-
-		CallGraphBuilder builder= engine.defaultCallGraphBuilder();
-		CallGraph callGraph= engine.buildDefaultCallGraph();
-
-		checker.computeHeapDependency(callGraph, builder.getPointerAnalysis());
-
-		PipelineStage generator= checker.getGenerator();
-		generator.getRefs();
-		generator.getMods();
-
-		// Check stage1
-		PipelineStage stage1= checker.getStage(1);
-//		assertTrue(stage1.getRefs().size() == 1);
-//		assertTrue(stage1.getMods().size() == 0);
-
-		// Check stage2
-		PipelineStage stage2= checker.getStage(2);
-//		assertTrue(stage2.getRefs().size() == 0);
-//		assertTrue(stage2.getMods().size() == 0);
-
-		// Check stage3
-		PipelineStage stage3= checker.getStage(3);
-		stage3.getRefs();
-//		assertTrue(stage3.getMods().size() == 1);
-	}
-
-	/**
-	 * Project2 indirectly accesses heap variables through method calls - so we are testing for
-	 * indirect accesses to heap
-	 */
-	@Test
-	public void testProject2_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
-		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
-		List<List<Integer>> selections= selectionFromArray(new int[][] { { 22 }, { 25 }, { 29 }, { 33, 34 } });
-		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
-
-		CallGraphBuilder builder= engine.defaultCallGraphBuilder();
-		CallGraph callGraph= engine.buildDefaultCallGraph();
-
-		checker.computeHeapDependency(callGraph, builder.getPointerAnalysis());
-
-		PipelineStage generator= checker.getGenerator();
-		generator.getRefs();
-		generator.getMods();
+		//TODO: Verify this later – the generator is more complicated because of how many references it accesss
 
 		// Check stage1
 		PipelineStage stage1= checker.getStage(1);
@@ -346,6 +264,70 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		PipelineStage stage3= checker.getStage(3);
 		assertTrue(stage3.getRefs().size() == 0);
 		assertTrue(stage3.getMods().size() == 1);
+	}
+
+	/**
+	 * Project1 directly accesses heap variables without method calls - so we are testing for direct
+	 * accesses to heap
+	 */
+	@Test
+	public void testProject1a_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 23 }, { 26 }, { 30 }, { 34 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+
+		PipelineStage generator= checker.getGenerator();
+		//TODO: Verify this later – the generator is more complicated because of how many references it accesss
+
+		// Check stage1
+		PipelineStage stage1= checker.getStage(1);
+		assertTrue(stage1.getRefs().size() == 4);
+		assertTrue(stage1.getMods().size() == 0);
+
+		// Check stage2
+		PipelineStage stage2= checker.getStage(2);
+		assertTrue(stage2.getRefs().size() == 0);
+		assertTrue(stage2.getMods().size() == 0);
+
+		// Check stage3
+		PipelineStage stage3= checker.getStage(3);
+		assertTrue(stage3.getRefs().size() == 0);
+		assertTrue(stage3.getMods().size() == 4);
+	}
+
+	/**
+	 * Project2 indirectly accesses heap variables through method calls - so we are testing for
+	 * indirect accesses to heap
+	 */
+	@Test
+	public void testProject2_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 23 }, { 27 }, { 31 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+
+		PipelineStage generator= checker.getGenerator();
+		//TODO: Verify this later – the generator is more complicated because of how many references it access
+
+		// Check stage1
+		PipelineStage stage1= checker.getStage(1);
+		assertTrue(stage1.getRefs().size() == 4);
+		assertTrue(stage1.getMods().size() == 0);
+
+		// Check stage2
+		PipelineStage stage2= checker.getStage(2);
+		assertTrue(stage2.getRefs().size() == 0);
+		assertTrue(stage2.getMods().size() == 0);
+
+		// Check stage3
+		PipelineStage stage3= checker.getStage(3);
+		assertTrue(stage3.getRefs().size() == 0);
+		assertTrue(stage3.getMods().size() == 4);
 	}
 
 	protected List<List<Integer>> selectionFromArray(int[][] lines) {

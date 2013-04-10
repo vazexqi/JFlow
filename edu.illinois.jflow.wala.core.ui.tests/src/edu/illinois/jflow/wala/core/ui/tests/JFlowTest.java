@@ -88,7 +88,7 @@ public abstract class JFlowTest extends JDTJavaTest {
 			CancelException {
 		IMethod method= retrieveMethod(fullyQualifiedClassName, methodName, methodParameters, returnType);
 		CGNode node= callGraph.getNode(method, Everywhere.EVERYWHERE);
-		return node.getIR();
+		return engine.getCache().getIR(method);
 	}
 
 	protected IMethod retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException, CancelException {
