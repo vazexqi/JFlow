@@ -2,7 +2,12 @@ package partitionchecker;
 
 public class Project4 {
 	public static void main(String[] args) {
-		Datum[] data = new Datum[] { new Datum(1) };
+		entry(new Datum[] { new Datum(new Integer(1)),
+				new Datum(new Integer(2)), new Datum(new Integer(3)),
+				new Datum(new Integer(4)) });
+	}
+
+	static void entry(Datum[] data) {
 		for (Datum d : data) {
 
 			// Begin Stage1
@@ -10,7 +15,7 @@ public class Project4 {
 			// End Stage1
 
 			// Begin Stage2
-			Integer manipulatedField = produce(field);
+			Integer manipulatedField = produce(d);
 			// End Stage2
 
 			// Begin Stage3
@@ -19,8 +24,8 @@ public class Project4 {
 		}
 	}
 
-	static Integer produce(Integer input) {
-		return input + 2;
+	static Integer produce(Datum input) {
+		return input.field;
 
 	}
 }

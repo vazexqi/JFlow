@@ -298,21 +298,21 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		assertTrue(stage3.getMods().size() == 4);
 	}
 
+
 	/**
-	 * Project2 indirectly accesses heap variables through method calls - so we are testing for
-	 * indirect accesses to heap
+	 * This test verifies that we can track mod/ref interprocedurally
 	 */
 	@Test
-	public void testProject2_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+	public void testProject4_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "[Lpartitionchecker/Datum;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
-		List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 23 }, { 27 }, { 31 } });
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 11 }, { 14 }, { 18 }, { 22 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 
 		PipelineStage generator= checker.getGenerator();
-		//TODO: Verify this later – the generator is more complicated because of how many references it access
+		//TODO: Verify this later – the generator is more complicated because of how many references it accesss
 
 		// Check stage1
 		PipelineStage stage1= checker.getStage(1);
@@ -321,7 +321,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 		// Check stage2
 		PipelineStage stage2= checker.getStage(2);
-		assertTrue(stage2.getRefs().size() == 0);
+		assertTrue(stage2.getRefs().size() == 4);
 		assertTrue(stage2.getMods().size() == 0);
 
 		// Check stage3
