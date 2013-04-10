@@ -3,7 +3,9 @@ package edu.illinois.jflow.wala.core.ui.tests;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.Assert;
 
@@ -12,7 +14,6 @@ import org.eclipse.core.runtime.CoreException;
 import com.ibm.wala.cast.java.client.JDTJavaSourceAnalysisEngine;
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
 import com.ibm.wala.cast.java.test.JDTJavaTest;
-import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
 import com.ibm.wala.ide.util.EclipseFileProvider;
@@ -23,12 +24,12 @@ import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
 import com.ibm.wala.ipa.callgraph.Entrypoint;
-import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.callgraph.impl.Util;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
+import com.ibm.wala.util.debug.Assertions;
 
 import edu.illinois.jflow.wala.utils.JFlowAnalysisUtil;
 
@@ -38,7 +39,7 @@ public abstract class JFlowTest extends JDTJavaTest {
 
 	protected CallGraph callGraph;
 
-	abstract String getTestPackageName();
+	protected abstract String getTestPackageName();
 
 	public JFlowTest(ZippedProjectData project) {
 		super(project);
@@ -84,14 +85,20 @@ public abstract class JFlowTest extends JDTJavaTest {
 		}
 	}
 
-	protected IR retrieveMethodToBeInspected(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException,
+	protected IR retrieveMethodIR(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException,
 			CancelException {
-		IMethod method= retrieveMethod(fullyQualifiedClassName, methodName, methodParameters, returnType);
-		CGNode node= callGraph.getNode(method, Everywhere.EVERYWHERE);
-		return engine.getCache().getIR(method);
+		MethodReference method= retrieveMethod(fullyQualifiedClassName, methodName, methodParameters, returnType);
+		Set<CGNode> nodes= callGraph.getNodes(method);
+
+		Assertions.productionAssertion(nodes.size() == 1, "Expected a single corresponding CGNode, but got either 0 or more");
+
+		CGNode node= nodes.iterator().next(); // Quick way to get first element of set with single entry since set doesn't implement get();
+		IR ir= node.getIR();
+		return ir;
 	}
 
-	protected IMethod retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException, CancelException {
+	protected MethodReference retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException,
+			CancelException {
 		engine= getAnalysisEngine(simplePkgTestEntryPoint(getTestPackageName()), rtJar);
 
 		callGraph= engine.buildDefaultCallGraph();
@@ -99,8 +106,38 @@ public abstract class JFlowTest extends JDTJavaTest {
 		IClassHierarchy classHierarchy= engine.getClassHierarchy();
 
 		MethodReference methodRef= descriptorToMethodRef(String.format("Source#%s#%s#(%s)%s", fullyQualifiedClassName, methodName, methodParameters, returnType), classHierarchy);
-		IMethod method= classHierarchy.resolveMethod(methodRef);
-		return method;
+		return methodRef;
+	}
+
+	protected String getTestName() {
+		StackTraceElement stack[]= new Throwable().getStackTrace();
+		for (int i= 0; i <= stack.length; i++) {
+			String methodName= stack[i].getMethodName();
+			if (methodName.startsWith("test")) {
+				// Filter out the _part
+				int indexOfUnderscore= methodName.indexOf("_");
+				if (indexOfUnderscore != -1) {
+					return methodName.substring(0, indexOfUnderscore);
+				} else
+					return methodName;
+			}
+		}
+
+		throw new Error("test method not found");
+	}
+
+	protected List<List<Integer>> selectionFromArray(int[][] lines) {
+		List<List<Integer>> selections= new ArrayList<List<Integer>>();
+		for (int[] stageLines : lines) {
+			// int is a primitive and Arrays.asList(stageLines) doesn't do the right thing
+			// it produces List<int[]> which is not what I want
+			List<Integer> stageLine= new ArrayList<Integer>();
+			for (int line : stageLines) {
+				stageLine.add(line);
+			}
+			selections.add(stageLine);
+		}
+		return selections;
 	}
 
 }

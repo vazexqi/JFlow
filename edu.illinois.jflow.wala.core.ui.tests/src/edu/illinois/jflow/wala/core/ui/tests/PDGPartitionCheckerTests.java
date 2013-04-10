@@ -4,7 +4,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
@@ -30,7 +29,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	}
 
 	@Override
-	String getTestPackageName() {
+	protected String getTestPackageName() {
 		return "partitionchecker";
 	}
 
@@ -41,26 +40,9 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	// i.e., testBlah_whatever looks for a class Blah
 	// You can use the _whatever part to distinguish different tests
 
-	protected String getTestName() {
-		StackTraceElement stack[]= new Throwable().getStackTrace();
-		for (int i= 0; i <= stack.length; i++) {
-			String methodName= stack[i].getMethodName();
-			if (methodName.startsWith("test")) {
-				// Filter out the _part
-				int indexOfUnderscore= methodName.indexOf("_");
-				if (indexOfUnderscore != -1) {
-					return methodName.substring(0, indexOfUnderscore);
-				} else
-					return methodName;
-			}
-		}
-
-		throw new Error("test method not found");
-	}
-
 	@Test
 	public void testProject2_checkPartitionsWithoutHeapAnalysis() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 23 }, { 27 }, { 31, 32 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -117,7 +99,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 	@Test
 	public void testProject3_checkPartitionsWithoutHeapAnalysis() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 16 }, { 19 }, { 23 }, { 27, 28 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -174,7 +156,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 	@Test
 	public void testProject2_checkLoopCarriedDependency() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 23 }, { 27 }, { 31, 32 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -185,7 +167,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 	@Test
 	public void testProject2LoopCarriedDependency_checkLoopCarriedDependency() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 22 }, { 25 }, { 29 }, { 33, 34 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -196,7 +178,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 	@Test
 	public void testProject3_checkLoopCarriedDependency() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 16 }, { 19 }, { 23 }, { 27, 28 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -207,7 +189,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	// Illustrate that Wala doesn't properly connect java.lang.Integer pointer variables with instance keys
 	@Test
 	public void testProject0_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 7, 8, 9, 10 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -222,7 +204,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	// Illustrate that Wala handles java.lang.Object types properly for pointerkey <-> instancekey
 	@Test
 	public void testProject0a_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 7, 8, 9, 10 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -240,7 +222,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject1_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 18 }, { 21 }, { 25 }, { 29 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -272,7 +254,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject1a_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 23 }, { 26 }, { 30 }, { 34 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -304,7 +286,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject4_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "[Lpartitionchecker/Datum;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "entry", "[Lpartitionchecker/Datum;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 11 }, { 14 }, { 18 }, { 22 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
@@ -328,19 +310,5 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		PipelineStage stage3= checker.getStage(3);
 		assertTrue(stage3.getRefs().size() == 0);
 		assertTrue(stage3.getMods().size() == 4);
-	}
-
-	protected List<List<Integer>> selectionFromArray(int[][] lines) {
-		List<List<Integer>> selections= new ArrayList<List<Integer>>();
-		for (int[] stageLines : lines) {
-			// int is a primitive and Arrays.asList(stageLines) doesn't do the right thing
-			// it produces List<int[]> which is not what I want
-			List<Integer> stageLine= new ArrayList<Integer>();
-			for (int line : stageLines) {
-				stageLine.add(line);
-			}
-			selections.add(stageLine);
-		}
-		return selections;
 	}
 }

@@ -32,7 +32,7 @@ public class PDGTests extends JFlowTest {
 	}
 
 	@Override
-	String getTestPackageName() {
+	protected String getTestPackageName() {
 		return "pdg";
 	}
 
@@ -44,7 +44,7 @@ public class PDGTests extends JFlowTest {
 
 	@Test
 	public void testProject1() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify
@@ -59,7 +59,7 @@ public class PDGTests extends JFlowTest {
 
 	@Test
 	public void testProject2() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify
@@ -90,7 +90,7 @@ public class PDGTests extends JFlowTest {
 
 	@Test
 	public void testProject3() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify
@@ -127,7 +127,7 @@ public class PDGTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject4() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify
@@ -167,7 +167,7 @@ public class PDGTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject5() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "I", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "entry", "I", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify
@@ -202,7 +202,7 @@ public class PDGTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject6() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "entry", "Ljava/util/List;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "entry", "Ljava/util/List;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify
@@ -254,7 +254,7 @@ public class PDGTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject7() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 
 		// Verify

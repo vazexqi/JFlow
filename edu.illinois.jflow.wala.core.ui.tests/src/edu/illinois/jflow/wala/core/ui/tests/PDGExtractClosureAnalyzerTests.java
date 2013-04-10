@@ -46,7 +46,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 	}
 
 	@Override
-	String getTestPackageName() {
+	protected String getTestPackageName() {
 		return "analyzer";
 	}
 
@@ -95,7 +95,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 
 	@Test
 	public void testProject1() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<Integer> lines= new ArrayList<Integer>();
 		lines.add(6);
@@ -111,7 +111,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 
 	@Test
 	public void testProject2() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<Integer> lines= new ArrayList<Integer>();
 		lines.add(6);
@@ -148,7 +148,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 
 	@Test
 	public void testProject3() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<Integer> lines= Arrays.asList(6, 7);
 		PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
@@ -195,7 +195,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 	 */
 	@Test
 	public void testProject4() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<Integer> lines= Arrays.asList(10, 11);
 		PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
@@ -238,7 +238,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 
 	@Test
 	public void testProject5() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<Integer> lines= Arrays.asList(10, 11);
 		PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
@@ -285,7 +285,7 @@ public class PDGExtractClosureAnalyzerTests extends JFlowTest {
 
 	@Test
 	public void testProject6() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
-		IR ir= retrieveMethodToBeInspected(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<Integer> lines= Arrays.asList(10, 11, 12);
 		PDGExtractClosureAnalyzer analyzer= new PDGExtractClosureAnalyzer(pdg, lines);
