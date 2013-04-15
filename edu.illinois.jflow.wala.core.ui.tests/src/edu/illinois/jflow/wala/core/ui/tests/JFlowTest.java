@@ -2,6 +2,8 @@ package edu.illinois.jflow.wala.core.ui.tests;
 
 
 
+import java.awt.BorderLayout;
+import java.awt.Frame;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +12,11 @@ import java.util.Set;
 import junit.framework.Assert;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.awt.SWT_AWT;
+import org.eclipse.swt.widgets.Dialog;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 
 import com.ibm.wala.cast.java.client.JDTJavaSourceAnalysisEngine;
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
@@ -30,6 +37,7 @@ import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
 import com.ibm.wala.util.debug.Assertions;
+import com.ibm.wala.viz.viewer.WalaViewer;
 
 import edu.illinois.jflow.wala.utils.JFlowAnalysisUtil;
 
@@ -138,6 +146,32 @@ public abstract class JFlowTest extends JDTJavaTest {
 			selections.add(stageLine);
 		}
 		return selections;
+	}
+
+	protected void openShell() {
+		Shell shell= new Shell(Display.getDefault());
+		(new Dialog(shell) {
+			public void open() {
+				Shell parent= getParent();
+				Shell shell= new Shell(parent, SWT.EMBEDDED | SWT.SHELL_TRIM | SWT.APPLICATION_MODAL);
+				shell.setSize(600, 800);
+	
+				Frame frame= SWT_AWT.new_Frame(shell);
+				frame.setSize(600, 800);
+				frame.setLayout(new BorderLayout());
+				frame.add(new WalaViewer(callGraph, engine.getPointerAnalysis()), BorderLayout.CENTER);
+				frame.pack();
+				frame.setVisible(true);
+	
+				shell.pack();
+				shell.open();
+				Display display= parent.getDisplay();
+				while (!shell.isDisposed()) {
+					if (!display.readAndDispatch())
+						display.sleep();
+				}
+			}
+		}).open();
 	}
 
 }
