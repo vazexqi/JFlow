@@ -1,14 +1,17 @@
 package edu.illinois.jflow.wala.core.ui.tests;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
+import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.util.CancelException;
@@ -310,5 +313,40 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		PipelineStage stage3= checker.getStage(3);
 		assertTrue(stage3.getRefs().size() == 0);
 		assertTrue(stage3.getMods().size() == 4);
+	}
+
+	/**
+	 * This test checks what happens when we cannot determine the contents of the array (unlike in
+	 * previous cases where the contents of the array are determined through new Datum statements.
+	 */
+	@Test
+	public void testProject5_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 18 }, { 21 }, { 25 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+
+		PipelineStage generator= checker.getGenerator();
+		Set<PointerKey> generatorRefs= generator.getRefs();
+		Set<PointerKey> generatorMods= generator.getMods();
+		//TODO: Verify this later – the generator is more complicated because of how many references it accesss
+
+		// Check stage1
+		PipelineStage stage1= checker.getStage(1);
+		Set<PointerKey> stage1Refs= stage1.getRefs();
+		Set<PointerKey> stage1Mods= stage1.getMods();
+		assertEquals(0, stage1Refs.size());
+		assertEquals(1, stage1Mods.size());
+
+		// Check stage2
+		PipelineStage stage2= checker.getStage(2);
+		Set<PointerKey> stage2Refs= stage2.getRefs();
+		Set<PointerKey> stage2Mods= stage2.getMods();
+		assertEquals(1, stage2Refs.size());
+		assertEquals(1, stage2Mods.size());
+
+		System.out.println("End");
 	}
 }
