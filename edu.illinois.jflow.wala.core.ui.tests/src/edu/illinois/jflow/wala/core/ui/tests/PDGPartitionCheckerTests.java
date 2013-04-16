@@ -349,4 +349,32 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 
 		System.out.println("End");
 	}
+
+	@Test
+	public void testChordFigure4_checkHeapAnalysis() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { {}, { 36 }, { 37 }, { 38 } }); // This one has no generator
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+
+		// Check stage1
+		PipelineStage stage1= checker.getStage(1);
+		Set<PointerKey> stage1Refs= stage1.getRefs();
+		Set<PointerKey> stage1Mods= stage1.getMods();
+
+		// Check stage2
+		PipelineStage stage2= checker.getStage(2);
+		Set<PointerKey> stage2Refs= stage2.getRefs();
+		Set<PointerKey> stage2Mods= stage2.getMods();
+
+		// Check stage2
+		PipelineStage stage3= checker.getStage(3);
+		Set<PointerKey> stage3Refs= stage3.getRefs();
+		Set<PointerKey> stage3Mods= stage3.getMods();
+
+		System.out.println("End");
+
+	}
 }

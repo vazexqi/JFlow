@@ -43,23 +43,23 @@ public class LireAnalysisTest extends JFlowTest {
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 
 		PipelineStage generator= checker.getGenerator();
-		printSizeOfModAndRef(generator);
+		printModRefInfo(generator);
 
 		PipelineStage stage1= checker.getStage(1);
-		printSizeOfModAndRef(stage1);
+		printModRefInfo(stage1);
 
 		PipelineStage stage2= checker.getStage(2);
-		printSizeOfModAndRef(stage2);
+		printModRefInfo(stage2);
 
 		PipelineStage stage3= checker.getStage(3);
-		printSizeOfModAndRef(stage3);
+		printModRefInfo(stage3);
 
 		PipelineStage stage4= checker.getStage(4);
-		printSizeOfModAndRef(stage4);
+		printModRefInfo(stage4);
 	}
 
-	private void printSizeOfModAndRef(PipelineStage stage) {
-		System.err.println(String.format("Size of mod ref: %d", stage.getRefs().size()));
-		System.err.println(String.format("Size of mod set: %d", stage.getMods().size()));
+	private void printModRefInfo(PipelineStage stage) {
+		System.err.println(stage.getPrettyPrintRefs());
+		System.err.println(stage.getPrettyPrintMods());
 	}
 }

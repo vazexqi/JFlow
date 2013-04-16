@@ -39,7 +39,7 @@ public class ReceiverStringContext implements Context {
 
 	@Override
 	public String toString() {
-		return "ReceiverStringContext: " + receiverString.toString();
+		return "KOBJSENCONT: " + receiverString.toString();
 	}
 
 	@Override

@@ -1,6 +1,8 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -9,13 +11,19 @@ import java.util.Set;
 import com.ibm.wala.classLoader.CallSiteReference;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
+import com.ibm.wala.ipa.callgraph.propagation.AbstractFieldPointerKey;
+import com.ibm.wala.ipa.callgraph.propagation.ArrayContentsKey;
+import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldKey;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
+import com.ibm.wala.ipa.callgraph.propagation.StaticFieldKey;
+import com.ibm.wala.ipa.modref.ArrayLengthKey;
 import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
 import com.ibm.wala.ipa.modref.ModRef;
 import com.ibm.wala.ipa.slicer.HeapExclusions;
 import com.ibm.wala.ssa.SSAAbstractInvokeInstruction;
 import com.ibm.wala.ssa.SSAInstruction;
+import com.ibm.wala.util.Predicate;
 import com.ibm.wala.util.collections.Iterator2Iterable;
 import com.ibm.wala.util.intset.OrdinalSet;
 
@@ -167,6 +175,7 @@ public class PipelineStage {
 		pipelineStageModRef.computeHeapDependencies();
 	}
 
+
 	class PipelineStageModRef {
 		private CGNode cgNode;
 
@@ -203,7 +212,8 @@ public class PipelineStage {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
 			for (SSAInstruction instruction : instructions) {
 				// These are direct modifications x.f = <something>
-				mods.addAll(modref.getMod(cgNode, heapModel, pointerAnalysis, instruction, null));
+				Set<PointerKey> instructionMod= modref.getMod(cgNode, heapModel, pointerAnalysis, instruction, null);
+				mods.addAll(instructionMod);
 
 				// These are indirect modifications through calls
 				if (instruction instanceof SSAAbstractInvokeInstruction) {
@@ -222,7 +232,8 @@ public class PipelineStage {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
 			for (SSAInstruction instruction : instructions) {
 				// These are direct references x.f
-				refs.addAll(modref.getRef(cgNode, heapModel, pointerAnalysis, instruction, null));
+				Set<PointerKey> instructionRef= modref.getRef(cgNode, heapModel, pointerAnalysis, instruction, null);
+				refs.addAll(instructionRef);
 
 				// These are indirect modifications through calls
 				if (instruction instanceof SSAAbstractInvokeInstruction) {
@@ -250,5 +261,80 @@ public class PipelineStage {
 
 	public Set<PointerKey> getMods() {
 		return mods;
+	}
+
+	// For some simple eyeballing statistics of the "shape" of the mod/ref
+
+	public String getPrettyPrintMods() {
+		return prettyPrint(mods);
+	}
+
+	public String getPrettyPrintRefs() {
+		return prettyPrint(refs);
+	}
+
+	private String prettyPrint(Set<PointerKey> set) {
+		StringBuilder sb= new StringBuilder();
+
+		/**
+		 * A bit messy but creating function generators in Java is even messier.
+		 */
+		List<PointerKey> instanceFieldKeys= filter(set, new Predicate<PointerKey>() {
+			@Override
+			public boolean test(PointerKey t) {
+				return t instanceof InstanceFieldKey;
+			}
+		});
+		Collections.sort(instanceFieldKeys, new InstanceStringComparator());
+		addListToBuffer("InstanceFieldKeys", instanceFieldKeys, sb);
+
+		List<PointerKey> arrayLengthKeys= filter(set, new Predicate<PointerKey>() {
+			@Override
+			public boolean test(PointerKey t) {
+				return t instanceof ArrayLengthKey;
+			}
+		});
+		Collections.sort(arrayLengthKeys, new InstanceStringComparator());
+		addListToBuffer("ArrayLengthKeys", arrayLengthKeys, sb);
+
+		List<PointerKey> arrayContentsKeys= filter(set, new Predicate<PointerKey>() {
+			@Override
+			public boolean test(PointerKey t) {
+				return t instanceof ArrayContentsKey;
+			}
+		});
+		Collections.sort(arrayContentsKeys, new InstanceStringComparator());
+		addListToBuffer("ArrayContentsKeys", arrayContentsKeys, sb);
+
+		List<PointerKey> staticFieldKeys= filter(set, new Predicate<PointerKey>() {
+
+			@Override
+			public boolean test(PointerKey t) {
+				return t instanceof StaticFieldKey;
+			}
+		});
+		addListToBuffer("Static Fields", staticFieldKeys, sb);
+
+		return sb.toString();
+	}
+
+	private void addListToBuffer(String header, List<PointerKey> instanceFieldKeys, StringBuilder sb) {
+		sb.append(String.format("%s%n%n", header));
+		for (PointerKey pointerKey : instanceFieldKeys) {
+			sb.append(String.format("%s%n", pointerKey.toString()));
+		}
+	}
+
+	private List<PointerKey> filter(Set<PointerKey> set, Predicate<PointerKey> filter) {
+		return Predicate.filter(set.iterator(), filter);
+	}
+
+	private final class InstanceStringComparator implements Comparator<PointerKey> {
+		@Override
+		public int compare(PointerKey o1, PointerKey o2) {
+			AbstractFieldPointerKey key1= (AbstractFieldPointerKey)o1;
+			AbstractFieldPointerKey key2= (AbstractFieldPointerKey)o2;
+			return key1.getInstanceKey().toString().compareTo(key2.getInstanceKey().toString());
+		}
 	}
 }
