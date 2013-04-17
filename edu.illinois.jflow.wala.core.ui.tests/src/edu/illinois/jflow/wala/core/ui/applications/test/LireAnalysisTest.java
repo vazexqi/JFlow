@@ -37,13 +37,13 @@ public class LireAnalysisTest extends JFlowTest {
 	public void testLireIndexingExample() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "serialIndexImages", "", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
-		List<List<Integer>> selections= selectionFromArray(new int[][] { { 62 }, { 65, 66 }, { 70 }, { 74 }, { 78, 79 } });
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 69 }, { 72, 73 }, { 77 }, { 81 }, { 85, 86 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 
 		PipelineStage generator= checker.getGenerator();
-		printModRefInfo(generator);
+//		printModRefInfo(generator);
 
 		PipelineStage stage1= checker.getStage(1);
 		printModRefInfo(stage1);
@@ -59,7 +59,10 @@ public class LireAnalysisTest extends JFlowTest {
 	}
 
 	private void printModRefInfo(PipelineStage stage) {
+		System.err.println("<<<REF>>>");
 		System.err.println(stage.getPrettyPrintRefs());
+
+		System.err.println("<<<MOD>>>");
 		System.err.println(stage.getPrettyPrintMods());
 	}
 }

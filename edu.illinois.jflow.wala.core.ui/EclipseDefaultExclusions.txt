@@ -4,9 +4,17 @@ sun\/awt\/.*
 sun\/swing\/.*
 com\/sun\/.*
 sun\/.*
+org\/netbeans\/.*
+org\/openide\/.*
+com\/ibm\/crypto\/.*
+com\/ibm\/security\/.*
+org\/apache\/xerces\/.*
 groovy\/.*
 groovyjarjaranltr\/.*
 groovyjarjarasm\/.*
 groovyjarjarcommonscli\/.*
 org.codehaus.groovy\/.*
 groovyx\/.*
+org\/apache\/.*
+org\/hamcrest\/.*
+org\/junit\/.*
