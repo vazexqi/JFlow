@@ -166,42 +166,75 @@ public class PipelineStage {
 		return ssaInstructions;
 	}
 
+	// Store these values in the outer class so that it is easier for testing
+
+	private CGNode cgNode;
+
+	private PointerAnalysis pointerAnalysis;
+
+	private ModRef modref;
+
+	private DelegatingExtendedHeapModel heapModel;
+
+	private CallGraph callGraph;
+
+	private Map<CGNode, OrdinalSet<PointerKey>> mod;
+
+	private Map<CGNode, OrdinalSet<PointerKey>> ref;
+
+	private HeapExclusions exclusions;
+
+	public CGNode getCgNode() {
+		return cgNode;
+	}
+
+	public PointerAnalysis getPointerAnalysis() {
+		return pointerAnalysis;
+	}
+
+	public ModRef getModref() {
+		return modref;
+	}
+
+	public DelegatingExtendedHeapModel getHeapModel() {
+		return heapModel;
+	}
+
+	public CallGraph getCallGraph() {
+		return callGraph;
+	}
+
+	public Map<CGNode, OrdinalSet<PointerKey>> getMod() {
+		return mod;
+	}
+
+	public Map<CGNode, OrdinalSet<PointerKey>> getRef() {
+		return ref;
+	}
+
+	public HeapExclusions getExclusions() {
+		return exclusions;
+	}
+
 	// Modref analysis
 	// Though this might look more complicated, we intentionally split this up (not doing modref upfront).
 	// This facilitates a staged approach to determining feasibility of each pipeline stage and also makes
 	// it easier to test in isolation.
 	void computeHeapDependencies(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
-		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef(cgNode, callGraph, pointerAnalysis, modref, mod, ref);
+		this.cgNode= cgNode;
+		this.callGraph= callGraph;
+		this.pointerAnalysis= pointerAnalysis;
+		this.modref= modref;
+		this.mod= mod;
+		this.ref= ref;
+		this.heapModel= new DelegatingExtendedHeapModel(pointerAnalysis.getHeapModel());
+		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef();
 		pipelineStageModRef.computeHeapDependencies();
 	}
 
 
+
 	class PipelineStageModRef {
-		private CGNode cgNode;
-
-		private PointerAnalysis pointerAnalysis;
-
-		private ModRef modref;
-
-		private DelegatingExtendedHeapModel heapModel;
-
-		private CallGraph callGraph;
-
-		private Map<CGNode, OrdinalSet<PointerKey>> mod;
-
-		private Map<CGNode, OrdinalSet<PointerKey>> ref;
-
-		private HeapExclusions exclusions; //TODO: Might want to make use of this to filter out JDK classes
-
-		public PipelineStageModRef(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
-			this.cgNode= cgNode;
-			this.callGraph= callGraph;
-			this.pointerAnalysis= pointerAnalysis;
-			this.modref= modref;
-			this.mod= mod;
-			this.ref= ref;
-			this.heapModel= new DelegatingExtendedHeapModel(pointerAnalysis.getHeapModel());
-		}
 
 		void computeHeapDependencies() {
 			computeRefs();
