@@ -18,7 +18,7 @@ import com.ibm.wala.ipa.summaries.BypassMethodTargetSelector;
 import com.ibm.wala.ipa.summaries.XMLMethodSummaryReader;
 import com.ibm.wala.util.strings.Atom;
 
-import edu.illinois.jflow.wala.pointeranalysis.KObjectSensitiveContextSelector;
+import edu.illinois.jflow.wala.pointeranalysis.JFlowCustomContextSelector;
 
 public class JFlowAnalysisUtil {
 
@@ -33,7 +33,7 @@ public class JFlowAnalysisUtil {
 	 * classes.
 	 */
 	public static AstJavaZeroOneContainerCFABuilder getCallGraphBuilder(AnalysisScope scope, IClassHierarchy cha, AnalysisOptions options, AnalysisCache cache) {
-		ContextSelector contextSelector= new KObjectSensitiveContextSelector();
+		ContextSelector contextSelector= new JFlowCustomContextSelector();
 
 		Util.addDefaultSelectors(options, cha);
 		Util.addDefaultBypassLogic(options, scope, Util.class.getClassLoader(), cha);

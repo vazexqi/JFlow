@@ -3,10 +3,13 @@
  */
 package edu.illinois.jflow.wala.pointeranalysis;
 
+import java.util.Collection;
+
 import com.ibm.wala.classLoader.IClass;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.types.TypeName;
 import com.ibm.wala.types.TypeReference;
+import com.ibm.wala.types.annotations.Annotation;
 import com.ibm.wala.util.strings.Atom;
 
 /**
@@ -60,5 +63,19 @@ public class AnalysisUtils {
 
 		//WALA uses $ to refers to inner classes. We have to replace "$" by "." to make it a valid class name in Java source code.
 		return fullyQualifiedName.replace("$", ".").replace("/", ".");
+	}
+
+	public static boolean isAnnotatedFactoryMethod(IMethod callee) {
+		Collection<Annotation> annotations= callee.getAnnotations();
+
+		if (annotations == null)
+			return false;
+
+		for (Annotation annotation : annotations) {
+			if (annotation.getType().getName().getClassName().toString().contains("JFlowFactory")) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

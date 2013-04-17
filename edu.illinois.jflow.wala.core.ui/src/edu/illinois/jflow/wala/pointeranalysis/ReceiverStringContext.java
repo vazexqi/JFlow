@@ -44,7 +44,7 @@ public class ReceiverStringContext implements Context {
 
 	@Override
 	public ContextItem get(ContextKey name) {
-		if (KObjectSensitiveContextSelector.RECEIVER_STRING.equals(name)) {
+		if (JFlowCustomContextSelector.RECEIVER_STRING.equals(name)) {
 			return receiverString;
 		} else {
 			return null;

@@ -21,10 +21,12 @@ import com.ibm.wala.util.intset.IntSetUtil;
  * Modified from KObjectSensitiveContextSelector.java, originally from Keshmesh. Authored by Mohsen
  * Vakilian and Stas Negara. Modified by Nicholas Chen.
  * 
+ * Uses a combination of k-object sensitivity, javatypecontext and callersitecontext
+ * 
  */
-public class KObjectSensitiveContextSelector implements ContextSelector {
+public class JFlowCustomContextSelector implements ContextSelector {
 
-	public static final int K= 2;
+	public static final int K= 3;
 
 	public static final ContextKey RECEIVER_STRING= new ContextKey() {
 		@Override
@@ -46,6 +48,8 @@ public class KObjectSensitiveContextSelector implements ContextSelector {
 			//Note: new Random() and similar statements cause an infinite pointer analysis for contexts like CallerSiteContext(caller, site)
 			PointType pointType= new PointType(receiver.getConcreteType());
 			return new JavaTypeContext(pointType);
+//		} else if (AnalysisUtils.isAnnotatedFactoryMethod(callee)) {
+//			return new CallerSiteContext(caller, site);
 		} else {
 			ReceiverString receiverString;
 			if (!(caller.getContext() instanceof ReceiverStringContext)) {
