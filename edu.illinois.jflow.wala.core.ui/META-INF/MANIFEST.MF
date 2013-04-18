@@ -20,5 +20,6 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: edu.illinois.jflow.jflow.wala.dataflowanalysis,
  edu.illinois.jflow.wala.core,
+ edu.illinois.jflow.wala.modref,
  edu.illinois.jflow.wala.pointeranalysis,
  edu.illinois.jflow.wala.utils

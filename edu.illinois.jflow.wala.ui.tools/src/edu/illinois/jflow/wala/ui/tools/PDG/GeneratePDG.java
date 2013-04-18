@@ -12,8 +12,6 @@ import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jface.action.Action;
 
-import com.ibm.wala.cast.ipa.modref.AstModRef;
-import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.cast.java.loader.JavaSourceLoaderImpl;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ipa.callgraph.CGNode;
@@ -32,6 +30,7 @@ import com.ibm.wala.util.Predicate;
 import com.ibm.wala.util.graph.Graph;
 import com.ibm.wala.util.graph.GraphSlicer;
 
+import edu.illinois.jflow.wala.modref.JFlowModRef;
 import edu.illinois.jflow.wala.ui.tools.graph.jdt.util.JavaEditorUtil;
 import edu.illinois.jflow.wala.ui.tools.graph.view.WalaGraphView;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
@@ -57,7 +56,7 @@ public class GeneratePDG extends Action {
 				CallGraph callGraph= engine.buildDefaultCallGraph();
 				MethodReference method= JavaEditorUtil.findSelectedMethodDeclaration(javaEditor, inputAsCompilationUnit);
 				if (method != null) {
-					final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_EXCEPTIONS, ControlDependenceOptions.NONE);
+					final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new JFlowModRef(), DataDependenceOptions.NO_EXCEPTIONS, ControlDependenceOptions.NONE);
 					Set<CGNode> nodes= callGraph.getNodes(method);
 					if (!nodes.isEmpty()) {
 						// Take the first one for now

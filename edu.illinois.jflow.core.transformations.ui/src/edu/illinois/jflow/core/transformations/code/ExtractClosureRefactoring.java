@@ -79,7 +79,6 @@ import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
 
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
-import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
 import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
@@ -99,6 +98,7 @@ import com.ibm.wala.util.CancelException;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
+import edu.illinois.jflow.wala.modref.JFlowModRef;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
 /**
@@ -308,7 +308,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		long point3= System.currentTimeMillis();
 
-		final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new AstJavaModRef(), DataDependenceOptions.NO_BASE_NO_EXCEPTIONS, ControlDependenceOptions.NONE);
+		final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new JFlowModRef(), DataDependenceOptions.NO_BASE_NO_EXCEPTIONS, ControlDependenceOptions.NONE);
 
 		long point4= System.currentTimeMillis();
 

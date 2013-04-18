@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
@@ -14,6 +13,8 @@ import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.debug.Assertions;
 import com.ibm.wala.util.intset.OrdinalSet;
+
+import edu.illinois.jflow.wala.modref.JFlowModRef;
 
 /**
  * Acts as a facade to check the validity of the selected statements. Checks in sequence:
@@ -33,7 +34,7 @@ public class PDGPartitionerChecker {
 
 	private Map<PDGNode, Integer> node2stage= new HashMap<PDGNode, Integer>();
 
-	private AstJavaModRef modref;
+	private JFlowModRef modref;
 
 	private Map<CGNode, OrdinalSet<PointerKey>> mod;
 
@@ -122,7 +123,7 @@ public class PDGPartitionerChecker {
 
 	private void setupModRefInfrastructure(CallGraph callGraph, PointerAnalysis pointerAnalysis) {
 		this.callGraph= callGraph;
-		this.modref= new AstJavaModRef();
+		this.modref= new JFlowModRef();
 		this.mod= modref.computeMod(callGraph, pointerAnalysis);
 		this.ref= modref.computeRef(callGraph, pointerAnalysis);
 	}
