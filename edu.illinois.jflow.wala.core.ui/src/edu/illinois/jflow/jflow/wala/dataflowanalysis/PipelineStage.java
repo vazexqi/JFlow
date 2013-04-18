@@ -14,6 +14,7 @@ import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.propagation.AbstractFieldPointerKey;
 import com.ibm.wala.ipa.callgraph.propagation.ArrayContentsKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldKey;
+import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.callgraph.propagation.StaticFieldKey;
@@ -353,8 +354,13 @@ public class PipelineStage {
 
 	private void addListToBuffer(String header, List<PointerKey> instanceFieldKeys, StringBuilder sb) {
 		sb.append(String.format("%s%n%n", header));
+
 		for (PointerKey pointerKey : instanceFieldKeys) {
 			sb.append(String.format("%s%n", pointerKey.toString()));
+			sb.append(String.format("-- points to -->%n"));
+			OrdinalSet<InstanceKey> pointsToSet= pointerAnalysis.getPointsToSet(pointerKey);
+			sb.append(String.format("%s%n", pointsToSet.toString()));
+			sb.append(String.format("%n"));
 		}
 	}
 
