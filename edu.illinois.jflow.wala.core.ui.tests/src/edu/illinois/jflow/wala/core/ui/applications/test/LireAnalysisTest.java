@@ -64,5 +64,8 @@ public class LireAnalysisTest extends JFlowTest {
 
 		System.err.println("<<<MOD>>>");
 		System.err.println(stage.getPrettyPrintMods());
+
+		System.err.println("<<IGNORED>>");
+		System.err.println(stage.getPrettyPrintIgnored());
 	}
 }

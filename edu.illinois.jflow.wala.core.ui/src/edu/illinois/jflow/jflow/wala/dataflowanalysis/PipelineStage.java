@@ -340,6 +340,10 @@ public class PipelineStage {
 
 	public String getPrettyPrintIgnored() {
 		StringBuilder sb= new StringBuilder();
+		for (MethodReference mRef : ignoreds) {
+			sb.append(mRef.toString());
+			sb.append(String.format("%n"));
+		}
 		return sb.toString();
 	}
 

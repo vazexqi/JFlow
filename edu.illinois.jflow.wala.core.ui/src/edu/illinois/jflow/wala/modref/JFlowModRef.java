@@ -3,6 +3,7 @@ package edu.illinois.jflow.wala.modref;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import com.ibm.wala.cast.ir.ssa.AstAssertInstruction;
 import com.ibm.wala.cast.ir.ssa.AstEchoInstruction;
@@ -17,6 +18,7 @@ import com.ibm.wala.cast.java.ipa.modref.AstJavaModRef;
 import com.ibm.wala.cast.java.ssa.AstJavaInstructionVisitor;
 import com.ibm.wala.cast.java.ssa.AstJavaInvokeInstruction;
 import com.ibm.wala.cast.java.ssa.EnclosingObjectReference;
+import com.ibm.wala.classLoader.CallSiteReference;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.CallGraphTransitiveClosure;
@@ -82,12 +84,12 @@ public class JFlowModRef extends AstJavaModRef {
 	 * For a call graph node, what ignored methods does it invoke, <bf> NOT </bf> including it's
 	 * callees transitively
 	 */
-	private Map<CGNode, Collection<MethodReference>> scanForIgnoredCallees(CallGraph cg, final PointerAnalysis pa) {
+	private Map<CGNode, Collection<MethodReference>> scanForIgnoredCallees(final CallGraph cg, final PointerAnalysis pa) {
 
 		return CallGraphTransitiveClosure.collectNodeResults(cg, new Function<CGNode, Collection<MethodReference>>() {
 
 			public Collection<MethodReference> apply(CGNode n) {
-				return scanNodeForIgnoredCallees(n, pa);
+				return scanNodeForIgnoredCallees(n, cg, pa);
 			}
 		});
 	}
@@ -96,10 +98,10 @@ public class JFlowModRef extends AstJavaModRef {
 	 * For a call graph node, what ignored methods does it invoke, <bf> NOT </bf> including it's
 	 * callees transitively
 	 */
-	private Collection<MethodReference> scanNodeForIgnoredCallees(final CGNode n, final PointerAnalysis pa) {
+	private Collection<MethodReference> scanNodeForIgnoredCallees(final CGNode n, final CallGraph cg, final PointerAnalysis pa) {
 		Collection<MethodReference> result= HashSetFactory.make();
 		final ExtendedHeapModel h= new DelegatingExtendedHeapModel(pa.getHeapModel());
-		JFlowIgnoredCalleVisitor v= makeIgnoredCalleeVisitor(n, result, pa, h);
+		JFlowIgnoredCalleVisitor v= makeIgnoredCalleeVisitor(n, cg, result, pa, h);
 		IR ir= n.getIR();
 		if (ir != null) {
 			for (Iterator<SSAInstruction> it= ir.iterateNormalInstructions(); it.hasNext();) {
@@ -113,29 +115,51 @@ public class JFlowModRef extends AstJavaModRef {
 
 		private final CGNode n;
 
+		private final CallGraph cg;
+
 		private final Collection<MethodReference> result;
 
 		private final PointerAnalysis pa;
 
 		private final ExtendedHeapModel h;
 
-		public JFlowIgnoredCalleVisitor(CGNode n, Collection<MethodReference> result, ExtendedHeapModel h, PointerAnalysis pa) {
+
+		public JFlowIgnoredCalleVisitor(CGNode n, CallGraph cg, Collection<MethodReference> result, ExtendedHeapModel h, PointerAnalysis pa) {
 			this.n= n;
+			this.cg= cg;
 			this.result= result;
 			this.pa= pa;
 			this.h= h;
 		}
 
-		// Collect all the methods that we know nothing about but we invoke. This will be a list of warnings
+		// Collect all the methods that we know nothing about but we invoke. This will be a list of warnings to the user
 		@Override
 		public void visitInvoke(SSAInvokeInstruction instruction) {
-			MethodReference declaredTarget= instruction.getDeclaredTarget();
-			if (AnalysisUtils.isLibraryClass(declaredTarget.getDeclaringClass())) {
-				result.add(declaredTarget);
+			CallSiteReference callSite= instruction.getCallSite();
+			Set<CGNode> possibleTargets= cg.getPossibleTargets(n, callSite);
+			for (CGNode target : possibleTargets) {
+				if (AnalysisUtils.isLibraryClass(target.getMethod().getDeclaringClass())) {
+					result.add(instruction.getDeclaredTarget());
+				}
+			}
+		}
+
+		@Override
+		public void visitJavaInvoke(AstJavaInvokeInstruction instruction) {
+			CallSiteReference callSite= instruction.getCallSite();
+			Set<CGNode> possibleTargets= cg.getPossibleTargets(n, callSite);
+			for (CGNode target : possibleTargets) {
+				if (AnalysisUtils.isLibraryClass(target.getMethod().getDeclaringClass())) {
+					result.add(instruction.getDeclaredTarget());
+				}
 			}
 		}
 
 		// The rest are empty since we are not doing anything
+
+		@Override
+		public void visitEnclosingObjectReference(EnclosingObjectReference inst) {
+		}
 
 		@Override
 		public void visitAstLexicalRead(AstLexicalRead instruction) {
@@ -262,21 +286,13 @@ public class JFlowModRef extends AstJavaModRef {
 		public void visitLoadMetadata(SSALoadMetadataInstruction instruction) {
 		}
 
-		@Override
-		public void visitJavaInvoke(AstJavaInvokeInstruction instruction) {
-		}
-
-		@Override
-		public void visitEnclosingObjectReference(EnclosingObjectReference inst) {
-		}
-
 	}
 
-	protected JFlowIgnoredCalleVisitor makeIgnoredCalleeVisitor(CGNode n, Collection<MethodReference> result, PointerAnalysis pa, ExtendedHeapModel h) {
-		return makeIgnoredCalleeVisitor(n, result, pa, h, false);
+	protected JFlowIgnoredCalleVisitor makeIgnoredCalleeVisitor(CGNode n, CallGraph cg, Collection<MethodReference> result, PointerAnalysis pa, ExtendedHeapModel h) {
+		return makeIgnoredCalleeVisitor(n, cg, result, pa, h, false);
 	}
 
-	protected JFlowIgnoredCalleVisitor makeIgnoredCalleeVisitor(CGNode n, Collection<MethodReference> result, PointerAnalysis pa, ExtendedHeapModel h, boolean ignoreAllocHeapDefs) {
-		return new JFlowIgnoredCalleVisitor(n, result, h, pa);
+	protected JFlowIgnoredCalleVisitor makeIgnoredCalleeVisitor(CGNode n, CallGraph cg, Collection<MethodReference> result, PointerAnalysis pa, ExtendedHeapModel h, boolean ignoreAllocHeapDefs) {
+		return new JFlowIgnoredCalleVisitor(n, cg, result, h, pa);
 	}
 }
