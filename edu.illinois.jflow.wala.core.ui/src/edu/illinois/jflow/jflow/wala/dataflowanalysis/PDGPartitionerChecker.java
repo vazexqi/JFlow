@@ -42,6 +42,8 @@ public class PDGPartitionerChecker {
 
 	private CallGraph callGraph;
 
+	private Map<CGNode, OrdinalSet<MethodReference>> ignored;
+
 	public static PDGPartitionerChecker makePartitionChecker(ProgramDependenceGraph pdg, List<List<Integer>> selections) {
 		PDGPartitionerChecker temp= new PDGPartitionerChecker(pdg);
 		temp.convertSelectionToStages(selections);
@@ -104,7 +106,7 @@ public class PDGPartitionerChecker {
 		setupModRefInfrastructure(callGraph, pointerAnalysis);
 		CGNode cgNode= getCurrentCGNode();
 		for (PipelineStage stage : stages) {
-			stage.computeHeapDependencies(cgNode, callGraph, pointerAnalysis, modref, mod, ref);
+			stage.computeHeapDependencies(cgNode, callGraph, pointerAnalysis, modref, mod, ref, ignored);
 
 		}
 	}
@@ -126,6 +128,7 @@ public class PDGPartitionerChecker {
 		this.modref= new JFlowModRef();
 		this.mod= modref.computeMod(callGraph, pointerAnalysis);
 		this.ref= modref.computeRef(callGraph, pointerAnalysis);
+		this.ignored= modref.computeIgnoredCallee(callGraph, pointerAnalysis);
 	}
 
 	// For querying

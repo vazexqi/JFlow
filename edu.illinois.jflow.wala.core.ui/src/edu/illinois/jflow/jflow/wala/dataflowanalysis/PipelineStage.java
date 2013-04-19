@@ -24,6 +24,7 @@ import com.ibm.wala.ipa.modref.ModRef;
 import com.ibm.wala.ipa.slicer.HeapExclusions;
 import com.ibm.wala.ssa.SSAAbstractInvokeInstruction;
 import com.ibm.wala.ssa.SSAInstruction;
+import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.Predicate;
 import com.ibm.wala.util.collections.Iterator2Iterable;
 import com.ibm.wala.util.intset.OrdinalSet;
@@ -55,6 +56,10 @@ public class PipelineStage {
 	private Set<PointerKey> refs= new HashSet<PointerKey>();
 
 	private Set<PointerKey> mods= new HashSet<PointerKey>();
+
+	// These are the ignored methods that we do not consider (makes the analysis unsound) so we tell the user
+
+	private Set<MethodReference> ignoreds= new HashSet<MethodReference>();
 
 	/*
 	 * Convenience method to create a new pipeline stage and begin the analysis immediately
@@ -183,7 +188,10 @@ public class PipelineStage {
 
 	private Map<CGNode, OrdinalSet<PointerKey>> ref;
 
+	private Map<CGNode, OrdinalSet<MethodReference>> ignored;
+
 	private HeapExclusions exclusions;
+
 
 	public CGNode getCgNode() {
 		return cgNode;
@@ -213,6 +221,10 @@ public class PipelineStage {
 		return ref;
 	}
 
+	public Map<CGNode, OrdinalSet<MethodReference>> getIgnored() {
+		return ignored;
+	}
+
 	public HeapExclusions getExclusions() {
 		return exclusions;
 	}
@@ -221,12 +233,14 @@ public class PipelineStage {
 	// Though this might look more complicated, we intentionally split this up (not doing modref upfront).
 	// This facilitates a staged approach to determining feasibility of each pipeline stage and also makes
 	// it easier to test in isolation.
-	void computeHeapDependencies(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref) {
+	void computeHeapDependencies(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref,
+			Map<CGNode, OrdinalSet<MethodReference>> ignored) {
 		this.cgNode= cgNode;
 		this.callGraph= callGraph;
 		this.pointerAnalysis= pointerAnalysis;
 		this.modref= modref;
 		this.mod= mod;
+		this.ignored= ignored;
 		this.ref= ref;
 		this.heapModel= new DelegatingExtendedHeapModel(pointerAnalysis.getHeapModel());
 		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef();
@@ -240,6 +254,23 @@ public class PipelineStage {
 		void computeHeapDependencies() {
 			computeRefs();
 			computeMods();
+			computeIgnores(); // This is not a heap dependency per-se but it is an important part of checking if our analysis is sound
+		}
+
+		private void computeIgnores() {
+			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
+			for (SSAInstruction instruction : instructions) {
+				if (instruction instanceof SSAAbstractInvokeInstruction) {
+					SSAAbstractInvokeInstruction call= (SSAAbstractInvokeInstruction)instruction;
+					CallSiteReference callSite= call.getCallSite();
+					Set<CGNode> possibleTargets= callGraph.getPossibleTargets(cgNode, callSite);
+					for (CGNode target : possibleTargets) {
+						OrdinalSet<MethodReference> ordinalSet= ignored.get(target);
+						ignoreds.addAll(OrdinalSet.toCollection(ordinalSet));
+					}
+				}
+			}
+
 		}
 
 		private void computeMods() {
@@ -305,6 +336,11 @@ public class PipelineStage {
 
 	public String getPrettyPrintRefs() {
 		return prettyPrint(refs);
+	}
+
+	public String getPrettyPrintIgnored() {
+		StringBuilder sb= new StringBuilder();
+		return sb.toString();
 	}
 
 	private String prettyPrint(Set<PointerKey> set) {
