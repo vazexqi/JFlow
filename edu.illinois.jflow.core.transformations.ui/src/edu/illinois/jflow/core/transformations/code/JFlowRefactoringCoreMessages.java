@@ -25,8 +25,6 @@ public class JFlowRefactoringCoreMessages extends NLS {
 
 	public static String ExtractClosureRefactoring_error_vararg_ordering;
 
-	public static String ExtractClosureRefactoring_no_set_of_statements;
-
 	public static String ExtractClosureRefactoring_organize_imports;
 
 	public static String ExtractClosureRefactoring_replace_continue;

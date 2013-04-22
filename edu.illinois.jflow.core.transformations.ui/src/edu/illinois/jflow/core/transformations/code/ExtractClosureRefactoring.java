@@ -771,11 +771,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-	private RefactoringStatus mergeTextSelectionStatus(RefactoringStatus status) {
-		status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_no_set_of_statements);
-		return status;
-	}
-
 	private String getType(VariableDeclaration declaration, boolean isVarargs) {
 		String type= ASTNodes.asString(ASTNodeFactory.newType(declaration.getAST(), declaration, fImportRewriter, new ContextSensitiveImportRewriteContext(declaration, fImportRewriter)));
 		if (isVarargs)
