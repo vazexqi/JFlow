@@ -44,6 +44,7 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
@@ -84,21 +85,16 @@ import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
 import com.ibm.wala.ipa.callgraph.AnalysisCache;
 import com.ibm.wala.ipa.callgraph.AnalysisOptions;
-import com.ibm.wala.ipa.callgraph.CallGraph;
-import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
 import com.ibm.wala.ipa.callgraph.impl.Everywhere;
 import com.ibm.wala.ipa.cha.IClassHierarchy;
-import com.ibm.wala.ipa.slicer.SDG;
-import com.ibm.wala.ipa.slicer.Slicer.ControlDependenceOptions;
-import com.ibm.wala.ipa.slicer.Slicer.DataDependenceOptions;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
 
+import edu.illinois.jflow.core.transformations.code.StagesLocator.StageAnnotationPair;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
-import edu.illinois.jflow.wala.modref.JFlowModRef;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
 /**
@@ -265,6 +261,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 		fImportRewriter= StubUtility.createImportRewrite(fRoot, true);
 
 		fAST= fRoot.getAST();
+
+		MethodDeclaration methodDeclaration= locateSelectedMethod();
+		locateStagesWithinBounds(fRoot, methodDeclaration);
+
+
+		// This part needs to work differently
 		fRoot.accept(createVisitor());
 
 		fSelectionStart= fAnalyzer.getSelection().getOffset();
@@ -285,36 +287,55 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return result;
 	}
 
+	public RefactoringStatus checkInitialCondition2(IProgressMonitor pm) throws CoreException {
+		RefactoringStatus result= new RefactoringStatus();
+		pm.beginTask("", 100); //$NON-NLS-1$
+
+		if (fSelectionStart < 0 || fSelectionLength == 0)
+			return mergeTextSelectionStatus(result);
+
+		IFile[] changedFiles= ResourceUtil.getFiles(new ICompilationUnit[] { fCUnit });
+		result.merge(Checks.validateModifiesFiles(changedFiles, getValidationContext()));
+		if (result.hasFatalError())
+			return result;
+		result.merge(ResourceChangeChecker.checkFilesToBeChanged(changedFiles, new SubProgressMonitor(pm, 1)));
+
+		if (fRoot == null) {
+			fRoot= RefactoringASTParser.parseWithASTProvider(fCUnit, true, new SubProgressMonitor(pm, 99));
+		}
+		fImportRewriter= StubUtility.createImportRewrite(fRoot, true);
+
+		fAST= fRoot.getAST();
+
+
+		return result;
+	}
+
+	private void locateStagesWithinBounds(CompilationUnit unit, MethodDeclaration methodDeclaration) {
+		StagesLocator locator= new StagesLocator(unit, methodDeclaration);
+		List<StageAnnotationPair> locateStages= locator.locateStages();
+		System.out.println(locateStages);
+	}
+
+	private MethodDeclaration locateSelectedMethod() {
+		NodeFinder nodeFinder= new NodeFinder(fRoot, fSelectionStart, fSelectionLength);
+		ASTNode coveringNode= nodeFinder.getCoveringNode();
+		MethodDeclaration methodDeclaration= (MethodDeclaration)ASTNodes.getParent(coveringNode, MethodDeclaration.class);
+		return methodDeclaration;
+	}
+
 	private ASTVisitor createVisitor() throws CoreException {
 		fAnalyzer= new ExtractClosureAnalyzer(fCUnit, Selection.createFromStartLength(fSelectionStart, fSelectionLength));
 		return fAnalyzer;
 	}
 
 	private PDGExtractClosureAnalyzer createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
-		long point1= System.currentTimeMillis();
-
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
 		final IClassHierarchy classHierarchy= engine.buildClassHierarchy();
 		final AnalysisOptions options= new AnalysisOptions();
 		final AnalysisCache cache= engine.makeDefaultCache();
-
-		long point2= System.currentTimeMillis();
-
-		// Set up mod-ref analysis
-		CallGraphBuilder builder= engine.defaultCallGraphBuilder();
-		CallGraph callGraph= engine.buildDefaultCallGraph();
-
-		long point3= System.currentTimeMillis();
-
-		final SDG sdg= new SDG(callGraph, builder.getPointerAnalysis(), new JFlowModRef(), DataDependenceOptions.NO_BASE_NO_EXCEPTIONS, ControlDependenceOptions.NONE);
-
-		long point4= System.currentTimeMillis();
-
-		System.err.println("Time for CHA: " + (point2 - point1) + " ms.");
-		System.err.println("Time for CallGraph " + (point3 - point2) + " ms.");
-		System.err.println("Time for MODREF: " + (point4 - point3) + " ms.");
 
 		// Get the IR for the selected method
 		MethodDeclaration methodDeclaration= (MethodDeclaration)fAnalyzer.getEnclosingBodyDeclaration();
