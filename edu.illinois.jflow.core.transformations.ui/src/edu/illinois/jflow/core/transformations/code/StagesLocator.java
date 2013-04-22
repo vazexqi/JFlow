@@ -128,8 +128,8 @@ public class StagesLocator {
 			try {
 				// IDocument starts counting from 0 but we want to follow what the user sees in the editor
 				// that starts from 1.
-				int start= doc.getLineOfOffset(getStageStart()) + 1;
-				int end= doc.getLineOfOffset(getStageEnd()) + 1;
+				int start= doc.getLineOfOffset(getStageStartOffset()) + 1;
+				int end= doc.getLineOfOffset(getStageEndOffset()) + 1;
 
 				// Grab everything including START and END
 				for (int line= start; line <= end; line++) {
@@ -142,17 +142,19 @@ public class StagesLocator {
 		}
 
 		/*
-		 * Returns the offset in the document, not including the start comments
+		 * Returns the offset in the document, including the start comments
 		 */
-		private int getStageStart() {
-			return start.getStartPosition() + start.getLength();
+		private int getStageStartOffset() {
+			return start.getStartPosition();
 		}
 
 		/*
-		 * Returns the offset in the document, not including the end comments;
+		 * Returns the offset in the document, including the end comments;
 		 */
-		private int getStageEnd() {
-			return end.getStartPosition();
+		private int getStageEndOffset() {
+			return end.getStartPosition() + end.getLength();
 		}
+
+
 	}
 }
