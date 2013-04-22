@@ -131,8 +131,8 @@ public class StagesLocator {
 				int start= doc.getLineOfOffset(getStageStart()) + 1;
 				int end= doc.getLineOfOffset(getStageEnd()) + 1;
 
-				// Grab everything BETWEEN start and end
-				for (int line= start + 1; line < end; line++) {
+				// Grab everything including START and END
+				for (int line= start; line <= end; line++) {
 					lines.add(line);
 				}
 			} catch (BadLocationException e) {
