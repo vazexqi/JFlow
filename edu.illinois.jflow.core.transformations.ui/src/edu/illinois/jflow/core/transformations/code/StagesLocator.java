@@ -59,7 +59,7 @@ public class StagesLocator {
 						Integer stageNumber= locateStageNameIfPossible(commentString);
 						StageAnnotationPair stageAnnotation= stages.get(stageNumber);
 						if (stageAnnotation == null) {
-							StageAnnotationPair newStageAnnotation= new StageAnnotationPair(stageNumber);
+							StageAnnotationPair newStageAnnotation= new StageAnnotationPair(stageNumber, doc);
 							stages.put(stageNumber, newStageAnnotation);
 							stageAnnotation= newStageAnnotation;
 						}
@@ -98,18 +98,21 @@ public class StagesLocator {
 	public static class StageAnnotationPair {
 		Integer stageName;
 
+		IDocument doc;
+
 		Comment start;
 
 		Comment end;
 
-		public StageAnnotationPair(Integer stageName) {
+		public StageAnnotationPair(Integer stageName, IDocument doc) {
+			this.doc= doc;
 			this.stageName= stageName;
 		}
 
 		/*
 		 * Assumes first comment to be added is the start comment 
 		 */
-		void addComment(Comment comment) {
+		public void addComment(Comment comment) {
 			if (start == null) {
 				start= comment;
 			}
@@ -120,18 +123,36 @@ public class StagesLocator {
 			}
 		}
 
+		public List<Integer> getStageLines() {
+			List<Integer> lines= new ArrayList<Integer>();
+			try {
+				// IDocument starts counting from 0 but we want to follow what the user sees in the editor
+				// that starts from 1.
+				int start= doc.getLineOfOffset(getStageStart()) + 1;
+				int end= doc.getLineOfOffset(getStageEnd()) + 1;
+
+				// Grab everything BETWEEN start and end
+				for (int line= start + 1; line < end; line++) {
+					lines.add(line);
+				}
+			} catch (BadLocationException e) {
+				e.printStackTrace();
+			}
+			return lines;
+		}
+
 		/*
 		 * Returns the offset in the document, not including the start comments
 		 */
-		public int getStageStart() {
+		private int getStageStart() {
 			return start.getStartPosition() + start.getLength();
 		}
 
 		/*
 		 * Returns the offset in the document, not including the end comments;
 		 */
-		public int getStageEnd() {
-			return end.getStartPosition() - 1;
+		private int getStageEnd() {
+			return end.getStartPosition();
 		}
 	}
 }
