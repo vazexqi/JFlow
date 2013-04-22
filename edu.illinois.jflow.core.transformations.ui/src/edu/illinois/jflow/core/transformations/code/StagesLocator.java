@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import org.eclipse.jdt.core.dom.Comment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
@@ -34,7 +35,7 @@ public class StagesLocator {
 
 	int methodEndOffset;
 
-	Map<Integer, StageAnnotationPair> stages= new HashMap<Integer, StageAnnotationPair>();
+	Map<Integer, SelectedStage> stages= new HashMap<Integer, SelectedStage>();
 
 	private IDocument doc;
 
@@ -46,7 +47,7 @@ public class StagesLocator {
 		this.methodEndOffset= methodStartOffset + methodDeclaration.getLength();
 	}
 
-	public List<StageAnnotationPair> locateStages() {
+	public List<SelectedStage> locateStages() {
 		@SuppressWarnings("unchecked")
 		List<Comment> commentList= cUnit.getCommentList();
 		for (Comment comment : commentList) {
@@ -57,9 +58,9 @@ public class StagesLocator {
 					try {
 						String commentString= doc.get(comment.getStartPosition(), comment.getLength());
 						Integer stageNumber= locateStageNameIfPossible(commentString);
-						StageAnnotationPair stageAnnotation= stages.get(stageNumber);
+						SelectedStage stageAnnotation= stages.get(stageNumber);
 						if (stageAnnotation == null) {
-							StageAnnotationPair newStageAnnotation= new StageAnnotationPair(stageNumber, doc);
+							SelectedStage newStageAnnotation= new SelectedStage(stageNumber, doc);
 							stages.put(stageNumber, newStageAnnotation);
 							stageAnnotation= newStageAnnotation;
 						}
@@ -75,10 +76,10 @@ public class StagesLocator {
 		return stagesToList();
 	}
 
-	private List<StageAnnotationPair> stagesToList() {
-		List<StageAnnotationPair> stagesList= new ArrayList<StageAnnotationPair>();
+	private List<SelectedStage> stagesToList() {
+		List<SelectedStage> stagesList= new ArrayList<SelectedStage>();
 		for (int stageNumber= 1; stageNumber <= stages.size(); stageNumber++) {
-			StageAnnotationPair stageAnnotationPair= stages.get(stageNumber);
+			SelectedStage stageAnnotationPair= stages.get(stageNumber);
 			Assertions.productionAssertion(stageAnnotationPair != null);
 			stagesList.add(stageAnnotationPair);
 		}
@@ -95,7 +96,7 @@ public class StagesLocator {
 			return null;
 	}
 
-	public static class StageAnnotationPair {
+	public static class SelectedStage {
 		Integer stageName;
 
 		IDocument doc;
@@ -104,7 +105,7 @@ public class StagesLocator {
 
 		Comment end;
 
-		public StageAnnotationPair(Integer stageName, IDocument doc) {
+		public SelectedStage(Integer stageName, IDocument doc) {
 			this.doc= doc;
 			this.stageName= stageName;
 		}

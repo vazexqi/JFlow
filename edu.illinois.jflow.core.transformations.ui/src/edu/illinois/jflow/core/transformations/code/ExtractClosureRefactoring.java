@@ -92,7 +92,7 @@ import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
 
-import edu.illinois.jflow.core.transformations.code.StagesLocator.StageAnnotationPair;
+import edu.illinois.jflow.core.transformations.code.StagesLocator.SelectedStage;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
@@ -285,7 +285,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private void locateStagesWithinBounds() {
 		MethodDeclaration methodDeclaration= locateSelectedMethod();
 		StagesLocator locator= new StagesLocator(fRoot, fDoc, methodDeclaration);
-		List<StageAnnotationPair> locateStages= locator.locateStages();
+		List<SelectedStage> locateStages= locator.locateStages();
 		System.out.println(locateStages);
 	}
 
