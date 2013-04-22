@@ -10,7 +10,6 @@ import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
 import edu.illinois.jflow.source.utils.BindingsFinder;
@@ -28,8 +27,7 @@ public class PDGExtractClosureAnalyzer {
 
 	private PipelineStage stage;
 
-	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, int selectionStart, int selectionLength) {
-		List<Integer> selectedLines= calculateSelectedLines(doc, selectionStart, selectionLength);
+	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, List<Integer> selectedLines) {
 		stage= new PipelineStage(pdg, selectedLines);
 	}
 
@@ -46,7 +44,6 @@ public class PDGExtractClosureAnalyzer {
 	 */
 	public void analyzeSelection() {
 		stage.analyzeSelection();
-
 	}
 
 	public List<DataDependence> getInputDataDependences() {
@@ -59,24 +56,6 @@ public class PDGExtractClosureAnalyzer {
 
 	public Set<String> getClosureLocalVariableNames() {
 		return stage.getClosureLocalVariableNames();
-	}
-
-	private List<Integer> calculateSelectedLines(IDocument doc, int selectionStart, int selectionLength) {
-		List<Integer> lines= new ArrayList<Integer>();
-
-		try {
-			// Document is 0-based but we want 1-based, hence the +1
-			int start= doc.getLineOfOffset(selectionStart) + 1;
-			int end= doc.getLineOfOffset(selectionStart + selectionLength) + 1;
-			for (int i= start; i <= end; i++) {
-				lines.add(i);
-			}
-
-		} catch (BadLocationException e) {
-			e.printStackTrace();
-		}
-
-		return lines;
 	}
 
 	public List<IVariableBinding> getLocalVariableBindings(ASTNode[] selectedNodes) {

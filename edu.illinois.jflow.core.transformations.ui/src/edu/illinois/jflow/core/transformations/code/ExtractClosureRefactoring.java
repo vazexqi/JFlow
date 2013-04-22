@@ -73,10 +73,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
-import org.eclipse.ltk.core.refactoring.TextFileChange;
 import org.eclipse.ltk.core.refactoring.participants.ResourceChangeChecker;
-import org.eclipse.text.edits.MultiTextEdit;
-import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
 
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
@@ -178,11 +175,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private ASTRewrite fRewriter;
 
-	private ExtractClosureAnalyzer fAnalyzer;
+	private List<ExtractClosureAnalyzer> fAnalyzers;
+
+	private List<SelectedStage> fSelectedStages;
 
 	private List<ParameterInfo> fParameterInfos;
 
-	private PDGExtractClosureAnalyzer fPDGAnalyzer;
+	private List<PDGExtractClosureAnalyzer> fPDGAnalyzers;
 
 	private IDocument fDoc;
 
@@ -212,6 +211,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	public static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
 
+
 	/**
 	 * Creates a new extract closure refactoring
 	 * 
@@ -231,6 +231,15 @@ public class ExtractClosureRefactoring extends Refactoring {
 	@Override
 	public String getName() {
 		return JFlowRefactoringCoreMessages.ExtractClosureRefactoring_name;
+	}
+
+	private List<ExtractClosureAnalyzer> createExtractClosureAnalyzers() throws CoreException {
+		fAnalyzers= new ArrayList<ExtractClosureAnalyzer>();
+		for (SelectedStage stage : fSelectedStages) {
+			ExtractClosureAnalyzer analyzer= new ExtractClosureAnalyzer(fCUnit, stage.getSelection());
+			fAnalyzers.add(analyzer);
+		}
+		return fAnalyzers;
 	}
 
 	/**
@@ -259,34 +268,43 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		fAST= fRoot.getAST();
 
-		locateStagesWithinBounds();
+		fSelectedStages= locateStagesWithinBounds();
 
-		// This part needs to work differently
-		fRoot.accept(createVisitor());
+		createExtractClosureAnalyzers();
 
-		fSelectionStart= fAnalyzer.getSelection().getOffset();
-		fSelectionLength= fAnalyzer.getSelection().getLength();
+		for (ExtractClosureAnalyzer analyzer : fAnalyzers) {
+			fRoot.accept(analyzer);
+		}
 
+		for (ExtractClosureAnalyzer analyzer : fAnalyzers) {
+			result.merge(analyzer.checkInitialConditions(fImportRewriter));
+		}
+
+		if (result.hasFatalError())
+			return result;
+
+		// If we don't have any errors at this point, we can initialize the heavy-lifting parts
 		try {
-			fPDGAnalyzer= createPDGAnalyzer();
-			fPDGAnalyzer.analyzeSelection();
+			createPDGAnalyzers();
+			for (PDGExtractClosureAnalyzer analyzer : fPDGAnalyzers) {
+				analyzer.analyzeSelection();
+			}
 		} catch (Exception e) {
-			// Just print the stack trace – not going to handle any specific case now
 			e.printStackTrace();
 		}
 
-		result.merge(fAnalyzer.checkInitialConditions(fImportRewriter));
-		if (result.hasFatalError())
-			return result;
-		initializeParameterInfos();
+		// XXX: Ugly
+		for (int i= 0; i < fAnalyzers.size(); i++) {
+			initializeParameterInfos(fPDGAnalyzers.get(i), fAnalyzers.get(i));
+		}
+
 		return result;
 	}
 
-	private void locateStagesWithinBounds() {
+	private List<SelectedStage> locateStagesWithinBounds() {
 		MethodDeclaration methodDeclaration= locateSelectedMethod();
 		StagesLocator locator= new StagesLocator(fRoot, fDoc, methodDeclaration);
-		List<SelectedStage> locateStages= locator.locateStages();
-		System.out.println(locateStages);
+		return locator.locateStages();
 	}
 
 	private MethodDeclaration locateSelectedMethod() {
@@ -296,12 +314,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return methodDeclaration;
 	}
 
-	private ASTVisitor createVisitor() throws CoreException {
-		fAnalyzer= new ExtractClosureAnalyzer(fCUnit, Selection.createFromStartLength(fSelectionStart, fSelectionLength));
-		return fAnalyzer;
-	}
 
-	private PDGExtractClosureAnalyzer createPDGAnalyzer() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
+	private List<PDGExtractClosureAnalyzer> createPDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
+		fPDGAnalyzers= new ArrayList<PDGExtractClosureAnalyzer>();
+
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
@@ -310,14 +326,20 @@ public class ExtractClosureRefactoring extends Refactoring {
 		final AnalysisCache cache= engine.makeDefaultCache();
 
 		// Get the IR for the selected method
-		MethodDeclaration methodDeclaration= (MethodDeclaration)fAnalyzer.getEnclosingBodyDeclaration();
+		// Since all the stages are going to be in the same method, just use the first ExtractClosureAnalyzer
+		ExtractClosureAnalyzer firstAnalyzer= fAnalyzers.get(0);
+		MethodDeclaration methodDeclaration= (MethodDeclaration)firstAnalyzer.getEnclosingBodyDeclaration();
 		JDTIdentityMapper mapper= new JDTIdentityMapper(JavaSourceAnalysisScope.SOURCE, fAST);
 		MethodReference methodRef= mapper.getMethodRef(methodDeclaration.resolveBinding());
-
 		final IMethod resolvedMethod= classHierarchy.resolveMethod(methodRef);
 		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, fDoc);
-		return new PDGExtractClosureAnalyzer(pdg, fDoc, fSelectionStart, fSelectionLength);
+
+		for (SelectedStage stage : fSelectedStages) {
+			fPDGAnalyzers.add(new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStageLines()));
+		}
+
+		return fPDGAnalyzers;
 	}
 
 	/**
@@ -373,68 +395,71 @@ public class ExtractClosureRefactoring extends Refactoring {
 	@Override
 	public Change createChange(IProgressMonitor pm) throws CoreException {
 		pm.beginTask("", 2); //$NON-NLS-1$
-		try {
-			BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
-			fRewriter= ASTRewrite.create(declaration.getAST());
 
-			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
-			result.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
-
-			MultiTextEdit root= new MultiTextEdit();
-			result.setEdit(root);
-
-			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
-
-			TextEditGroup closureEditGroup= new TextEditGroup("Extract to Closure");
-			result.addTextEditGroup(closureEditGroup);
-
-			// A sentinel is just a placeholder to keep track of the position of insertion
-			// For this refactoring, we need to insert two things:
-			// 1) The DataflowChannels (if necessary)
-			// 2) The DataflowMessagingRunnable
-			Block sentinel= fAST.newBlock();
-			ListRewrite sentinelRewriter= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
-			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
-
-			// Add the dataflowChannels that are required
-			addDataflowChannels(declaration, sentinel, sentinelRewriter, closureEditGroup, pm);
-
-			// Update all references to values written in the closure body to read from channels
-			List<ASTNode> channels= createTempVariablesForChannels(declaration, closureEditGroup, pm);
-			for (ASTNode astNode : channels) {
-				sentinelRewriter.insertAfter(astNode, sentinel, closureEditGroup);
-			}
-
-			// Handle InterruptedException from using DataflowChannels
-			updateExceptions(declaration, closureEditGroup);
-
-			// Replace the placeholder sentinel with the actual code
-			ExpressionStatement closureInvocationStatement= createClosureInvocationStatement(declaration, selectedNodes, closureEditGroup, pm);
-			sentinelRewriter.replace(sentinel, closureInvocationStatement, closureEditGroup);
-
-			if (fImportRewriter.hasRecordedChanges()) {
-				TextEdit edit= fImportRewriter.rewriteImports(null);
-				root.addChild(edit);
-				result.addTextEditGroup(new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports, new TextEdit[] { edit }));
-			}
-			root.addChild(fRewriter.rewriteAST());
-			return result;
-		} finally {
-			pm.done();
-		}
-
+		return new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
+//		try {
+//			BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
+//			fRewriter= ASTRewrite.create(declaration.getAST());
+//
+//			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
+//			result.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
+//
+//			MultiTextEdit root= new MultiTextEdit();
+//			result.setEdit(root);
+//
+//			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
+//
+//			TextEditGroup closureEditGroup= new TextEditGroup("Extract to Closure");
+//			result.addTextEditGroup(closureEditGroup);
+//
+//			// A sentinel is just a placeholder to keep track of the position of insertion
+//			// For this refactoring, we need to insert two things:
+//			// 1) The DataflowChannels (if necessary)
+//			// 2) The DataflowMessagingRunnable
+//			Block sentinel= fAST.newBlock();
+//			ListRewrite sentinelRewriter= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
+//			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
+//
+//			// Add the dataflowChannels that are required
+//			addDataflowChannels(declaration, sentinel, sentinelRewriter, closureEditGroup, pm);
+//
+//			// Update all references to values written in the closure body to read from channels
+//			List<ASTNode> channels= createTempVariablesForChannels(declaration, closureEditGroup, pm);
+//			for (ASTNode astNode : channels) {
+//				sentinelRewriter.insertAfter(astNode, sentinel, closureEditGroup);
+//			}
+//
+//			// Handle InterruptedException from using DataflowChannels
+//			updateExceptions(declaration, closureEditGroup);
+//
+//			// Replace the placeholder sentinel with the actual code
+//			ExpressionStatement closureInvocationStatement= createClosureInvocationStatement(declaration, selectedNodes, closureEditGroup, pm);
+//			sentinelRewriter.replace(sentinel, closureInvocationStatement, closureEditGroup);
+//
+//			if (fImportRewriter.hasRecordedChanges()) {
+//				TextEdit edit= fImportRewriter.rewriteImports(null);
+//				root.addChild(edit);
+//				result.addTextEditGroup(new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports, new TextEdit[] { edit }));
+//			}
+//			root.addChild(fRewriter.rewriteAST());
+//			return result;
+//		} finally {
+//			pm.done();
+//		}
 	}
 
-	private ExpressionStatement createClosureInvocationStatement(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup closureEditGroup, IProgressMonitor pm) throws JavaModelException {
-		ClassInstanceCreation dataflowClosure= createNewDataflowClosure(declaration, selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup, pm);
+	private ExpressionStatement createClosureInvocationStatement(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
+			TextEditGroup closureEditGroup,
+			IProgressMonitor pm) throws JavaModelException {
+		ClassInstanceCreation dataflowClosure= createNewDataflowClosure(pdgAnalyzer, analyzer, declaration, selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup, pm);
 		MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
 		ExpressionStatement closureInvocationStatement= fAST.newExpressionStatement(closureInvocation);
 		return closureInvocationStatement;
 	}
 
-	private void updateExceptions(BodyDeclaration declaration, TextEditGroup closureEditGroup) {
+	private void updateExceptions(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, TextEditGroup closureEditGroup) {
 		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
-		if (fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes()).size() != 0) {
+		if (pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes()).size() != 0) {
 			MethodDeclaration method= (MethodDeclaration)declaration;
 			// This is safe since MethodDeclaration THROWN_EXCEPTIONS_PROPERTY returns a list of Name
 			@SuppressWarnings("unchecked")
@@ -448,11 +473,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-	private List<ASTNode> createTempVariablesForChannels(BodyDeclaration declaration, TextEditGroup closureEditGroup, IProgressMonitor pm) {
+	private List<ASTNode> createTempVariablesForChannels(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, TextEditGroup closureEditGroup,
+			IProgressMonitor pm) {
 		List<ASTNode> nodes= new ArrayList<ASTNode>();
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialReads : fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes())) {
-			VariableDeclarationStatement tempVariable= createDeclaration(potentialReads, createChannelRead(channelNumber));
+		for (IVariableBinding potentialReads : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
+			VariableDeclarationStatement tempVariable= createDeclaration(analyzer, potentialReads, createChannelRead(channelNumber));
 			nodes.add(tempVariable);
 			channelNumber++;
 		}
@@ -467,10 +493,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return methodInvocation;
 	}
 
-	private void addDataflowChannels(BodyDeclaration declaration, Block sentinel, ListRewrite sentinelRewriter, TextEditGroup closureEditGroup, IProgressMonitor pm) {
+	private void addDataflowChannels(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, Block sentinel, ListRewrite sentinelRewriter,
+			TextEditGroup closureEditGroup, IProgressMonitor pm) {
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		if (fAnalyzer.getPotentialReadsOutsideOfClosure().length != 0) {
-			for (IVariableBinding potentialReads : fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes())) {
+		if (analyzer.getPotentialReadsOutsideOfClosure().length != 0) {
+			for (IVariableBinding potentialReads : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
 				// Use string generation since this is a single statement
 				String channel= "final DataflowQueue<" + resolveType(potentialReads) + "> " + GENERIC_CHANNEL_NAME + channelNumber + "= new DataflowQueue<" + resolveType(potentialReads) + ">();";
 				ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
@@ -510,12 +537,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return type.getName();
 	}
 
-	private VariableDeclaration getVariableDeclaration(ParameterInfo parameter) {
-		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), fAnalyzer.getEnclosingBodyDeclaration());
+	private VariableDeclaration getVariableDeclaration(ExtractClosureAnalyzer analyzer, ParameterInfo parameter) {
+		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), analyzer.getEnclosingBodyDeclaration());
 	}
 
-	private VariableDeclarationStatement createDeclaration(IVariableBinding binding, Expression intilizer) {
-		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, fAnalyzer.getEnclosingBodyDeclaration());
+	private VariableDeclarationStatement createDeclaration(ExtractClosureAnalyzer analyzer, IVariableBinding binding, Expression intilizer) {
+		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, analyzer.getEnclosingBodyDeclaration());
 		VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
 		fragment.setName((SimpleName)ASTNode.copySubtree(fAST, original.getName()));
 		fragment.setInitializer(intilizer);
@@ -558,19 +585,21 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * @param editGroup
 	 * @return
 	 */
-	private ClassInstanceCreation createNewDataflowClosure(BodyDeclaration declaration, ASTNode[] selectedNodes, String findRecommendedLineSeparator, TextEditGroup editGroup, IProgressMonitor pm) {
+	private ClassInstanceCreation createNewDataflowClosure(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
+			String findRecommendedLineSeparator,
+			TextEditGroup editGroup, IProgressMonitor pm) {
 		ClassInstanceCreation dataflowClosure= fAST.newClassInstanceCreation();
 
 		// Create the small chunks
-		augmentWithTypeInfo(dataflowClosure);
+		augmentWithTypeInfo(analyzer, dataflowClosure);
 		augmentWithConstructorArgument(dataflowClosure);
-		augmentWithAnonymousClassDeclaration(declaration, dataflowClosure, selectedNodes, editGroup, pm);
+		augmentWithAnonymousClassDeclaration(pdgAnalyzer, analyzer, declaration, dataflowClosure, selectedNodes, editGroup, pm);
 
 		return dataflowClosure;
 	}
 
-	private void augmentWithTypeInfo(ClassInstanceCreation dataflowClosure) {
-		ImportRewriteContext context= new ContextSensitiveImportRewriteContext(fAnalyzer.getEnclosingBodyDeclaration(), fImportRewriter);
+	private void augmentWithTypeInfo(ExtractClosureAnalyzer analyzer, ClassInstanceCreation dataflowClosure) {
+		ImportRewriteContext context= new ContextSensitiveImportRewriteContext(analyzer.getEnclosingBodyDeclaration(), fImportRewriter);
 		fImportRewriter.addImport(CLOSURE_QUALIFIED_TYPE, context);
 		dataflowClosure.setType(fAST.newSimpleType(fAST.newName(CLOSURE_TYPE)));
 	}
@@ -583,9 +612,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 		arguments.add(fAST.newNumberLiteral(argumentsCount));
 	}
 
-	private void augmentWithAnonymousClassDeclaration(BodyDeclaration declaration, ClassInstanceCreation dataflowClosure, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
+	private void augmentWithAnonymousClassDeclaration(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ClassInstanceCreation dataflowClosure,
+			ASTNode[] selectedNodes,
+			TextEditGroup editGroup, IProgressMonitor pm) {
 		AnonymousClassDeclaration closure= fAST.newAnonymousClassDeclaration();
-		MethodDeclaration createRunMethodForClosure= createRunMethodForClosure(declaration, selectedNodes, editGroup, pm);
+		MethodDeclaration createRunMethodForClosure= createRunMethodForClosure(pdgAnalyzer, analyzer, declaration, selectedNodes, editGroup, pm);
 		// This is safe since AnonymousClassDeclaration.bodyDeclarations can only return a list of BodyDeclaration
 		@SuppressWarnings("unchecked")
 		List<BodyDeclaration> bodyDeclarations= (List<BodyDeclaration>)closure.bodyDeclarations();
@@ -602,7 +633,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * @param editGroup
 	 * @return
 	 */
-	private MethodDeclaration createRunMethodForClosure(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
+	private MethodDeclaration createRunMethodForClosure(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
+			TextEditGroup editGroup, IProgressMonitor pm) {
 		MethodDeclaration runMethod= fAST.newMethodDeclaration();
 		List<Modifier> newModifiers= ASTNodeFactory.newModifiers(fAST, Modifier.PROTECTED);
 
@@ -617,7 +649,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		@SuppressWarnings("unchecked")
 		List<SingleVariableDeclaration> parameters= (List<SingleVariableDeclaration>)runMethod.parameters();
 		parameters.add(createObjectArrayArgument());
-		runMethod.setBody(createClosureBody(declaration, selectedNodes, editGroup, pm));
+		runMethod.setBody(createClosureBody(pdgAnalyzer, analyzer, declaration, selectedNodes, editGroup, pm));
 
 		return runMethod;
 	}
@@ -635,18 +667,19 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return parameter;
 	}
 
-	private Block createClosureBody(BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup, IProgressMonitor pm) {
+	private Block createClosureBody(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup,
+			IProgressMonitor pm) {
 		Block methodBlock= fAST.newBlock();
 		ListRewrite statements= fRewriter.getListRewrite(methodBlock, Block.STATEMENTS_PROPERTY);
 
 		// Locals that are not passed as an arguments since the extracted method only
 		// writes to them
-		List<IVariableBinding> unfilteredMethodLocals= fPDGAnalyzer.getLocalVariableBindings(fAnalyzer.getSelectedNodes());
-		List<IVariableBinding> methodLocals= removeSelectedDeclarations(unfilteredMethodLocals);
+		List<IVariableBinding> unfilteredMethodLocals= pdgAnalyzer.getLocalVariableBindings(analyzer.getSelectedNodes());
+		List<IVariableBinding> methodLocals= removeSelectedDeclarations(analyzer, unfilteredMethodLocals);
 		for (IVariableBinding binding : methodLocals) {
 			@SuppressWarnings("unchecked")
 			List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
-			methodBlockStatements.add(createDeclaration(binding, null));
+			methodBlockStatements.add(createDeclaration(analyzer, binding, null));
 		}
 
 		// Update the bindings to the parameters
@@ -655,7 +688,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			for (int n= 0; n < selectedNodes.length; n++) {
 				SimpleName[] oldNames= LinkedNodeFinder.findByBinding(selectedNodes[n], parameter.getOldBinding());
 				for (int i= 0; i < oldNames.length; i++) {
-					fRewriter.replace(oldNames[i], createCastParameters(parameter, argumentPosition), null);
+					fRewriter.replace(oldNames[i], createCastParameters(analyzer, parameter, argumentPosition), null);
 				}
 			}
 			argumentPosition++;
@@ -667,7 +700,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Add the potential writes at the end (in case multiple writes have occurred and we only want the latest values)  
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialWrites : fPDGAnalyzer.getOutputBindings(fAnalyzer.getSelectedNodes())) {
+		for (IVariableBinding potentialWrites : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
 			// Use string generation since this is a single statement
 			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");";
 			ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
@@ -679,18 +712,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return methodBlock;
 	}
 
-	private List<IVariableBinding> removeSelectedDeclarations(List<IVariableBinding> unfilteredMethodLocals) {
+	private List<IVariableBinding> removeSelectedDeclarations(ExtractClosureAnalyzer analyzer, List<IVariableBinding> unfilteredMethodLocals) {
 		List<IVariableBinding> result= new ArrayList<IVariableBinding>();
-		Selection selection= fAnalyzer.getSelection();
+		Selection selection= analyzer.getSelection();
 		for (IVariableBinding binding : unfilteredMethodLocals) {
-			ASTNode decl= ((CompilationUnit)fAnalyzer.getEnclosingBodyDeclaration().getRoot()).findDeclaringNode(binding);
+			ASTNode decl= ((CompilationUnit)analyzer.getEnclosingBodyDeclaration().getRoot()).findDeclaringNode(binding);
 			if (!selection.covers(decl))
 				result.add(binding);
 		}
 		return result;
 	}
 
-	private ASTNode createCastParameters(ParameterInfo parameter, int argumentsPosition) {
+	private ASTNode createCastParameters(ExtractClosureAnalyzer analyzer, ParameterInfo parameter, int argumentsPosition) {
 		ParenthesizedExpression argumentExpression= fAST.newParenthesizedExpression();
 		CastExpression castExpression= fAST.newCastExpression();
 
@@ -698,7 +731,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		if (oldBinding.getType().isPrimitive()) {
 			castExpression.setType(fAST.newSimpleType(fAST.newName(resolveType(oldBinding))));
 		} else {
-			VariableDeclaration infoDecl= getVariableDeclaration(parameter);
+			VariableDeclaration infoDecl= getVariableDeclaration(analyzer, parameter);
 			castExpression.setType(ASTNodeFactory.newType(fAST, infoDecl, fImportRewriter, null));
 		}
 
@@ -711,11 +744,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return argumentExpression;
 	}
 
-	private void initializeParameterInfos() {
+	private void initializeParameterInfos(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer) {
 		// XXX: This is incomplete
-		List<IVariableBinding> arguments= fPDGAnalyzer.getInputBindings(fAnalyzer.getSelectedNodes());
+		List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
 		fParameterInfos= new ArrayList<ParameterInfo>(arguments.size());
-		ASTNode root= fAnalyzer.getEnclosingBodyDeclaration();
+		ASTNode root= analyzer.getEnclosingBodyDeclaration();
 
 		ParameterInfo vararg= null;
 		int index= 0;
