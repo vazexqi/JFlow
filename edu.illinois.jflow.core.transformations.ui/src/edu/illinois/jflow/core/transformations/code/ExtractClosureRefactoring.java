@@ -161,6 +161,87 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
+	/**
+	 * A structure to group together all the useful information for each stage. This structure is
+	 * primarily focused only for the transformation component. The analysis component uses a
+	 * different scheme to facilitate analysis and testing (less dependency on JDT).
+	 * 
+	 * @author nchen
+	 * 
+	 */
+	private final class StageInfo {
+		final SelectedStage stage;
+
+		final ExtractClosureAnalyzer analyzer;
+
+		PDGExtractClosureAnalyzer pdgAnalyzer;
+
+		List<ParameterInfo> parameterInfo;
+
+		StageInfo(SelectedStage stage, ExtractClosureAnalyzer analyzer) {
+			this.stage= stage;
+			this.analyzer= analyzer;
+		}
+
+		public ExtractClosureAnalyzer getAnalyzer() {
+			return analyzer;
+		}
+
+		public SelectedStage getStage() {
+			return stage;
+		}
+
+		public PDGExtractClosureAnalyzer getPdgAnalyzer() {
+			return pdgAnalyzer;
+		}
+
+		public void setPdgAnalyzer(PDGExtractClosureAnalyzer pdgAnalyzer) {
+			this.pdgAnalyzer= pdgAnalyzer;
+		}
+
+		public List<ParameterInfo> getParameterInfo() {
+			return parameterInfo;
+		}
+
+		public void setParameterInfo(List<ParameterInfo> parameterInfo) {
+			this.parameterInfo= parameterInfo;
+		}
+
+		private void initializeParameterInfos() {
+			List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
+			parameterInfo= new ArrayList<ParameterInfo>(arguments.size());
+			ASTNode root= analyzer.getEnclosingBodyDeclaration();
+
+			ParameterInfo vararg= null;
+			int index= 0;
+			for (IVariableBinding argument : arguments) {
+				if (argument == null)
+					continue;
+				VariableDeclaration declaration= ASTNodes.findVariableDeclaration(argument, root);
+				boolean isVarargs= declaration instanceof SingleVariableDeclaration
+						? ((SingleVariableDeclaration)declaration).isVarargs()
+						: false;
+				ParameterInfo info= new ParameterInfo(argument, getType(declaration, isVarargs), argument.getName(), index++);
+				if (isVarargs) {
+					vararg= info;
+				} else {
+					parameterInfo.add(info);
+				}
+			}
+			if (vararg != null) {
+				parameterInfo.add(vararg);
+			}
+		}
+
+		private String getType(VariableDeclaration declaration, boolean isVarargs) {
+			String type= ASTNodes.asString(ASTNodeFactory.newType(declaration.getAST(), declaration, fImportRewriter, new ContextSensitiveImportRewriteContext(declaration, fImportRewriter)));
+			if (isVarargs)
+				return type + ParameterInfo.ELLIPSIS;
+			else
+				return type;
+		}
+	}
+
 	private ICompilationUnit fCUnit;
 
 	private CompilationUnit fRoot;
@@ -175,13 +256,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private ASTRewrite fRewriter;
 
-	private List<ExtractClosureAnalyzer> fAnalyzers;
-
-	private List<SelectedStage> fSelectedStages;
-
+	//XXX:Remove me
 	private List<ParameterInfo> fParameterInfos;
 
-	private List<PDGExtractClosureAnalyzer> fPDGAnalyzers;
+	private Map<Integer, StageInfo> stages;
 
 	private IDocument fDoc;
 
@@ -226,20 +304,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 		fRoot= null;
 		fSelectionStart= selectionStart;
 		fSelectionLength= selectionLength;
+		stages= new HashMap<Integer, StageInfo>();
 	}
 
 	@Override
 	public String getName() {
 		return JFlowRefactoringCoreMessages.ExtractClosureRefactoring_name;
-	}
-
-	private List<ExtractClosureAnalyzer> createExtractClosureAnalyzers() throws CoreException {
-		fAnalyzers= new ArrayList<ExtractClosureAnalyzer>();
-		for (SelectedStage stage : fSelectedStages) {
-			ExtractClosureAnalyzer analyzer= new ExtractClosureAnalyzer(fCUnit, stage.getSelection());
-			fAnalyzers.add(analyzer);
-		}
-		return fAnalyzers;
 	}
 
 	/**
@@ -268,15 +338,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		fAST= fRoot.getAST();
 
-		fSelectedStages= locateStagesWithinBounds();
+		initializeStageInfo();
 
-		createExtractClosureAnalyzers();
-
-		for (ExtractClosureAnalyzer analyzer : fAnalyzers) {
+		for (StageInfo stage : stages.values()) {
+			ExtractClosureAnalyzer analyzer= stage.getAnalyzer();
 			fRoot.accept(analyzer);
-		}
-
-		for (ExtractClosureAnalyzer analyzer : fAnalyzers) {
+			// XXX: Remove the fImportRewriter parameter
 			result.merge(analyzer.checkInitialConditions(fImportRewriter));
 		}
 
@@ -286,25 +353,30 @@ public class ExtractClosureRefactoring extends Refactoring {
 		// If we don't have any errors at this point, we can initialize the heavy-lifting parts
 		try {
 			createPDGAnalyzers();
-			for (PDGExtractClosureAnalyzer analyzer : fPDGAnalyzers) {
-				analyzer.analyzeSelection();
-			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		// XXX: Ugly
-		for (int i= 0; i < fAnalyzers.size(); i++) {
-			initializeParameterInfos(fPDGAnalyzers.get(i), fAnalyzers.get(i));
+		for (StageInfo stage : stages.values()) {
+			PDGExtractClosureAnalyzer analyzer= stage.getPdgAnalyzer();
+			analyzer.analyzeSelection();
+			stage.initializeParameterInfos();
 		}
 
 		return result;
 	}
 
-	private List<SelectedStage> locateStagesWithinBounds() {
+	private void initializeStageInfo() throws CoreException {
 		MethodDeclaration methodDeclaration= locateSelectedMethod();
 		StagesLocator locator= new StagesLocator(fRoot, fDoc, methodDeclaration);
-		return locator.locateStages();
+
+		List<SelectedStage> annotatedStages= locator.locateStages();
+		for (int stageNumber= 0; stageNumber < annotatedStages.size(); stageNumber++) {
+			SelectedStage stage= annotatedStages.get(stageNumber);
+			ExtractClosureAnalyzer analyzer= new ExtractClosureAnalyzer(fCUnit, stage.getSelection());
+			StageInfo stageInfo= new StageInfo(stage, analyzer);
+			stages.put(stageNumber, stageInfo);
+		}
 	}
 
 	private MethodDeclaration locateSelectedMethod() {
@@ -314,10 +386,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return methodDeclaration;
 	}
 
-
-	private List<PDGExtractClosureAnalyzer> createPDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
-		fPDGAnalyzers= new ArrayList<PDGExtractClosureAnalyzer>();
-
+	private void createPDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
@@ -327,19 +396,17 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// Get the IR for the selected method
 		// Since all the stages are going to be in the same method, just use the first ExtractClosureAnalyzer
-		ExtractClosureAnalyzer firstAnalyzer= fAnalyzers.get(0);
-		MethodDeclaration methodDeclaration= (MethodDeclaration)firstAnalyzer.getEnclosingBodyDeclaration();
+		MethodDeclaration methodDeclaration= locateSelectedMethod();
 		JDTIdentityMapper mapper= new JDTIdentityMapper(JavaSourceAnalysisScope.SOURCE, fAST);
 		MethodReference methodRef= mapper.getMethodRef(methodDeclaration.resolveBinding());
 		final IMethod resolvedMethod= classHierarchy.resolveMethod(methodRef);
 		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, fDoc);
 
-		for (SelectedStage stage : fSelectedStages) {
-			fPDGAnalyzers.add(new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStageLines()));
+		for (int stageNumber= 0; stageNumber < stages.keySet().size(); stageNumber++) {
+			StageInfo stage= stages.get(stageNumber);
+			stage.setPdgAnalyzer(new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStage().getStageLines()));
 		}
-
-		return fPDGAnalyzers;
 	}
 
 	/**
@@ -744,40 +811,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return argumentExpression;
 	}
 
-	private void initializeParameterInfos(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer) {
-		// XXX: This is incomplete
-		List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
-		fParameterInfos= new ArrayList<ParameterInfo>(arguments.size());
-		ASTNode root= analyzer.getEnclosingBodyDeclaration();
-
-		ParameterInfo vararg= null;
-		int index= 0;
-		for (IVariableBinding argument : arguments) {
-			if (argument == null)
-				continue;
-			VariableDeclaration declaration= ASTNodes.findVariableDeclaration(argument, root);
-			boolean isVarargs= declaration instanceof SingleVariableDeclaration
-					? ((SingleVariableDeclaration)declaration).isVarargs()
-					: false;
-			ParameterInfo info= new ParameterInfo(argument, getType(declaration, isVarargs), argument.getName(), index++);
-			if (isVarargs) {
-				vararg= info;
-			} else {
-				fParameterInfos.add(info);
-			}
-		}
-		if (vararg != null) {
-			fParameterInfos.add(vararg);
-		}
-	}
-
-	private String getType(VariableDeclaration declaration, boolean isVarargs) {
-		String type= ASTNodes.asString(ASTNodeFactory.newType(declaration.getAST(), declaration, fImportRewriter, new ContextSensitiveImportRewriteContext(declaration, fImportRewriter)));
-		if (isVarargs)
-			return type + ParameterInfo.ELLIPSIS;
-		else
-			return type;
-	}
 
 
 }
