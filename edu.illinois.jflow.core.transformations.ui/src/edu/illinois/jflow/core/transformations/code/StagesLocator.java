@@ -143,6 +143,14 @@ public class StagesLocator {
 		}
 
 		/*
+		 * Returns a Selection object representing the current stage
+		 */
+		@SuppressWarnings("restriction")
+		public Selection getSelection() {
+			return Selection.createFromStartEnd(getStageStartOffset(), getStageEndOffset());
+		}
+
+		/*
 		 * Returns the offset in the document, including the start comments
 		 */
 		private int getStageStartOffset() {
