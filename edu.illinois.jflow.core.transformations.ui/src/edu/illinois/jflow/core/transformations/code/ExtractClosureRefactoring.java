@@ -246,9 +246,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		RefactoringStatus result= new RefactoringStatus();
 		pm.beginTask("", 100); //$NON-NLS-1$
 
-		if (fSelectionStart < 0 || fSelectionLength == 0)
-			return mergeTextSelectionStatus(result);
-
 		IFile[] changedFiles= ResourceUtil.getFiles(new ICompilationUnit[] { fCUnit });
 		result.merge(Checks.validateModifiesFiles(changedFiles, getValidationContext()));
 		if (result.hasFatalError())
@@ -262,9 +259,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		fAST= fRoot.getAST();
 
-		MethodDeclaration methodDeclaration= locateSelectedMethod();
-		locateStagesWithinBounds(fRoot, methodDeclaration);
-
+		locateStagesWithinBounds();
 
 		// This part needs to work differently
 		fRoot.accept(createVisitor());
@@ -287,32 +282,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return result;
 	}
 
-	public RefactoringStatus checkInitialCondition2(IProgressMonitor pm) throws CoreException {
-		RefactoringStatus result= new RefactoringStatus();
-		pm.beginTask("", 100); //$NON-NLS-1$
-
-		if (fSelectionStart < 0 || fSelectionLength == 0)
-			return mergeTextSelectionStatus(result);
-
-		IFile[] changedFiles= ResourceUtil.getFiles(new ICompilationUnit[] { fCUnit });
-		result.merge(Checks.validateModifiesFiles(changedFiles, getValidationContext()));
-		if (result.hasFatalError())
-			return result;
-		result.merge(ResourceChangeChecker.checkFilesToBeChanged(changedFiles, new SubProgressMonitor(pm, 1)));
-
-		if (fRoot == null) {
-			fRoot= RefactoringASTParser.parseWithASTProvider(fCUnit, true, new SubProgressMonitor(pm, 99));
-		}
-		fImportRewriter= StubUtility.createImportRewrite(fRoot, true);
-
-		fAST= fRoot.getAST();
-
-
-		return result;
-	}
-
-	private void locateStagesWithinBounds(CompilationUnit unit, MethodDeclaration methodDeclaration) {
-		StagesLocator locator= new StagesLocator(unit, methodDeclaration);
+	private void locateStagesWithinBounds() {
+		MethodDeclaration methodDeclaration= locateSelectedMethod();
+		StagesLocator locator= new StagesLocator(fRoot, fDoc, methodDeclaration);
 		List<StageAnnotationPair> locateStages= locator.locateStages();
 		System.out.println(locateStages);
 	}

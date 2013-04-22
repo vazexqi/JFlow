@@ -10,6 +10,8 @@ import java.util.regex.Pattern;
 import org.eclipse.jdt.core.dom.Comment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
 
 import com.ibm.wala.util.debug.Assertions;
 
@@ -34,8 +36,11 @@ public class StagesLocator {
 
 	Map<Integer, StageAnnotationPair> stages= new HashMap<Integer, StageAnnotationPair>();
 
-	public StagesLocator(CompilationUnit cUnit, MethodDeclaration methodDeclaration) {
+	private IDocument doc;
+
+	public StagesLocator(CompilationUnit cUnit, IDocument doc, MethodDeclaration methodDeclaration) {
 		this.cUnit= cUnit;
+		this.doc= doc;
 		this.methodDeclaration= methodDeclaration;
 		this.methodStartOffset= methodDeclaration.getStartPosition();
 		this.methodEndOffset= methodStartOffset + methodDeclaration.getLength();
@@ -49,14 +54,20 @@ public class StagesLocator {
 				int startOffset= comment.getStartPosition();
 				int endOffset= startOffset + comment.getLength();
 				if (startOffset >= methodStartOffset && endOffset <= methodEndOffset) {
-					String stageName= locateStageNameIfPossible(comment.toString());
-					StageAnnotationPair stageAnnotation= stages.get(stageName);
-					if (stageAnnotation == null) {
-						StageAnnotationPair newStageAnnotation= new StageAnnotationPair(stageName);
-						stages.put(Integer.parseInt(stageName), newStageAnnotation);
-						stageAnnotation= newStageAnnotation;
+					try {
+						String commentString= doc.get(comment.getStartPosition(), comment.getLength());
+						Integer stageNumber= locateStageNameIfPossible(commentString);
+						StageAnnotationPair stageAnnotation= stages.get(stageNumber);
+						if (stageAnnotation == null) {
+							StageAnnotationPair newStageAnnotation= new StageAnnotationPair(stageNumber);
+							stages.put(stageNumber, newStageAnnotation);
+							stageAnnotation= newStageAnnotation;
+						}
+						stageAnnotation.addComment(comment);
+					} catch (BadLocationException e) {
+						// This should not happen given that we get the offset from the compilation unit so the offsets should be valid
+						e.printStackTrace();
 					}
-					stageAnnotation.addComment(comment);
 				}
 			}
 		}
@@ -66,7 +77,7 @@ public class StagesLocator {
 
 	private List<StageAnnotationPair> stagesToList() {
 		List<StageAnnotationPair> stagesList= new ArrayList<StageAnnotationPair>();
-		for (int stageNumber= 0; stageNumber < stages.size(); stageNumber++) {
+		for (int stageNumber= 1; stageNumber <= stages.size(); stageNumber++) {
 			StageAnnotationPair stageAnnotationPair= stages.get(stageNumber);
 			Assertions.productionAssertion(stageAnnotationPair != null);
 			stagesList.add(stageAnnotationPair);
@@ -74,24 +85,24 @@ public class StagesLocator {
 		return stagesList;
 	}
 
-	private String locateStageNameIfPossible(String input) {
-		Pattern stagePattern= Pattern.compile("//(?:\\s*) \\b(?:Begin|End)\\b Stage(\\d+)");
+	private Integer locateStageNameIfPossible(String input) {
+		Pattern stagePattern= Pattern.compile("//(?:\\s*)\\b(?:Begin|End)(?:\\s+)Stage(\\d+)");
 		Matcher matcher= stagePattern.matcher(input);
 		if (matcher.find()) {
 			String group= matcher.group(1);
-			return group;
+			return Integer.parseInt(group);
 		} else
 			return null;
 	}
 
 	public static class StageAnnotationPair {
-		String stageName;
+		Integer stageName;
 
 		Comment start;
 
 		Comment end;
 
-		public StageAnnotationPair(String stageName) {
+		public StageAnnotationPair(Integer stageName) {
 			this.stageName= stageName;
 		}
 
@@ -112,14 +123,14 @@ public class StagesLocator {
 		/*
 		 * Returns the offset in the document, not including the start comments
 		 */
-		int getStageStart() {
+		public int getStageStart() {
 			return start.getStartPosition() + start.getLength();
 		}
 
 		/*
 		 * Returns the offset in the document, not including the end comments;
 		 */
-		int getStageEnd() {
+		public int getStageEnd() {
 			return end.getStartPosition() - 1;
 		}
 	}
