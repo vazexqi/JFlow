@@ -102,7 +102,8 @@ import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 public class ExtractClosureRefactoring extends Refactoring {
 
 	/**
-	 * Locates the existing DataflowChannels and the names and finds new unique names for them.
+	 * Locates the existing DataflowChannels and the names and finds new unique names for them. XXX:
+	 * I think we can remove this if we are doing all the stages at once.
 	 * 
 	 */
 	private static final class DataflowChannelVisitor extends ASTVisitor {
@@ -288,7 +289,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	/**
 	 * Creates a new extract closure refactoring
 	 * 
-	 * @param unit the compilation unit, or <code>null</code> if invoked by scripting
+	 * @param unit the compilation unit
 	 * @param doc the document of the current editor
 	 * @param selectionStart selection start
 	 * @param selectionLength selection end
@@ -308,8 +309,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	/**
-	 * Checks if the refactoring can be activated. Activation typically means, if a corresponding
-	 * menu entry can be added to the UI.
+	 * Checks if the refactoring can be activated.
 	 * 
 	 * @param pm a progress monitor to report progress during activation checking.
 	 * @return the refactoring status describing the result of the activation check.
@@ -330,38 +330,30 @@ public class ExtractClosureRefactoring extends Refactoring {
 			fRoot= RefactoringASTParser.parseWithASTProvider(fCUnit, true, new SubProgressMonitor(pm, 99));
 		}
 		fImportRewriter= StubUtility.createImportRewrite(fRoot, true);
-
 		fAST= fRoot.getAST();
 
-		initializeStageInfo();
-
-		for (Stage stage : stages.values()) {
-			ExtractClosureAnalyzer analyzer= stage.getAnalyzer();
-			fRoot.accept(analyzer);
-			// XXX: Remove the fImportRewriter parameter
-			result.merge(analyzer.checkInitialConditions(fImportRewriter));
-		}
+		// This is some light-weight analyzer that checks for control flow
+		initializeStages(result);
 
 		if (result.hasFatalError())
 			return result;
 
 		// If we don't have any errors at this point, we can initialize the heavy-lifting parts
-		try {
-			createPDGAnalyzers();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		for (Stage stage : stages.values()) {
-			PDGExtractClosureAnalyzer analyzer= stage.getPdgAnalyzer();
-			analyzer.analyzeSelection();
-			stage.initializeParameterInfos();
-		}
+		initializeStageAnalyzers();
 
 		return result;
 	}
 
-	private void initializeStageInfo() throws CoreException {
+	private void initializeStageAnalyzers() {
+		try {
+			// XXX: Check for actual heap and dependencies
+			initializePDGAnalyzers();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void initializeStages(RefactoringStatus result) throws CoreException {
 		MethodDeclaration methodDeclaration= locateSelectedMethod();
 		AnnotatedStagesFinder locator= new AnnotatedStagesFinder(fRoot, fDoc, methodDeclaration);
 
@@ -372,6 +364,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 			Stage stageInfo= new Stage(stage, analyzer);
 			stages.put(stageNumber, stageInfo);
 		}
+
+		// We do not fuse these two loops since we want to initialize all of them first before
+		// reporting any errors
+		for (Stage stage : stages.values()) {
+			ExtractClosureAnalyzer analyzer= stage.getAnalyzer();
+			fRoot.accept(analyzer);
+			result.merge(analyzer.checkInitialConditions());
+		}
 	}
 
 	private MethodDeclaration locateSelectedMethod() {
@@ -381,7 +381,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return methodDeclaration;
 	}
 
-	private void createPDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
+	private void initializePDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
 		engine.buildAnalysisScope();
@@ -400,7 +400,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		for (int stageNumber= 0; stageNumber < stages.keySet().size(); stageNumber++) {
 			Stage stage= stages.get(stageNumber);
-			stage.setPdgAnalyzer(new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStage().getStageLines()));
+			PDGExtractClosureAnalyzer pdgAnalyzer= new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStage().getStageLines());
+			stage.setPdgAnalyzer(pdgAnalyzer);
+			pdgAnalyzer.analyzeSelection();
+			stage.initializeParameterInfos();
 		}
 	}
 
@@ -411,10 +414,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 */
 	public List<ParameterInfo> getParameterInfos() {
 		return fParameterInfos;
-	}
-
-	public ICompilationUnit getCompilationUnit() {
-		return fCUnit;
 	}
 
 	/**

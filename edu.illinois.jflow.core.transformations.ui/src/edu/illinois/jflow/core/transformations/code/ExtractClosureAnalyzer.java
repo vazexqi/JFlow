@@ -13,7 +13,6 @@ import java.util.Set;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.compiler.ITerminalSymbols;
-import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Annotation;
@@ -22,7 +21,6 @@ import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.BreakStatement;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.ContinueStatement;
@@ -39,7 +37,6 @@ import org.eclipse.jdt.core.dom.LabeledStatement;
 import org.eclipse.jdt.core.dom.Message;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.Name;
-import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
@@ -49,15 +46,10 @@ import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.ThisExpression;
 import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.Type;
-import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
-import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
-import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.ImportRewriteContext;
-import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
-import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.LocalVariableIndex;
@@ -109,10 +101,6 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	private int fReturnKind;
 
-	private Type fReturnType;
-
-	private ITypeBinding fReturnTypeBinding;
-
 	private FlowInfo fInputFlowInfo;
 
 	private FlowContext fInputFlowContext;
@@ -155,14 +143,6 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	public boolean extractsExpression() {
 		return fReturnKind == EXPRESSION;
-	}
-
-	public Type getReturnType() {
-		return fReturnType;
-	}
-
-	public ITypeBinding getReturnTypeBinding() {
-		return fReturnTypeBinding;
 	}
 
 	public boolean generateImport() {
@@ -212,7 +192,7 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 
 	//---- Activation checking ---------------------------------------------------------------------------
 
-	public RefactoringStatus checkInitialConditions(ImportRewrite rewriter) {
+	public RefactoringStatus checkInitialConditions() {
 		RefactoringStatus result= getStatus();
 		checkExpression(result);
 		if (result.hasFatalError())
@@ -238,7 +218,6 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 			fReturnKind= MULTIPLE;
 			return result;
 		}
-		initReturnType(rewriter);
 		return result;
 	}
 
@@ -254,57 +233,6 @@ class ExtractClosureAnalyzer extends CodeAnalyzer {
 				status.addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_from_annotation, JavaStatusContext.create(fCUnit, node));
 			}
 		}
-	}
-
-	private void initReturnType(ImportRewrite rewriter) {
-		AST ast= fEnclosingBodyDeclaration.getAST();
-		fReturnType= null;
-		fReturnTypeBinding= null;
-		switch (fReturnKind) {
-			case ACCESS_TO_LOCAL:
-				VariableDeclaration declaration= ASTNodes.findVariableDeclaration(fReturnValue, fEnclosingBodyDeclaration);
-				fReturnType= ASTNodeFactory.newType(ast, declaration, rewriter, new ContextSensitiveImportRewriteContext(declaration, rewriter));
-				if (declaration.resolveBinding() != null) {
-					fReturnTypeBinding= declaration.resolveBinding().getType();
-				}
-				break;
-			case EXPRESSION:
-				Expression expression= (Expression)getFirstSelectedNode();
-				if (expression.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION) {
-					fExpressionBinding= ((ClassInstanceCreation)expression).getType().resolveBinding();
-				} else {
-					fExpressionBinding= expression.resolveTypeBinding();
-				}
-				if (fExpressionBinding != null) {
-					if (fExpressionBinding.isNullType()) {
-						getStatus().addFatalError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_extract_null_type, JavaStatusContext.create(fCUnit, expression));
-					} else {
-						ITypeBinding normalizedBinding= Bindings.normalizeForDeclarationUse(fExpressionBinding, ast);
-						if (normalizedBinding != null) {
-							ImportRewriteContext context= new ContextSensitiveImportRewriteContext(fEnclosingBodyDeclaration, rewriter);
-							fReturnType= rewriter.addImport(normalizedBinding, ast, context);
-							fReturnTypeBinding= normalizedBinding;
-						}
-					}
-				} else {
-					fReturnType= ast.newPrimitiveType(PrimitiveType.VOID);
-					fReturnTypeBinding= ast.resolveWellKnownType("void"); //$NON-NLS-1$
-					getStatus().addError(JFlowRefactoringCoreMessages.ExtractClosureAnalyzer_cannot_determine_return_type, JavaStatusContext.create(fCUnit, expression));
-				}
-				break;
-			case RETURN_STATEMENT_VALUE:
-				if (fEnclosingBodyDeclaration.getNodeType() == ASTNode.METHOD_DECLARATION) {
-					fReturnType= ((MethodDeclaration)fEnclosingBodyDeclaration).getReturnType2();
-					fReturnTypeBinding= fReturnType != null ? fReturnType.resolveBinding() : null;
-				}
-				break;
-			default:
-				fReturnType= ast.newPrimitiveType(PrimitiveType.VOID);
-				fReturnTypeBinding= ast.resolveWellKnownType("void"); //$NON-NLS-1$
-		}
-		if (fReturnType == null)
-			fReturnType= ast.newPrimitiveType(PrimitiveType.VOID);
-		fReturnTypeBinding= ast.resolveWellKnownType("void"); //$NON-NLS-1$
 	}
 
 	//	 !!! -- +/- same as in ExtractTempRefactoring
