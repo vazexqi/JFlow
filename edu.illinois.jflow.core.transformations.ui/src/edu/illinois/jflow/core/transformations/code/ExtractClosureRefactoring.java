@@ -96,6 +96,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * 
 	 */
 	private final class Stage {
+		// Though using string templates might seems like a foolish idea, it is much more succinct that building
+		// this entire thing programmatically. This is true whenever we are doing more code generation than just manipulation
+		// e.g. replace or modify.
+		static final String DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE= "new DataflowMessagingRunnable(1) {\n" +
+				"	@Override\n" +
+				"	protected void doRun(Object... args) {\n" +
+				"		%s\n" +
+				"	}\n" +
+				"}.call(channel%s.getVal());";
+
+		final String NEWLINE= String.format("%n");
+
 		final AnnotatedStage stage;
 
 		final ExtractClosureAnalyzer analyzer;
@@ -109,23 +121,23 @@ public class ExtractClosureRefactoring extends Refactoring {
 			this.analyzer= analyzer;
 		}
 
-		public ExtractClosureAnalyzer getAnalyzer() {
+		ExtractClosureAnalyzer getAnalyzer() {
 			return analyzer;
 		}
 
-		public AnnotatedStage getStage() {
+		AnnotatedStage getStage() {
 			return stage;
 		}
 
-		public void setPdgAnalyzer(PDGExtractClosureAnalyzer pdgAnalyzer) {
+		void setPdgAnalyzer(PDGExtractClosureAnalyzer pdgAnalyzer) {
 			this.pdgAnalyzer= pdgAnalyzer;
 		}
 
-		public List<ParameterInfo> getParameterInfo() {
+		List<ParameterInfo> getParameterInfo() {
 			return parameterInfo;
 		}
 
-		private void initializeParameterInfos() {
+		void initializeParameterInfos() {
 			List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
 			parameterInfo= new ArrayList<ParameterInfo>(arguments.size());
 			ASTNode root= analyzer.getEnclosingBodyDeclaration();
@@ -158,6 +170,60 @@ public class ExtractClosureRefactoring extends Refactoring {
 			else
 				return type;
 		}
+
+		// CODE GENERATION
+		//////////////////
+
+		Statement createDataflowStatement() {
+			StringBuilder sb= new StringBuilder();
+
+			// 1. Grab the values from the channel
+			String initializationStmts= createInitializationStatements();
+			sb.append(initializationStmts);
+
+			sb.append(NEWLINE);
+			// 2. Include the original statements
+			for (ASTNode astNode : analyzer.getSelectedNodes()) {
+				sb.append(ASTNodes.asString(astNode));
+				sb.append(NEWLINE);
+			}
+
+			// 3. Pump new value into the channel
+			String updateStmts= createUpdateStatements();
+			sb.append(updateStmts);
+
+			String closureInvocation= String.format(DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE, sb.toString(), stage.stageName - 1);
+			return (Statement)ASTNodeFactory.newStatement(fAST, closureInvocation);
+		}
+
+		private String createInitializationStatements() {
+			StringBuilder sb= new StringBuilder();
+
+			sb.append(String.format("Bundle b = ((Bundle) args[0]);%n"));
+
+			String template= "%s %s = b.%s;%n";
+
+			for (ParameterInfo pInfo : parameterInfo) {
+				sb.append(String.format(template, resolveType(pInfo.getOldBinding()), pInfo.getOldName(), pInfo.getOldName()));
+			}
+
+			return sb.toString();
+		}
+
+		private String createUpdateStatements() {
+			StringBuilder sb= new StringBuilder();
+
+			String template= "b.%s = %s;%n";
+
+			List<IVariableBinding> arguments= pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes());
+			for (IVariableBinding binding : arguments) {
+				sb.append(String.format(template, binding.getName(), binding.getName()));
+			}
+
+			sb.append(String.format(GENERIC_CHANNEL_NAME + "%d.bind(b)", stage.stageName));
+
+			return sb.toString();
+		}
 	}
 
 	/**
@@ -187,10 +253,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			}
 		}
 
-		private String resolveType(IVariableBinding binding) {
-			ITypeBinding type= binding.getType();
-			return type.getName();
-		}
 
 		AbstractTypeDeclaration createNewNestedClass() {
 			TypeDeclaration bundleClass= fAST.newTypeDeclaration();
@@ -214,6 +276,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
+	private String resolveType(IVariableBinding binding) {
+		ITypeBinding type= binding.getType();
+		return type.getName();
+	}
+
 	private ICompilationUnit fCUnit;
 
 	private CompilationUnit fRoot;
@@ -232,8 +299,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private IDocument fDoc;
 
-	private static final String EMPTY= ""; //$NON-NLS-1$
-
 	// GPARS
 	////////
 
@@ -241,7 +306,17 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	public static final String DATAFLOWMESSAGING_TYPE= "groovyx.gpars.DataflowMessagingRunnable";
 
-	public static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
+	public static final String GENERIC_CHANNEL_NAME= "channel";
+
+	public static final String CLOSURE_METHOD= "doRun";
+
+	public static final String CLOSURE_TYPE= "DataflowMessagingRunnable";
+
+	public static final String CLOSURE_PACKAGE= "groovyx.gpars";
+
+	public static final String CLOSURE_QUALIFIED_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE;
+
+	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel";
 
 	/**
 	 * Creates a new extract closure refactoring
@@ -417,6 +492,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 			createMethodBundle(result);
 			createChannels(result);
+
+			for (Stage stage : stages.values()) {
+				Statement statement= stage.createDataflowStatement();
+				System.out.println(statement);
+			}
 
 //
 //			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
