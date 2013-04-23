@@ -7,9 +7,13 @@ package edu.illinois.jflow.core.transformations.code;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,6 +29,7 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
 import org.eclipse.jdt.core.dom.Block;
@@ -35,6 +40,7 @@ import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -47,6 +53,7 @@ import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -231,6 +238,58 @@ public class ExtractClosureRefactoring extends Refactoring {
 				return type + ParameterInfo.ELLIPSIS;
 			else
 				return type;
+		}
+	}
+
+	/**
+	 * Creates a "bundle" class for all the variables that we need to pass between stages.
+	 * 
+	 * @author nchen
+	 * 
+	 */
+	final class BundleCreator {
+		static final String BUNDLE_CLASS_NAME= "Bundle";
+
+		// Distinguish the different parameter info from each stage by their names. While using names might sound absurd,
+		// recall that we can safely make the assumption that because that all the stages are within the same block, the names 
+		// are indeed unique and can be used to differentiate.
+		Set<ParameterInfo> variables= new TreeSet<ParameterInfo>(new Comparator<ParameterInfo>() {
+
+			@Override
+			public int compare(ParameterInfo pInfoLeft, ParameterInfo pInfoRight) {
+				return pInfoLeft.getOldName().compareTo(pInfoRight.getOldName());
+			}
+		});
+
+		BundleCreator(Collection<Stage> stages) {
+			// Initialize all the variables that we would need
+			for (Stage stage : stages) {
+				variables.addAll(stage.getParameterInfo());
+			}
+		}
+
+		// Create the class first
+		// Decide on how to display and move it
+
+		AbstractTypeDeclaration createNewNestedClass() {
+			TypeDeclaration bundleClass= fAST.newTypeDeclaration();
+			bundleClass.setName(fAST.newSimpleName(BUNDLE_CLASS_NAME));
+
+			@SuppressWarnings("unchecked")
+			List<BodyDeclaration> bodyDeclarations= bundleClass.bodyDeclarations();
+
+			for (ParameterInfo pInfo : variables) {
+				VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
+				fragment.setName(fAST.newSimpleName(pInfo.getOldName()));
+
+				FieldDeclaration field= fAST.newFieldDeclaration(fragment);
+				IVariableBinding varType= pInfo.getOldBinding();
+				field.setType(fAST.newSimpleType(fAST.newSimpleName(resolveType(varType))));
+
+				bodyDeclarations.add(field);
+			}
+
+			return bundleClass;
 		}
 	}
 
@@ -430,6 +489,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 	@Override
 	public Change createChange(IProgressMonitor pm) throws CoreException {
 		pm.beginTask("", 2); //$NON-NLS-1$
+
+		BundleCreator bc= new BundleCreator(stages.values());
+		AbstractTypeDeclaration newClass= bc.createNewNestedClass();
+		System.out.println(newClass);
 
 		return new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
 //		try {
