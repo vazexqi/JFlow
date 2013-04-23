@@ -17,6 +17,8 @@ public class JFlowRefactoringCoreMessages extends NLS {
 
 	public static String ExtractClosureRefactoring_change_name;
 
+	public static String ExtractClosureRefactoring_channel_textedit_description;
+
 	public static String ExtractClosureRefactoring_descriptor_description;
 
 	public static String ExtractClosureRefactoring_descriptor_description_short;

@@ -14,21 +14,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
-import org.eclipse.jdt.core.IJavaElement;
-import org.eclipse.jdt.core.IType;
-import org.eclipse.jdt.core.ITypeHierarchy;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ArrayAccess;
@@ -38,9 +32,11 @@ import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -100,72 +96,14 @@ import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
 /**
- * Extracts a closure in a compilation unit based on a text selection range.
+ * Extracts a closure in a compilation unit based on a text selection range. The text selection
+ * range must be within a FOR loop and contain annotations of the form // Begin StageX and // End
+ * StageX for the analysis to work.
  * 
- * @author Nicholas Chen
+ * @author nchen
  */
 @SuppressWarnings("restriction")
 public class ExtractClosureRefactoring extends Refactoring {
-
-	/**
-	 * Locates the existing DataflowChannels and the names and finds new unique names for them. XXX:
-	 * I think we can remove this if we are doing all the stages at once.
-	 * 
-	 */
-	private static final class DataflowChannelVisitor extends ASTVisitor {
-		private int largestChannelNumber= 0;
-
-		private IProgressMonitor pm;
-
-		public DataflowChannelVisitor(IProgressMonitor pm) {
-			this.pm= pm;
-		}
-
-		@Override
-		public boolean visit(VariableDeclarationStatement node) {
-			ITypeBinding binding= node.getType().resolveBinding();
-			IJavaElement javaElement= binding.getJavaElement();
-			if (javaElement != null) {
-
-				IType type= (IType)binding.getJavaElement();
-				try {
-					ITypeHierarchy supertypeHierarchy= type.newSupertypeHierarchy(pm);
-					IType[] allInterfaces= supertypeHierarchy.getAllInterfaces();
-					for (IType interfaceType : allInterfaces) {
-						String fullyQualifiedName= interfaceType.getFullyQualifiedName();
-						if (fullyQualifiedName.equals(DATAFLOWQUEUE_INTERFACE)) {
-							// This is safe because VariableDeclarationStatement.fragment() returns a list of VariableDeclarationFragment
-							@SuppressWarnings("unchecked")
-							List<VariableDeclarationFragment> fragments= (List<VariableDeclarationFragment>)node.fragments();
-							for (VariableDeclarationFragment fragment : fragments) {
-								String identifier= fragment.getName().getIdentifier();
-								Pattern pattern= Pattern.compile(GENERIC_CHANNEL_NAME + "(\\d+)"); //$NON-NLS-1$
-								Matcher matcher= pattern.matcher(identifier);
-								if (matcher.find()) {
-									String group= matcher.group(1);
-									determineLargestCount(group);
-								}
-							}
-						}
-
-					}
-				} catch (JavaModelException e) {
-					e.printStackTrace();
-				}
-
-			}
-			return super.visit(node);
-		}
-
-		private void determineLargestCount(String channelName) {
-			int parseInt= Integer.parseInt(channelName);
-			largestChannelNumber= parseInt > getLargestChannelNumber() ? parseInt : getLargestChannelNumber();
-		}
-
-		public int getLargestChannelNumber() {
-			return largestChannelNumber;
-		}
-	}
 
 	/**
 	 * A structure to group together all the useful information for each stage. This structure is
@@ -366,6 +304,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return JFlowRefactoringCoreMessages.ExtractClosureRefactoring_name;
 	}
 
+	// INITIALIZATION OF ANALYZERS
+	//////////////////////////////
+
 	/**
 	 * Checks if the refactoring can be activated.
 	 * 
@@ -442,13 +383,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-	private MethodDeclaration locateSelectedMethod() {
-		NodeFinder nodeFinder= new NodeFinder(fRoot, fSelectionStart, fSelectionLength);
-		ASTNode coveringNode= nodeFinder.getCoveringNode();
-		MethodDeclaration methodDeclaration= (MethodDeclaration)ASTNodes.getParent(coveringNode, MethodDeclaration.class);
-		return methodDeclaration;
-	}
-
 	private void initializePDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
 		// Set up the analysis engine
 		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
@@ -475,6 +409,24 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
+	// LOCATING NODES
+	//////////////////
+
+	private MethodDeclaration locateSelectedMethod() {
+		NodeFinder nodeFinder= new NodeFinder(fRoot, fSelectionStart, fSelectionLength);
+		ASTNode coveringNode= nodeFinder.getCoveringNode();
+		MethodDeclaration methodDeclaration= (MethodDeclaration)ASTNodes.getParent(coveringNode, MethodDeclaration.class);
+		return methodDeclaration;
+	}
+
+	private Statement locateEnclosingLoopStatement() {
+		NodeFinder nodeFinder= new NodeFinder(fRoot, fSelectionStart, fSelectionLength);
+		ASTNode node= nodeFinder.getCoveringNode();
+		do {
+			node= node.getParent();
+		} while (node != null && !(node instanceof EnhancedForStatement || node instanceof ForStatement));
+		return (Statement)node;
+	}
 
 	/* (non-Javadoc)
 	 * Method declared in Refactoring
@@ -497,7 +449,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 
 		try {
-			BodyDeclaration declaration= locateSelectedMethod();
+			BodyDeclaration methodDecl= locateSelectedMethod();
 			fRewriter= ASTRewrite.create(fAST);
 
 			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
@@ -509,16 +461,37 @@ public class ExtractClosureRefactoring extends Refactoring {
 			// BUNDLE
 			//////////
 
-			// TODO: Move this to the messages.properties
 			TextEditGroup insertClassDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_bundle_textedit_description);
 			result.addTextEditGroup(insertClassDesc);
 
 			BundleCreator bc= new BundleCreator(stages.values());
 			AbstractTypeDeclaration newClass= bc.createNewNestedClass();
 
-			ChildListPropertyDescriptor desc= (ChildListPropertyDescriptor)declaration.getLocationInParent();
-			ListRewrite container= fRewriter.getListRewrite(declaration.getParent(), desc);
-			container.insertBefore(newClass, declaration, insertClassDesc);
+			ChildListPropertyDescriptor methodDeclDescriptor= (ChildListPropertyDescriptor)methodDecl.getLocationInParent();
+			ListRewrite methodDeclContainer= fRewriter.getListRewrite(methodDecl.getParent(), methodDeclDescriptor);
+			methodDeclContainer.insertBefore(newClass, methodDecl, insertClassDesc);
+
+			// CHANNEL
+			//////////
+
+			Statement forStatement= locateEnclosingLoopStatement();
+
+			TextEditGroup insertChannelDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_channel_textedit_description);
+			result.addTextEditGroup(insertChannelDesc);
+
+			List<Statement> channelStatements= createChannelStatements();
+
+			ChildListPropertyDescriptor forStatementDescriptor= (ChildListPropertyDescriptor)forStatement.getLocationInParent();
+			ListRewrite forStatementContainer= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
+
+			for (int index= 0; index < channelStatements.size(); index++) {
+				if (index == 0) { // First one
+					forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
+				} else {
+					forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
+				}
+			}
+
 //
 //			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
 //
@@ -549,6 +522,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 //			ExpressionStatement closureInvocationStatement= createClosureInvocationStatement(declaration, selectedNodes, closureEditGroup, pm);
 //			sentinelRewriter.replace(sentinel, closureInvocationStatement, closureEditGroup);
 //
+			// IMPORTS
+			//////////
+
+			fImportRewriter.addImport(DATAFLOWQUEUE_TYPE);
+
 			if (fImportRewriter.hasRecordedChanges()) {
 				TextEdit edit= fImportRewriter.rewriteImports(null);
 				root.addChild(edit);
@@ -559,6 +537,20 @@ public class ExtractClosureRefactoring extends Refactoring {
 		} finally {
 			pm.done();
 		}
+	}
+
+	private List<Statement> createChannelStatements() {
+		List<Statement> channelStatements= new ArrayList<Statement>();
+
+		// Create the statements in reverse order to make it easier to insert later
+		for (int i= stages.size() - 1; i >= 0; i--) {
+			String channelDeclarationStatement= String.format("final DataflowQueue<%s> %s%d = new DataflowQueue<%s>();", BundleCreator.BUNDLE_CLASS_NAME, GENERIC_CHANNEL_NAME, i, //$NON-NLS-1$
+					BundleCreator.BUNDLE_CLASS_NAME);
+			Statement newStatement= (Statement)ASTNodeFactory.newStatement(fAST, channelDeclarationStatement);
+			channelStatements.add(newStatement);
+		}
+
+		return channelStatements;
 	}
 
 	private ExpressionStatement createClosureInvocationStatement(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
@@ -624,9 +616,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 
 	private int generateFreshChannelNumber(BodyDeclaration declaration, IProgressMonitor pm) {
-		DataflowChannelVisitor channelNameCollector= new DataflowChannelVisitor(pm);
-		declaration.accept(channelNameCollector);
-		return channelNameCollector.getLargestChannelNumber() + 1;
+		return 0; // BOGUS VALUE
 	}
 
 
