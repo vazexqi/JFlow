@@ -449,7 +449,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 
 		try {
-			BodyDeclaration methodDecl= locateSelectedMethod();
 			fRewriter= ASTRewrite.create(fAST);
 
 			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
@@ -458,39 +457,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 			MultiTextEdit root= new MultiTextEdit();
 			result.setEdit(root);
 
-			// BUNDLE
-			//////////
-
-			TextEditGroup insertClassDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_bundle_textedit_description);
-			result.addTextEditGroup(insertClassDesc);
-
-			BundleCreator bc= new BundleCreator(stages.values());
-			AbstractTypeDeclaration newClass= bc.createNewNestedClass();
-
-			ChildListPropertyDescriptor methodDeclDescriptor= (ChildListPropertyDescriptor)methodDecl.getLocationInParent();
-			ListRewrite methodDeclContainer= fRewriter.getListRewrite(methodDecl.getParent(), methodDeclDescriptor);
-			methodDeclContainer.insertBefore(newClass, methodDecl, insertClassDesc);
-
-			// CHANNEL
-			//////////
-
-			Statement forStatement= locateEnclosingLoopStatement();
-
-			TextEditGroup insertChannelDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_channel_textedit_description);
-			result.addTextEditGroup(insertChannelDesc);
-
-			List<Statement> channelStatements= createChannelStatements();
-
-			ChildListPropertyDescriptor forStatementDescriptor= (ChildListPropertyDescriptor)forStatement.getLocationInParent();
-			ListRewrite forStatementContainer= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
-
-			for (int index= 0; index < channelStatements.size(); index++) {
-				if (index == 0) { // First one
-					forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
-				} else {
-					forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
-				}
-			}
+			createMethodBundle(result);
+			createChannels(result);
 
 //
 //			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
@@ -536,6 +504,41 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return result;
 		} finally {
 			pm.done();
+		}
+	}
+
+
+	private void createMethodBundle(final CompilationUnitChange result) {
+		BodyDeclaration methodDecl= locateSelectedMethod();
+
+		TextEditGroup insertClassDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_bundle_textedit_description);
+		result.addTextEditGroup(insertClassDesc);
+
+		BundleCreator bc= new BundleCreator(stages.values());
+		AbstractTypeDeclaration newClass= bc.createNewNestedClass();
+
+		ChildListPropertyDescriptor methodDeclDescriptor= (ChildListPropertyDescriptor)methodDecl.getLocationInParent();
+		ListRewrite methodDeclContainer= fRewriter.getListRewrite(methodDecl.getParent(), methodDeclDescriptor);
+		methodDeclContainer.insertBefore(newClass, methodDecl, insertClassDesc);
+	}
+
+	private void createChannels(final CompilationUnitChange result) {
+		Statement forStatement= locateEnclosingLoopStatement();
+
+		TextEditGroup insertChannelDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_channel_textedit_description);
+		result.addTextEditGroup(insertChannelDesc);
+
+		List<Statement> channelStatements= createChannelStatements();
+
+		ChildListPropertyDescriptor forStatementDescriptor= (ChildListPropertyDescriptor)forStatement.getLocationInParent();
+		ListRewrite forStatementContainer= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
+
+		for (int index= 0; index < channelStatements.size(); index++) {
+			if (index == 0) { // First one
+				forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
+			} else {
+				forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
+			}
 		}
 	}
 
