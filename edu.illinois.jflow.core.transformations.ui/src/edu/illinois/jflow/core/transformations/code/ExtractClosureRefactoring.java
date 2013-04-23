@@ -20,50 +20,32 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
-import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.ArrayAccess;
-import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
-import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
-import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.ForStatement;
-import org.eclipse.jdt.core.dom.IExtendedModifier;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
-import org.eclipse.jdt.core.dom.Modifier;
-import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NodeFinder;
-import org.eclipse.jdt.core.dom.ParenthesizedExpression;
-import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
-import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
-import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.ImportRewriteContext;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 import org.eclipse.jdt.core.refactoring.CompilationUnitChange;
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
-import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
-import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
@@ -209,8 +191,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 			}
 		}
 
-		// Create the class first
-		// Decide on how to display and move it
+		private String resolveType(IVariableBinding binding) {
+			ITypeBinding type= binding.getType();
+			return type.getName();
+		}
 
 		AbstractTypeDeclaration createNewNestedClass() {
 			TypeDeclaration bundleClass= fAST.newTypeDeclaration();
@@ -247,9 +231,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private int fSelectionLength;
 
 	private ASTRewrite fRewriter;
-
-	//XXX:Remove me
-	private List<ParameterInfo> fParameterInfos;
 
 	private Map<Integer, Stage> stages;
 
@@ -507,7 +488,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-
 	private void createMethodBundle(final CompilationUnitChange result) {
 		BodyDeclaration methodDecl= locateSelectedMethod();
 
@@ -554,300 +534,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 
 		return channelStatements;
-	}
-
-	private ExpressionStatement createClosureInvocationStatement(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
-			TextEditGroup closureEditGroup,
-			IProgressMonitor pm) throws JavaModelException {
-		ClassInstanceCreation dataflowClosure= createNewDataflowClosure(pdgAnalyzer, analyzer, declaration, selectedNodes, fCUnit.findRecommendedLineSeparator(), closureEditGroup, pm);
-		MethodInvocation closureInvocation= createClosureInvocation(dataflowClosure);
-		ExpressionStatement closureInvocationStatement= fAST.newExpressionStatement(closureInvocation);
-		return closureInvocationStatement;
-	}
-
-	private void updateExceptions(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, TextEditGroup closureEditGroup) {
-		// If there was indeed a read using getVal on a DataflowChannel, then there is a potential exception
-		if (pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes()).size() != 0) {
-			MethodDeclaration method= (MethodDeclaration)declaration;
-			// This is safe since MethodDeclaration THROWN_EXCEPTIONS_PROPERTY returns a list of Name
-			@SuppressWarnings("unchecked")
-			List<Name> exceptions= (List<Name>)fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).getOriginalList();
-			for (Name name : exceptions) {
-				if (name.getFullyQualifiedName().matches("InterruptedException")) //$NON-NLS-1$
-					return;
-			}
-			Name exception= ASTNodeFactory.newName(fAST, "InterruptedException"); //$NON-NLS-1$
-			fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).insertLast(exception, closureEditGroup);
-		}
-	}
-
-	private List<ASTNode> createTempVariablesForChannels(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, TextEditGroup closureEditGroup,
-			IProgressMonitor pm) {
-		List<ASTNode> nodes= new ArrayList<ASTNode>();
-		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialReads : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
-			VariableDeclarationStatement tempVariable= createDeclaration(analyzer, potentialReads, createChannelRead(channelNumber));
-			nodes.add(tempVariable);
-			channelNumber++;
-		}
-
-		return nodes;
-	}
-
-	private Expression createChannelRead(int channelNumber) {
-		MethodInvocation methodInvocation= fAST.newMethodInvocation();
-		methodInvocation.setExpression(fAST.newSimpleName(GENERIC_CHANNEL_NAME + channelNumber));
-		methodInvocation.setName(fAST.newSimpleName("getVal")); //$NON-NLS-1$
-		return methodInvocation;
-	}
-
-	private void addDataflowChannels(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, Block sentinel, ListRewrite sentinelRewriter,
-			TextEditGroup closureEditGroup, IProgressMonitor pm) {
-		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		if (analyzer.getPotentialReadsOutsideOfClosure().length != 0) {
-			for (IVariableBinding potentialReads : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
-				// Use string generation since this is a single statement
-				String channel= "final DataflowQueue<" + resolveType(potentialReads) + "> " + GENERIC_CHANNEL_NAME + channelNumber + "= new DataflowQueue<" + resolveType(potentialReads) + ">();"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-				ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
-				sentinelRewriter.insertBefore(newStatement, sentinel, closureEditGroup);
-				channelNumber++;
-			}
-
-			fImportRewriter.addImport(DATAFLOWQUEUE_TYPE);
-		}
-	}
-
-
-	private int generateFreshChannelNumber(BodyDeclaration declaration, IProgressMonitor pm) {
-		return 0; // BOGUS VALUE
-	}
-
-
-	// TODO: Is there a utility class that does this mapping?
-	final static Map<String, String> primitivesToClass= new HashMap<String, String>();
-	static {
-		primitivesToClass.put("char", "Character"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("byte", "Byte"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("short", "Short"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("int", "Integer"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("long", "Long"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("float", "Float"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("double", "Double"); //$NON-NLS-1$ //$NON-NLS-2$
-		primitivesToClass.put("boolean", "Boolean"); //$NON-NLS-1$ //$NON-NLS-2$
-	}
-
-	private String resolveType(IVariableBinding binding) {
-		ITypeBinding type= binding.getType();
-		if (type.isPrimitive())
-			return primitivesToClass.get(type.getName());
-		return type.getName();
-	}
-
-	private VariableDeclaration getVariableDeclaration(ExtractClosureAnalyzer analyzer, ParameterInfo parameter) {
-		return ASTNodes.findVariableDeclaration(parameter.getOldBinding(), analyzer.getEnclosingBodyDeclaration());
-	}
-
-	private VariableDeclarationStatement createDeclaration(ExtractClosureAnalyzer analyzer, IVariableBinding binding, Expression intilizer) {
-		VariableDeclaration original= ASTNodes.findVariableDeclaration(binding, analyzer.getEnclosingBodyDeclaration());
-		VariableDeclarationFragment fragment= fAST.newVariableDeclarationFragment();
-		fragment.setName((SimpleName)ASTNode.copySubtree(fAST, original.getName()));
-		fragment.setInitializer(intilizer);
-		VariableDeclarationStatement result= fAST.newVariableDeclarationStatement(fragment);
-		// This is safe because we are dealing exclusively with ASTNode
-		@SuppressWarnings("unchecked")
-		List<ASTNode> copySubtrees= (List<ASTNode>)ASTNode.copySubtrees(fAST, ASTNodes.getModifiers(original));
-		@SuppressWarnings("unchecked")
-		List<ASTNode> modifiers= (List<ASTNode>)result.modifiers();
-		modifiers.addAll(copySubtrees);
-		result.setType(ASTNodeFactory.newType(fAST, original, fImportRewriter, new ContextSensitiveImportRewriteContext(original, fImportRewriter)));
-		return result;
-	}
-
-	private MethodInvocation createClosureInvocation(ClassInstanceCreation dataflowClosure) {
-		MethodInvocation closureInvocation= fAST.newMethodInvocation();
-		closureInvocation.setName(fAST.newSimpleName(CLOSURE_INVOCATION_METHOD_NAME));
-		closureInvocation.setExpression(dataflowClosure);
-		createClosureArguments(closureInvocation);
-		return closureInvocation;
-	}
-
-	private void createClosureArguments(MethodInvocation closureInvocation) {
-		// This is safe since MethodInvocation.arguments() returns a list of Expression
-		@SuppressWarnings("unchecked")
-		List<Expression> arguments= (List<Expression>)closureInvocation.arguments();
-		for (int i= 0; i < fParameterInfos.size(); i++) {
-			ParameterInfo parameter= fParameterInfos.get(i);
-			arguments.add(ASTNodeFactory.newName(fAST, parameter.getOldName()));
-		}
-	}
-
-	/**
-	 * Create an ASTNode similar to
-	 * 
-	 * new DataFlowMessagingRunnable(...){...}
-	 * 
-	 * @param selectedNodes
-	 * @param findRecommendedLineSeparator
-	 * @param editGroup
-	 * @return
-	 */
-	private ClassInstanceCreation createNewDataflowClosure(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
-			String findRecommendedLineSeparator,
-			TextEditGroup editGroup, IProgressMonitor pm) {
-		ClassInstanceCreation dataflowClosure= fAST.newClassInstanceCreation();
-
-		// Create the small chunks
-		augmentWithTypeInfo(analyzer, dataflowClosure);
-		augmentWithConstructorArgument(dataflowClosure);
-		augmentWithAnonymousClassDeclaration(pdgAnalyzer, analyzer, declaration, dataflowClosure, selectedNodes, editGroup, pm);
-
-		return dataflowClosure;
-	}
-
-	private void augmentWithTypeInfo(ExtractClosureAnalyzer analyzer, ClassInstanceCreation dataflowClosure) {
-		ImportRewriteContext context= new ContextSensitiveImportRewriteContext(analyzer.getEnclosingBodyDeclaration(), fImportRewriter);
-		fImportRewriter.addImport(CLOSURE_QUALIFIED_TYPE, context);
-		dataflowClosure.setType(fAST.newSimpleType(fAST.newName(CLOSURE_TYPE)));
-	}
-
-	private void augmentWithConstructorArgument(ClassInstanceCreation dataflowClosure) {
-		String argumentsCount= new Integer(fParameterInfos.size()).toString();
-		// This is safe since ClassInstanceCreation.arguments() can only return Expression
-		@SuppressWarnings("unchecked")
-		List<Expression> arguments= (List<Expression>)dataflowClosure.arguments();
-		arguments.add(fAST.newNumberLiteral(argumentsCount));
-	}
-
-	private void augmentWithAnonymousClassDeclaration(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ClassInstanceCreation dataflowClosure,
-			ASTNode[] selectedNodes,
-			TextEditGroup editGroup, IProgressMonitor pm) {
-		AnonymousClassDeclaration closure= fAST.newAnonymousClassDeclaration();
-		MethodDeclaration createRunMethodForClosure= createRunMethodForClosure(pdgAnalyzer, analyzer, declaration, selectedNodes, editGroup, pm);
-		// This is safe since AnonymousClassDeclaration.bodyDeclarations can only return a list of BodyDeclaration
-		@SuppressWarnings("unchecked")
-		List<BodyDeclaration> bodyDeclarations= (List<BodyDeclaration>)closure.bodyDeclarations();
-		bodyDeclarations.add(createRunMethodForClosure);
-		dataflowClosure.setAnonymousClassDeclaration(closure);
-	}
-
-	/**
-	 * Create a ASTNode similar to
-	 * 
-	 * protected void doRun(Object... arguments) { ... }
-	 * 
-	 * @param selectedNodes - The statements to be enclosed in the doRun(...) method
-	 * @param editGroup
-	 * @return
-	 */
-	private MethodDeclaration createRunMethodForClosure(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
-			TextEditGroup editGroup, IProgressMonitor pm) {
-		MethodDeclaration runMethod= fAST.newMethodDeclaration();
-		List<Modifier> newModifiers= ASTNodeFactory.newModifiers(fAST, Modifier.PROTECTED);
-
-		// This is safe since MethodDeclaration.modifiers() returns a list of IExtendedModifier
-		@SuppressWarnings("unchecked")
-		List<IExtendedModifier> modifiers= (List<IExtendedModifier>)runMethod.modifiers();
-		modifiers.addAll(newModifiers);
-		runMethod.setReturnType2(fAST.newPrimitiveType(org.eclipse.jdt.core.dom.PrimitiveType.VOID));
-		runMethod.setName(fAST.newSimpleName(CLOSURE_METHOD));
-
-		// This is safe since MethodDeclaration.paramters() returns a list of SingleVariableDeclaration
-		@SuppressWarnings("unchecked")
-		List<SingleVariableDeclaration> parameters= (List<SingleVariableDeclaration>)runMethod.parameters();
-		parameters.add(createObjectArrayArgument());
-		runMethod.setBody(createClosureBody(pdgAnalyzer, analyzer, declaration, selectedNodes, editGroup, pm));
-
-		return runMethod;
-	}
-
-	/**
-	 * Creates an the Object... arguments type
-	 * 
-	 * @return
-	 */
-	private SingleVariableDeclaration createObjectArrayArgument() {
-		SingleVariableDeclaration parameter= fAST.newSingleVariableDeclaration();
-		parameter.setVarargs(true);
-		parameter.setType(fAST.newSimpleType(fAST.newSimpleName(CLOSURE_PARAMETER_TYPE)));
-		parameter.setName(fAST.newSimpleName(CLOSURE_PARAMETER_NAME));
-		return parameter;
-	}
-
-	private Block createClosureBody(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes, TextEditGroup editGroup,
-			IProgressMonitor pm) {
-		Block methodBlock= fAST.newBlock();
-		ListRewrite statements= fRewriter.getListRewrite(methodBlock, Block.STATEMENTS_PROPERTY);
-
-		// Locals that are not passed as an arguments since the extracted method only
-		// writes to them
-		List<IVariableBinding> unfilteredMethodLocals= pdgAnalyzer.getLocalVariableBindings(analyzer.getSelectedNodes());
-		List<IVariableBinding> methodLocals= removeSelectedDeclarations(analyzer, unfilteredMethodLocals);
-		for (IVariableBinding binding : methodLocals) {
-			@SuppressWarnings("unchecked")
-			List<Statement> methodBlockStatements= (List<Statement>)methodBlock.statements();
-			methodBlockStatements.add(createDeclaration(analyzer, binding, null));
-		}
-
-		// Update the bindings to the parameters
-		int argumentPosition= 0;
-		for (ParameterInfo parameter : fParameterInfos) {
-			for (int n= 0; n < selectedNodes.length; n++) {
-				SimpleName[] oldNames= LinkedNodeFinder.findByBinding(selectedNodes[n], parameter.getOldBinding());
-				for (int i= 0; i < oldNames.length; i++) {
-					fRewriter.replace(oldNames[i], createCastParameters(analyzer, parameter, argumentPosition), null);
-				}
-			}
-			argumentPosition++;
-		}
-
-		ListRewrite source= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
-		ASTNode toMove= source.createMoveTarget(selectedNodes[0], selectedNodes[selectedNodes.length - 1], null, editGroup);
-		statements.insertLast(toMove, editGroup);
-
-		// Add the potential writes at the end (in case multiple writes have occurred and we only want the latest values)  
-		int channelNumber= generateFreshChannelNumber(declaration, pm);
-		for (IVariableBinding potentialWrites : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
-			// Use string generation since this is a single statement
-			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-			ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
-			statements.insertLast(newStatement, editGroup);
-			channelNumber++;
-		}
-
-
-		return methodBlock;
-	}
-
-	private List<IVariableBinding> removeSelectedDeclarations(ExtractClosureAnalyzer analyzer, List<IVariableBinding> unfilteredMethodLocals) {
-		List<IVariableBinding> result= new ArrayList<IVariableBinding>();
-		Selection selection= analyzer.getSelection();
-		for (IVariableBinding binding : unfilteredMethodLocals) {
-			ASTNode decl= ((CompilationUnit)analyzer.getEnclosingBodyDeclaration().getRoot()).findDeclaringNode(binding);
-			if (!selection.covers(decl))
-				result.add(binding);
-		}
-		return result;
-	}
-
-	private ASTNode createCastParameters(ExtractClosureAnalyzer analyzer, ParameterInfo parameter, int argumentsPosition) {
-		ParenthesizedExpression argumentExpression= fAST.newParenthesizedExpression();
-		CastExpression castExpression= fAST.newCastExpression();
-
-		IVariableBinding oldBinding= parameter.getOldBinding();
-		if (oldBinding.getType().isPrimitive()) {
-			castExpression.setType(fAST.newSimpleType(fAST.newName(resolveType(oldBinding))));
-		} else {
-			VariableDeclaration infoDecl= getVariableDeclaration(analyzer, parameter);
-			castExpression.setType(ASTNodeFactory.newType(fAST, infoDecl, fImportRewriter, null));
-		}
-
-		ArrayAccess arrayAccess= fAST.newArrayAccess();
-		arrayAccess.setArray(fAST.newSimpleName(CLOSURE_PARAMETER_NAME));
-		arrayAccess.setIndex(fAST.newNumberLiteral(Integer.toString(argumentsPosition)));
-		castExpression.setExpression(arrayAccess);
-
-		argumentExpression.setExpression(castExpression);
-		return argumentExpression;
 	}
 
 
