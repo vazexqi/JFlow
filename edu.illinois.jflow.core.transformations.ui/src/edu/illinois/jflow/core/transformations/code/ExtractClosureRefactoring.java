@@ -76,7 +76,10 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
+import org.eclipse.ltk.core.refactoring.TextFileChange;
 import org.eclipse.ltk.core.refactoring.participants.ResourceChangeChecker;
+import org.eclipse.text.edits.MultiTextEdit;
+import org.eclipse.text.edits.TextEdit;
 import org.eclipse.text.edits.TextEditGroup;
 
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
@@ -136,7 +139,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 							List<VariableDeclarationFragment> fragments= (List<VariableDeclarationFragment>)node.fragments();
 							for (VariableDeclarationFragment fragment : fragments) {
 								String identifier= fragment.getName().getIdentifier();
-								Pattern pattern= Pattern.compile(GENERIC_CHANNEL_NAME + "(\\d+)");
+								Pattern pattern= Pattern.compile(GENERIC_CHANNEL_NAME + "(\\d+)"); //$NON-NLS-1$
 								Matcher matcher= pattern.matcher(identifier);
 								if (matcher.find()) {
 									String group= matcher.group(1);
@@ -248,7 +251,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * 
 	 */
 	final class BundleCreator {
-		static final String BUNDLE_CLASS_NAME= "Bundle";
+		static final String BUNDLE_CLASS_NAME= "Bundle"; //$NON-NLS-1$
 
 		// Distinguish the different parameter info from each stage by their names. While using names might sound absurd,
 		// recall that we can safely make the assumption that because that all the stages are within the same block, the names 
@@ -398,11 +401,11 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		// DEBUGGING
 		for (int stageNumber= 0; stageNumber < stages.values().size(); stageNumber++) {
-			System.out.println(String.format("STAGE: %d%n", stageNumber));
+			System.out.println(String.format("STAGE: %d%n", stageNumber)); //$NON-NLS-1$
 			for (ParameterInfo info : stages.get(stageNumber).getParameterInfo()) {
 				System.out.println(info);
 			}
-			System.out.println(String.format("%n%n"));
+			System.out.println(String.format("%n%n")); //$NON-NLS-1$
 		}
 		return result;
 	}
@@ -421,6 +424,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 		AnnotatedStagesFinder locator= new AnnotatedStagesFinder(fRoot, fDoc, methodDeclaration);
 
 		List<AnnotatedStage> annotatedStages= locator.locateStages();
+
+		// We do not fuse these two loops since we want to initialize all of them first before
+		// reporting any errors
+
 		for (int stageNumber= 0; stageNumber < annotatedStages.size(); stageNumber++) {
 			AnnotatedStage stage= annotatedStages.get(stageNumber);
 			ExtractClosureAnalyzer analyzer= new ExtractClosureAnalyzer(fCUnit, stage.getSelection());
@@ -428,8 +435,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			stages.put(stageNumber, stageInfo);
 		}
 
-		// We do not fuse these two loops since we want to initialize all of them first before
-		// reporting any errors
 		for (Stage stage : stages.values()) {
 			ExtractClosureAnalyzer analyzer= stage.getAnalyzer();
 			fRoot.accept(analyzer);
@@ -490,20 +495,30 @@ public class ExtractClosureRefactoring extends Refactoring {
 	public Change createChange(IProgressMonitor pm) throws CoreException {
 		pm.beginTask("", 2); //$NON-NLS-1$
 
-		BundleCreator bc= new BundleCreator(stages.values());
-		AbstractTypeDeclaration newClass= bc.createNewNestedClass();
-		System.out.println(newClass);
 
-		return new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
-//		try {
-//			BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
-//			fRewriter= ASTRewrite.create(declaration.getAST());
-//
-//			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
-//			result.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
-//
-//			MultiTextEdit root= new MultiTextEdit();
-//			result.setEdit(root);
+		try {
+			BodyDeclaration declaration= locateSelectedMethod();
+			fRewriter= ASTRewrite.create(fAST);
+
+			final CompilationUnitChange result= new CompilationUnitChange(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_change_name, fCUnit);
+			result.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
+
+			MultiTextEdit root= new MultiTextEdit();
+			result.setEdit(root);
+
+			// BUNDLE
+			//////////
+
+			// TODO: Move this to the messages.properties
+			TextEditGroup insertClassDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_bundle_textedit_description);
+			result.addTextEditGroup(insertClassDesc);
+
+			BundleCreator bc= new BundleCreator(stages.values());
+			AbstractTypeDeclaration newClass= bc.createNewNestedClass();
+
+			ChildListPropertyDescriptor desc= (ChildListPropertyDescriptor)declaration.getLocationInParent();
+			ListRewrite container= fRewriter.getListRewrite(declaration.getParent(), desc);
+			container.insertBefore(newClass, declaration, insertClassDesc);
 //
 //			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
 //
@@ -534,16 +549,16 @@ public class ExtractClosureRefactoring extends Refactoring {
 //			ExpressionStatement closureInvocationStatement= createClosureInvocationStatement(declaration, selectedNodes, closureEditGroup, pm);
 //			sentinelRewriter.replace(sentinel, closureInvocationStatement, closureEditGroup);
 //
-//			if (fImportRewriter.hasRecordedChanges()) {
-//				TextEdit edit= fImportRewriter.rewriteImports(null);
-//				root.addChild(edit);
-//				result.addTextEditGroup(new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports, new TextEdit[] { edit }));
-//			}
-//			root.addChild(fRewriter.rewriteAST());
-//			return result;
-//		} finally {
-//			pm.done();
-//		}
+			if (fImportRewriter.hasRecordedChanges()) {
+				TextEdit edit= fImportRewriter.rewriteImports(null);
+				root.addChild(edit);
+				result.addTextEditGroup(new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_organize_imports, new TextEdit[] { edit }));
+			}
+			root.addChild(fRewriter.rewriteAST());
+			return result;
+		} finally {
+			pm.done();
+		}
 	}
 
 	private ExpressionStatement createClosureInvocationStatement(PDGExtractClosureAnalyzer pdgAnalyzer, ExtractClosureAnalyzer analyzer, BodyDeclaration declaration, ASTNode[] selectedNodes,
@@ -563,10 +578,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 			@SuppressWarnings("unchecked")
 			List<Name> exceptions= (List<Name>)fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).getOriginalList();
 			for (Name name : exceptions) {
-				if (name.getFullyQualifiedName().matches("InterruptedException"))
+				if (name.getFullyQualifiedName().matches("InterruptedException")) //$NON-NLS-1$
 					return;
 			}
-			Name exception= ASTNodeFactory.newName(fAST, "InterruptedException");
+			Name exception= ASTNodeFactory.newName(fAST, "InterruptedException"); //$NON-NLS-1$
 			fRewriter.getListRewrite(method, MethodDeclaration.THROWN_EXCEPTIONS_PROPERTY).insertLast(exception, closureEditGroup);
 		}
 	}
@@ -587,7 +602,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	private Expression createChannelRead(int channelNumber) {
 		MethodInvocation methodInvocation= fAST.newMethodInvocation();
 		methodInvocation.setExpression(fAST.newSimpleName(GENERIC_CHANNEL_NAME + channelNumber));
-		methodInvocation.setName(fAST.newSimpleName("getVal"));
+		methodInvocation.setName(fAST.newSimpleName("getVal")); //$NON-NLS-1$
 		return methodInvocation;
 	}
 
@@ -597,7 +612,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		if (analyzer.getPotentialReadsOutsideOfClosure().length != 0) {
 			for (IVariableBinding potentialReads : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
 				// Use string generation since this is a single statement
-				String channel= "final DataflowQueue<" + resolveType(potentialReads) + "> " + GENERIC_CHANNEL_NAME + channelNumber + "= new DataflowQueue<" + resolveType(potentialReads) + ">();";
+				String channel= "final DataflowQueue<" + resolveType(potentialReads) + "> " + GENERIC_CHANNEL_NAME + channelNumber + "= new DataflowQueue<" + resolveType(potentialReads) + ">();"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 				ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
 				sentinelRewriter.insertBefore(newStatement, sentinel, closureEditGroup);
 				channelNumber++;
@@ -618,14 +633,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 	// TODO: Is there a utility class that does this mapping?
 	final static Map<String, String> primitivesToClass= new HashMap<String, String>();
 	static {
-		primitivesToClass.put("char", "Character");
-		primitivesToClass.put("byte", "Byte");
-		primitivesToClass.put("short", "Short");
-		primitivesToClass.put("int", "Integer");
-		primitivesToClass.put("long", "Long");
-		primitivesToClass.put("float", "Float");
-		primitivesToClass.put("double", "Double");
-		primitivesToClass.put("boolean", "Boolean");
+		primitivesToClass.put("char", "Character"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("byte", "Byte"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("short", "Short"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("int", "Integer"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("long", "Long"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("float", "Float"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("double", "Double"); //$NON-NLS-1$ //$NON-NLS-2$
+		primitivesToClass.put("boolean", "Boolean"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	private String resolveType(IVariableBinding binding) {
@@ -800,7 +815,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		int channelNumber= generateFreshChannelNumber(declaration, pm);
 		for (IVariableBinding potentialWrites : pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes())) {
 			// Use string generation since this is a single statement
-			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");";
+			String channel= GENERIC_CHANNEL_NAME + channelNumber + "." + DATAFLOWQUEUE_PUT_METHOD + "(" + potentialWrites.getName() + ");"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			ASTNode newStatement= ASTNodeFactory.newStatement(fAST, channel);
 			statements.insertLast(newStatement, editGroup);
 			channelNumber++;
