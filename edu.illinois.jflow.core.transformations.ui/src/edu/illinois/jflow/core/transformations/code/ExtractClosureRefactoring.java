@@ -117,10 +117,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return stage;
 		}
 
-		public PDGExtractClosureAnalyzer getPdgAnalyzer() {
-			return pdgAnalyzer;
-		}
-
 		public void setPdgAnalyzer(PDGExtractClosureAnalyzer pdgAnalyzer) {
 			this.pdgAnalyzer= pdgAnalyzer;
 		}
@@ -238,30 +234,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private static final String EMPTY= ""; //$NON-NLS-1$
 
-	// This section is specific to the API for GPars Dataflow
+	// GPARS
+	////////
 
-	public static final String CLOSURE_PARAMETER_NAME= "arguments"; //$NON-NLS-1$
+	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue";
 
-	public static final String CLOSURE_PARAMETER_TYPE= "Object"; //$NON-NLS-1$
-
-	public static final String CLOSURE_METHOD= "doRun"; //$NON-NLS-1$
-
-	public static final String CLOSURE_INVOCATION_METHOD_NAME= "call"; //$NON-NLS-1$
-
-	public static final String CLOSURE_PACKAGE= "groovyx.gpars"; //$NON-NLS-1$
-
-	public static final String CLOSURE_TYPE= "DataflowMessagingRunnable"; //$NON-NLS-1$
-
-	public static final String CLOSURE_QUALIFIED_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE; //$NON-NLS-1$
-
-	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
-
-	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
-
-	public static final String DATAFLOWQUEUE_PUT_METHOD= "bind"; //$NON-NLS-1$
+	public static final String DATAFLOWMESSAGING_TYPE= "groovyx.gpars.DataflowMessagingRunnable";
 
 	public static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
-
 
 	/**
 	 * Creates a new extract closure refactoring
@@ -414,10 +394,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 */
 	@Override
 	public RefactoringStatus checkFinalConditions(IProgressMonitor pm) throws CoreException {
-		pm.subTask(EMPTY);
-
 		RefactoringStatus result= new RefactoringStatus();
-		// EMPTY FOR NOW
 		return result;
 	}
 
@@ -475,6 +452,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			//////////
 
 			fImportRewriter.addImport(DATAFLOWQUEUE_TYPE);
+			fImportRewriter.addImport(DATAFLOWMESSAGING_TYPE);
 
 			if (fImportRewriter.hasRecordedChanges()) {
 				TextEdit edit= fImportRewriter.rewriteImports(null);
@@ -535,7 +513,4 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		return channelStatements;
 	}
-
-
-
 }
