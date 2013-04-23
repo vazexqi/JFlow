@@ -5,12 +5,7 @@
  */
 package edu.illinois.jflow.core.transformations.ui.refactoring;
 
-import java.util.Iterator;
-import java.util.List;
-
-import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jface.dialogs.IDialogSettings;
-import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.ui.refactoring.UserInputWizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
@@ -25,7 +20,6 @@ import edu.illinois.jflow.core.transformations.code.ExtractClosureRefactoring;
  * @author nchen
  * 
  */
-@SuppressWarnings("restriction")
 public class ExtractClosureInputPage extends UserInputWizardPage {
 
 	public static final String PAGE_NAME= "ExtractClosureInputPage";//$NON-NLS-1$
@@ -102,31 +96,4 @@ public class ExtractClosureInputPage extends UserInputWizardPage {
 		}
 		super.setVisible(visible);
 	}
-
-
-	private void parameterModified() {
-		setPageComplete(validatePage(false));
-	}
-
-	private RefactoringStatus validatePage(boolean text) {
-		RefactoringStatus result= new RefactoringStatus();
-		result.merge(validateParameters());
-		return result;
-	}
-
-
-	private RefactoringStatus validateParameters() {
-		RefactoringStatus result= new RefactoringStatus();
-		List<ParameterInfo> parameters= fRefactoring.getParameterInfos();
-		for (Iterator<ParameterInfo> iter= parameters.iterator(); iter.hasNext();) {
-			ParameterInfo info= iter.next();
-			if ("".equals(info.getNewName())) { //$NON-NLS-1$
-				result.addFatalError(JFlowRefactoringUIMessages.ExtractClosureInputPage_validation_emptyParameterName);
-				return result;
-			}
-		}
-		result.merge(fRefactoring.checkVarargOrder());
-		return result;
-	}
-
 }

@@ -8,7 +8,6 @@ package edu.illinois.jflow.core.transformations.code;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -17,7 +16,6 @@ import java.util.regex.Pattern;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
@@ -67,8 +65,6 @@ import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
-import org.eclipse.jdt.internal.corext.util.Messages;
-import org.eclipse.jdt.internal.ui.viewsupport.BasicElementLabels;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
@@ -415,31 +411,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 	}
 
-	/**
-	 * Returns the parameter infos.
-	 * 
-	 * @return a list of parameter infos.
-	 */
-	public List<ParameterInfo> getParameterInfos() {
-		return fParameterInfos;
-	}
-
-	/**
-	 * Checks if varargs are ordered correctly.
-	 * 
-	 * @return validation status
-	 */
-	public RefactoringStatus checkVarargOrder() {
-		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= iter.next();
-			if (info.isOldVarargs() && iter.hasNext()) {
-				return RefactoringStatus.createFatalErrorStatus(Messages.format(
-						JFlowRefactoringCoreMessages.ExtractClosureRefactoring_error_vararg_ordering,
-						BasicElementLabels.getJavaElementName(info.getOldName())));
-			}
-		}
-		return new RefactoringStatus();
-	}
 
 	/* (non-Javadoc)
 	 * Method declared in Refactoring
@@ -449,12 +420,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		pm.subTask(EMPTY);
 
 		RefactoringStatus result= new RefactoringStatus();
-		result.merge(checkVarargOrder());
-		pm.worked(1);
-		if (pm.isCanceled())
-			throw new OperationCanceledException();
-
-		pm.done();
+		// EMPTY FOR NOW
 		return result;
 	}
 
