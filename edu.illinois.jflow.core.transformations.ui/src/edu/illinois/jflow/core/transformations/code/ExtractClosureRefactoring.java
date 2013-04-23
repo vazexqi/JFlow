@@ -89,7 +89,6 @@ import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
 
-import edu.illinois.jflow.core.transformations.code.StagesLocator.SelectedStage;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
@@ -169,8 +168,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 	 * @author nchen
 	 * 
 	 */
-	private final class StageInfo {
-		final SelectedStage stage;
+	private final class Stage {
+		final AnnotatedStage stage;
 
 		final ExtractClosureAnalyzer analyzer;
 
@@ -178,7 +177,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		List<ParameterInfo> parameterInfo;
 
-		StageInfo(SelectedStage stage, ExtractClosureAnalyzer analyzer) {
+		Stage(AnnotatedStage stage, ExtractClosureAnalyzer analyzer) {
 			this.stage= stage;
 			this.analyzer= analyzer;
 		}
@@ -187,7 +186,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return analyzer;
 		}
 
-		public SelectedStage getStage() {
+		public AnnotatedStage getStage() {
 			return stage;
 		}
 
@@ -201,10 +200,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		public List<ParameterInfo> getParameterInfo() {
 			return parameterInfo;
-		}
-
-		public void setParameterInfo(List<ParameterInfo> parameterInfo) {
-			this.parameterInfo= parameterInfo;
 		}
 
 		private void initializeParameterInfos() {
@@ -259,7 +254,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	//XXX:Remove me
 	private List<ParameterInfo> fParameterInfos;
 
-	private Map<Integer, StageInfo> stages;
+	private Map<Integer, Stage> stages;
 
 	private IDocument fDoc;
 
@@ -304,7 +299,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		fRoot= null;
 		fSelectionStart= selectionStart;
 		fSelectionLength= selectionLength;
-		stages= new HashMap<Integer, StageInfo>();
+		stages= new HashMap<Integer, Stage>();
 	}
 
 	@Override
@@ -340,7 +335,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		initializeStageInfo();
 
-		for (StageInfo stage : stages.values()) {
+		for (Stage stage : stages.values()) {
 			ExtractClosureAnalyzer analyzer= stage.getAnalyzer();
 			fRoot.accept(analyzer);
 			// XXX: Remove the fImportRewriter parameter
@@ -357,7 +352,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			e.printStackTrace();
 		}
 
-		for (StageInfo stage : stages.values()) {
+		for (Stage stage : stages.values()) {
 			PDGExtractClosureAnalyzer analyzer= stage.getPdgAnalyzer();
 			analyzer.analyzeSelection();
 			stage.initializeParameterInfos();
@@ -368,13 +363,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private void initializeStageInfo() throws CoreException {
 		MethodDeclaration methodDeclaration= locateSelectedMethod();
-		StagesLocator locator= new StagesLocator(fRoot, fDoc, methodDeclaration);
+		AnnotatedStagesFinder locator= new AnnotatedStagesFinder(fRoot, fDoc, methodDeclaration);
 
-		List<SelectedStage> annotatedStages= locator.locateStages();
+		List<AnnotatedStage> annotatedStages= locator.locateStages();
 		for (int stageNumber= 0; stageNumber < annotatedStages.size(); stageNumber++) {
-			SelectedStage stage= annotatedStages.get(stageNumber);
+			AnnotatedStage stage= annotatedStages.get(stageNumber);
 			ExtractClosureAnalyzer analyzer= new ExtractClosureAnalyzer(fCUnit, stage.getSelection());
-			StageInfo stageInfo= new StageInfo(stage, analyzer);
+			Stage stageInfo= new Stage(stage, analyzer);
 			stages.put(stageNumber, stageInfo);
 		}
 	}
@@ -404,7 +399,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, fDoc);
 
 		for (int stageNumber= 0; stageNumber < stages.keySet().size(); stageNumber++) {
-			StageInfo stage= stages.get(stageNumber);
+			Stage stage= stages.get(stageNumber);
 			stage.setPdgAnalyzer(new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStage().getStageLines()));
 		}
 	}

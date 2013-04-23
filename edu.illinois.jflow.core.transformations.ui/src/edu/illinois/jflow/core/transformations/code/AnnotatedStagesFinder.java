@@ -10,7 +10,6 @@ import java.util.regex.Pattern;
 import org.eclipse.jdt.core.dom.Comment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
@@ -26,7 +25,7 @@ import com.ibm.wala.util.debug.Assertions;
  * @author nchen
  * 
  */
-public class StagesLocator {
+public class AnnotatedStagesFinder {
 	CompilationUnit cUnit;
 
 	MethodDeclaration methodDeclaration;
@@ -35,11 +34,11 @@ public class StagesLocator {
 
 	int methodEndOffset;
 
-	Map<Integer, SelectedStage> stages= new HashMap<Integer, SelectedStage>();
+	Map<Integer, AnnotatedStage> stages= new HashMap<Integer, AnnotatedStage>();
 
 	private IDocument doc;
 
-	public StagesLocator(CompilationUnit cUnit, IDocument doc, MethodDeclaration methodDeclaration) {
+	public AnnotatedStagesFinder(CompilationUnit cUnit, IDocument doc, MethodDeclaration methodDeclaration) {
 		this.cUnit= cUnit;
 		this.doc= doc;
 		this.methodDeclaration= methodDeclaration;
@@ -47,20 +46,20 @@ public class StagesLocator {
 		this.methodEndOffset= methodStartOffset + methodDeclaration.getLength();
 	}
 
-	public List<SelectedStage> locateStages() {
+	public List<AnnotatedStage> locateStages() {
 		@SuppressWarnings("unchecked")
 		List<Comment> commentList= cUnit.getCommentList();
 		for (Comment comment : commentList) {
 			if (comment.isLineComment()) { // We are only looking at line comments
 				int startOffset= comment.getStartPosition();
 				int endOffset= startOffset + comment.getLength();
-				if (startOffset >= methodStartOffset && endOffset <= methodEndOffset) {
+				if (isInsideMethod(startOffset, endOffset)) {
 					try {
 						String commentString= doc.get(comment.getStartPosition(), comment.getLength());
 						Integer stageNumber= locateStageNameIfPossible(commentString);
-						SelectedStage stageAnnotation= stages.get(stageNumber);
+						AnnotatedStage stageAnnotation= stages.get(stageNumber);
 						if (stageAnnotation == null) {
-							SelectedStage newStageAnnotation= new SelectedStage(stageNumber, doc);
+							AnnotatedStage newStageAnnotation= new AnnotatedStage(stageNumber, doc);
 							stages.put(stageNumber, newStageAnnotation);
 							stageAnnotation= newStageAnnotation;
 						}
@@ -76,10 +75,14 @@ public class StagesLocator {
 		return stagesToList();
 	}
 
-	private List<SelectedStage> stagesToList() {
-		List<SelectedStage> stagesList= new ArrayList<SelectedStage>();
+	private boolean isInsideMethod(int startOffset, int endOffset) {
+		return startOffset >= methodStartOffset && endOffset <= methodEndOffset;
+	}
+
+	private List<AnnotatedStage> stagesToList() {
+		List<AnnotatedStage> stagesList= new ArrayList<AnnotatedStage>();
 		for (int stageNumber= 1; stageNumber <= stages.size(); stageNumber++) {
-			SelectedStage stageAnnotationPair= stages.get(stageNumber);
+			AnnotatedStage stageAnnotationPair= stages.get(stageNumber);
 			Assertions.productionAssertion(stageAnnotationPair != null);
 			stagesList.add(stageAnnotationPair);
 		}
@@ -94,76 +97,5 @@ public class StagesLocator {
 			return Integer.parseInt(group);
 		} else
 			return null;
-	}
-
-	public static class SelectedStage {
-		Integer stageName;
-
-		IDocument doc;
-
-		Comment start;
-
-		Comment end;
-
-		public SelectedStage(Integer stageName, IDocument doc) {
-			this.doc= doc;
-			this.stageName= stageName;
-		}
-
-		/*
-		 * Assumes first comment to be added is the start comment 
-		 */
-		public void addComment(Comment comment) {
-			if (start == null) {
-				start= comment;
-			}
-			else if (end == null) {
-				end= comment;
-			} else {
-				throw new IllegalStateException("Already have begin and end comments");
-			}
-		}
-
-		public List<Integer> getStageLines() {
-			List<Integer> lines= new ArrayList<Integer>();
-			try {
-				// IDocument starts counting from 0 but we want to follow what the user sees in the editor
-				// that starts from 1.
-				int start= doc.getLineOfOffset(getStageStartOffset()) + 1;
-				int end= doc.getLineOfOffset(getStageEndOffset()) + 1;
-
-				// Grab everything including START and END
-				for (int line= start; line <= end; line++) {
-					lines.add(line);
-				}
-			} catch (BadLocationException e) {
-				e.printStackTrace();
-			}
-			return lines;
-		}
-
-		/*
-		 * Returns a Selection object representing the current stage
-		 */
-		@SuppressWarnings("restriction")
-		public Selection getSelection() {
-			return Selection.createFromStartEnd(getStageStartOffset(), getStageEndOffset());
-		}
-
-		/*
-		 * Returns the offset in the document, including the start comments
-		 */
-		private int getStageStartOffset() {
-			return start.getStartPosition();
-		}
-
-		/*
-		 * Returns the offset in the document, including the end comments;
-		 */
-		private int getStageEndOffset() {
-			return end.getStartPosition() + end.getLength();
-		}
-
-
 	}
 }
