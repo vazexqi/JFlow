@@ -341,6 +341,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 		// If we don't have any errors at this point, we can initialize the heavy-lifting parts
 		initializeStageAnalyzers();
 
+		// DEBUGGING
+		for (int stageNumber= 0; stageNumber < stages.values().size(); stageNumber++) {
+			System.out.println(String.format("STAGE: %d%n", stageNumber));
+			for (ParameterInfo info : stages.get(stageNumber).getParameterInfo()) {
+				System.out.println(info);
+			}
+			System.out.println(String.format("%n%n"));
+		}
 		return result;
 	}
 

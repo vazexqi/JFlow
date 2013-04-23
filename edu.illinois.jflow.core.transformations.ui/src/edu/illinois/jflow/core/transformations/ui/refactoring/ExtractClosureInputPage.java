@@ -9,9 +9,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
-import org.eclipse.jdt.internal.ui.refactoring.ChangeParametersControl;
-import org.eclipse.jdt.internal.ui.refactoring.IParameterListChangeListener;
-import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.ui.refactoring.UserInputWizardPage;
@@ -25,7 +22,7 @@ import edu.illinois.jflow.core.transformations.code.ExtractClosureRefactoring;
 /**
  * This is the input page for the Extract Closure Refactoring.
  * 
- * @author Nicholas Chen
+ * @author nchen
  * 
  */
 @SuppressWarnings("restriction")
@@ -62,29 +59,29 @@ public class ExtractClosureInputPage extends UserInputWizardPage {
 		layout.marginWidth= 0;
 		group.setLayout(layout);
 
-		//TODO: Should not have an empty parameter (need to substitute with continue node)
-		if (!fRefactoring.getParameterInfos().isEmpty()) {
-			ChangeParametersControl cp= new ChangeParametersControl(result, SWT.NONE,
-					JFlowRefactoringUIMessages.ExtractClosureInputPage_parameters,
-					new IParameterListChangeListener() {
-						public void parameterChanged(ParameterInfo parameter) {
-							parameterModified();
-						}
-
-						public void parameterListChanged() {
-							parameterModified();
-						}
-
-						public void parameterAdded(ParameterInfo parameter) {
-						}
-					}, ChangeParametersControl.Mode.EXTRACT_METHOD);
-			gd= new GridData(GridData.FILL_BOTH);
-			gd.horizontalSpan= 2;
-			cp.setLayoutData(gd);
-			cp.setInput(fRefactoring.getParameterInfos());
-		}
-
-		Dialog.applyDialogFont(result);
+// XXX: Add some parameters if we really need them
+//		if (!fRefactoring.getParameterInfos().isEmpty()) {
+//			ChangeParametersControl cp= new ChangeParametersControl(result, SWT.NONE,
+//					JFlowRefactoringUIMessages.ExtractClosureInputPage_parameters,
+//					new IParameterListChangeListener() {
+//						public void parameterChanged(ParameterInfo parameter) {
+//							parameterModified();
+//						}
+//
+//						public void parameterListChanged() {
+//							parameterModified();
+//						}
+//
+//						public void parameterAdded(ParameterInfo parameter) {
+//						}
+//					}, ChangeParametersControl.Mode.EXTRACT_METHOD);
+//			gd= new GridData(GridData.FILL_BOTH);
+//			gd.horizontalSpan= 2;
+//			cp.setLayoutData(gd);
+//			cp.setInput(fRefactoring.getParameterInfos());
+//		}
+//
+//		Dialog.applyDialogFont(result);
 	}
 
 
@@ -100,7 +97,8 @@ public class ExtractClosureInputPage extends UserInputWizardPage {
 	@Override
 	public void setVisible(boolean visible) {
 		if (visible) {
-			setPageComplete(validatePage(true));
+//			setPageComplete(validatePage(true));
+			setPageComplete(true);
 		}
 		super.setVisible(visible);
 	}
