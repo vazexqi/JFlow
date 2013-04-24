@@ -330,7 +330,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 				statements.add(declStatement);
 
 				// Initialization statement
-				String template= BUNDLE_VARIABLE_NAME + ".%s = %s;%n";
+				String template= BUNDLE_VARIABLE_NAME + ".%s = %s;";
 				for (IVariableBinding iVar : consumed) {
 					Statement initializationStmt= (Statement)ASTNodeFactory.newStatement(fAST, String.format(template, iVar.getName(), iVar.getName()));
 					statements.add(initializationStmt);
