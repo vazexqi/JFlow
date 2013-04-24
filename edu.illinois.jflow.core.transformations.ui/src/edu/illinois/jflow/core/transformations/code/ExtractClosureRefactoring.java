@@ -172,7 +172,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 				return type;
 		}
 
-
 		// CODE GENERATION
 		//////////////////
 		public void rewriteAsDataflow(TextEditGroup description) {
@@ -206,7 +205,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		private String createInitializationStatements() {
 			StringBuilder sb= new StringBuilder();
 
-			sb.append(String.format("Bundle b = ((Bundle) args[0]);%n")); //$NON-NLS-1$
+			sb.append(String.format("%s b = ((%s) args[0]);%n", BundleCreator.BUNDLE_CLASS_NAME, BundleCreator.BUNDLE_CLASS_NAME)); //$NON-NLS-1$
 
 			String template= "%s %s = b.%s;%n"; //$NON-NLS-1$
 
@@ -232,6 +231,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return sb.toString();
 		}
 
+		public Collection<IVariableBinding> getOutputs() {
+			return pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes());
+		}
+
+		public Collection<IVariableBinding> getInputs() {
+			return pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
+		}
 	}
 
 	/**
@@ -243,16 +249,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 	final class BundleCreator {
 		static final String BUNDLE_CLASS_NAME= "Bundle"; //$NON-NLS-1$
 
-		// Distinguish the different parameter info from each stage by their names. While using names might sound absurd,
-		// recall that we can safely make the assumption that because that all the stages are within the same block, the names 
-		// are indeed unique and can be used to differentiate.
-		Set<ParameterInfo> variables= new TreeSet<ParameterInfo>(new Comparator<ParameterInfo>() {
-
-			@Override
-			public int compare(ParameterInfo pInfoLeft, ParameterInfo pInfoRight) {
-				return pInfoLeft.getOldName().compareTo(pInfoRight.getOldName());
-			}
-		});
+		Set<ParameterInfo> variables= new TreeSet<ParameterInfo>(new ParameterInfoComparator());
 
 		BundleCreator(Collection<Stage> stages) {
 			// Initialize all the variables that we would need
@@ -260,7 +257,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 				variables.addAll(stage.getParameterInfo());
 			}
 		}
-
 
 		AbstractTypeDeclaration createNewNestedClass() {
 			TypeDeclaration bundleClass= fAST.newTypeDeclaration();
@@ -281,6 +277,99 @@ public class ExtractClosureRefactoring extends Refactoring {
 			}
 
 			return bundleClass;
+		}
+	}
+
+	/**
+	 * <p>
+	 * This class calculates the values that must be "pumped" into the loop at the begining.
+	 * </p>
+	 * <p>
+	 * It does this very simply:
+	 * <ol>
+	 * <li>Get all the stages involved and create a set of all the variables that are being
+	 * produced. Call this set P.</li>
+	 * <li>Get all the stages involved and create a set of all variables that are being consumed.
+	 * Call this set C.</li>
+	 * <li>The set difference C \ P gives us the variables that are not produced by any of the
+	 * stages. Thus, those variables must come from outside and must be "pumped" into the loop.</li>
+	 * </ol>
+	 * </p>
+	 * 
+	 * @author nchen
+	 * 
+	 */
+	final class PrologueCreator {
+
+		private static final String BUNDLE_VARIABLE_NAME= "b";
+
+		private static final String INITIAL_CHANNEL= GENERIC_CHANNEL_NAME + "0";
+
+		Set<IVariableBinding> produced= new TreeSet<IVariableBinding>(new IVariableBindingComparator());
+
+		Set<IVariableBinding> consumed= new TreeSet<IVariableBinding>(new IVariableBindingComparator());
+
+		PrologueCreator(Collection<Stage> stages) {
+			// Initialize all the variables that we would need
+			for (Stage stage : stages) {
+				produced.addAll(stage.getOutputs());
+				consumed.addAll(stage.getInputs());
+			}
+		}
+
+		List<Statement> createInitializationStatements() {
+			List<Statement> statements= new ArrayList<Statement>();
+
+			consumed.removeAll(produced); // Whatever remains - should be at least size 1 since the loop produces at least one variable
+
+			if (consumed.size() > 0) { // This should always be true
+				// Declaration statement
+				Statement declStatement= (Statement)ASTNodeFactory.newStatement(fAST,
+						String.format("%s %s = new %s();", BundleCreator.BUNDLE_CLASS_NAME, BUNDLE_VARIABLE_NAME, BundleCreator.BUNDLE_CLASS_NAME));
+				statements.add(declStatement);
+
+				// Initialization statement
+				String template= BUNDLE_VARIABLE_NAME + ".%s = %s;%n";
+				for (IVariableBinding iVar : consumed) {
+					Statement initializationStmt= (Statement)ASTNodeFactory.newStatement(fAST, String.format(template, iVar.getName(), iVar.getName()));
+					statements.add(initializationStmt);
+				}
+
+				// Pump into the channel
+				Statement pump= (Statement)ASTNodeFactory.newStatement(fAST, String.format("%s.bind(%s);", INITIAL_CHANNEL, BUNDLE_VARIABLE_NAME));
+				statements.add(pump);
+			}
+
+			return statements;
+		}
+	}
+
+	/**
+	 * Distinguish the different parameter info from each stage by their names. While using names
+	 * might sound absurd, recall that we can safely make the assumption that because that all the
+	 * stages are within the same block, the names are indeed unique and can be used to
+	 * differentiate.
+	 * 
+	 * @author nchen
+	 * 
+	 */
+	private final class ParameterInfoComparator implements Comparator<ParameterInfo> {
+		@Override
+		public int compare(ParameterInfo pInfoLeft, ParameterInfo pInfoRight) {
+			return pInfoLeft.getOldName().compareTo(pInfoRight.getOldName());
+		}
+	}
+
+	/**
+	 * Distinguishes different variable bindings by getKey() which is guaranteed to be unique.
+	 * 
+	 * @author nchen
+	 * 
+	 */
+	private final class IVariableBindingComparator implements Comparator<IVariableBinding> {
+		@Override
+		public int compare(IVariableBinding iVarLeft, IVariableBinding iVarRight) {
+			return iVarLeft.getKey().compareTo(iVarRight.getKey());
 		}
 	}
 
@@ -502,7 +591,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 			createMethodBundle(result);
 			// 2. Create the channels
 			createChannels(result);
-			// 3. Replace the original statements with DataflowMessagingRunnable closures
+			// 3. Pump the initial data into channel0
+			PrologueCreator pc= new PrologueCreator(stages.values());
+			pc.createInitializationStatements();
+			// 4. Replace the original statements with DataflowMessagingRunnable closures
 			replaceStatements(result);
 
 			// IMPORTS
@@ -522,7 +614,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 			pm.done();
 		}
 	}
-
 
 	private void createMethodBundle(final CompilationUnitChange result) {
 		BodyDeclaration methodDecl= locateSelectedMethod();
