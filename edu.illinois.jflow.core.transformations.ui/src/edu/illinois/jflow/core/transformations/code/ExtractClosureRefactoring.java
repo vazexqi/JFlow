@@ -101,12 +101,15 @@ public class ExtractClosureRefactoring extends Refactoring {
 		// Though using string templates might seems like a foolish idea, it is much more succinct that building
 		// this entire thing programmatically. This is true whenever we are doing more code generation than just manipulation
 		// e.g. replace or modify.
-		static final String DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE= "new DataflowMessagingRunnable(1) {\n" + //$NON-NLS-1$
-				"	@Override\n" + //$NON-NLS-1$
-				"	protected void doRun(Object... args) {\n" + //$NON-NLS-1$
-				"		%s\n" + //$NON-NLS-1$
-				"	}\n" + //$NON-NLS-1$
-				"}.call(channel%s.getVal());"; //$NON-NLS-1$
+		static final String DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE= "new DataflowMessagingRunnable(1) {\n" +
+				"	@Override\n" +
+				"	protected void doRun(Object... args) { \n" +
+				"	  try {\n" +
+				"			%s \n" +
+				"		} catch (Exception e) {}\n" +
+				"	} \n" +
+				"}.call(channel%s.getVal());\n" +
+				"";
 
 		final String NEWLINE= String.format("%n"); //$NON-NLS-1$
 
