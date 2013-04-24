@@ -23,6 +23,7 @@ import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
+import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -591,11 +592,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 			createMethodBundle(result);
 			// 2. Create the channels
 			createChannels(result);
-			// 3. Pump the initial data into channel0
-			PrologueCreator pc= new PrologueCreator(stages.values());
-			pc.createInitializationStatements();
-			// 4. Replace the original statements with DataflowMessagingRunnable closures
-			replaceStatements(result);
+
+			// 3. Replace the original statements with DataflowMessagingRunnable closures
+			TextEditGroup replaceOriginalWithDataflowDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_replace_statement_textedit_description);
+			result.addTextEditGroup(replaceOriginalWithDataflowDesc);
+
+			insertPrologueStatements(replaceOriginalWithDataflowDesc);
+			replaceStatements(replaceOriginalWithDataflowDesc);
 
 			// IMPORTS
 			//////////
@@ -640,6 +643,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 		ChildListPropertyDescriptor forStatementDescriptor= (ChildListPropertyDescriptor)forStatement.getLocationInParent();
 		ListRewrite forStatementContainer= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
 
+		//XXX: Seems like we can clean this up no need for if...else...
 		for (int index= 0; index < channelStatements.size(); index++) {
 			if (index == 0) { // First one
 				forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
@@ -663,10 +667,35 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return channelStatements;
 	}
 
-	private void replaceStatements(CompilationUnitChange result) {
-		TextEditGroup replaceOriginalWithDataflowDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_replace_statement_textedit_description);
-		result.addTextEditGroup(replaceOriginalWithDataflowDesc);
+	private void insertPrologueStatements(TextEditGroup replaceOriginalWithDataflowDesc) {
+		Statement statement= locateEnclosingLoopStatement();
+		ListRewrite loopRewriter= null;
+		Statement body= null;
 
+		// TODO: Handle other kinds of loops
+		if (statement instanceof ForStatement) {
+			ForStatement forStatement= (ForStatement)statement;
+			body= forStatement.getBody();
+		} else if (statement instanceof EnhancedForStatement) {
+			EnhancedForStatement enhancedForStatement= (EnhancedForStatement)statement;
+			body= enhancedForStatement.getBody();
+		}
+
+		if (body != null) {
+			loopRewriter= fRewriter.getListRewrite(body, Block.STATEMENTS_PROPERTY);
+			if (loopRewriter != null) {
+				PrologueCreator pc= new PrologueCreator(stages.values());
+				List<Statement> statements= pc.createInitializationStatements();
+				// We have to insert in reverse other since we are using the 0 position (that is what insertFirst) does
+				// as the anchor point
+				for (int index= statements.size() - 1; index >= 0; index--) {
+					loopRewriter.insertFirst(statements.get(index), replaceOriginalWithDataflowDesc);
+				}
+			}
+		}
+	}
+
+	private void replaceStatements(TextEditGroup replaceOriginalWithDataflowDesc) {
 		for (Stage stage : stages.values()) {
 			stage.rewriteAsDataflow(replaceOriginalWithDataflowDesc);
 		}
