@@ -46,6 +46,7 @@ import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRe
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
+import org.eclipse.jdt.internal.corext.dom.StatementRewrite;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
@@ -99,14 +100,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 		// Though using string templates might seems like a foolish idea, it is much more succinct that building
 		// this entire thing programmatically. This is true whenever we are doing more code generation than just manipulation
 		// e.g. replace or modify.
-		static final String DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE= "new DataflowMessagingRunnable(1) {\n" +
-				"	@Override\n" +
-				"	protected void doRun(Object... args) {\n" +
-				"		%s\n" +
-				"	}\n" +
-				"}.call(channel%s.getVal());";
+		static final String DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE= "new DataflowMessagingRunnable(1) {\n" + //$NON-NLS-1$
+				"	@Override\n" + //$NON-NLS-1$
+				"	protected void doRun(Object... args) {\n" + //$NON-NLS-1$
+				"		%s\n" + //$NON-NLS-1$
+				"	}\n" + //$NON-NLS-1$
+				"}.call(channel%s.getVal());"; //$NON-NLS-1$
 
-		final String NEWLINE= String.format("%n");
+		final String NEWLINE= String.format("%n"); //$NON-NLS-1$
 
 		final AnnotatedStage stage;
 
@@ -171,10 +172,16 @@ public class ExtractClosureRefactoring extends Refactoring {
 				return type;
 		}
 
+
 		// CODE GENERATION
 		//////////////////
+		public void rewriteAsDataflow(TextEditGroup description) {
+			Statement dataflowStatement= createDataflowStatement();
+			StatementRewrite statementRewrite= new StatementRewrite(fRewriter, analyzer.getSelectedNodes());
+			statementRewrite.replace(new ASTNode[] { dataflowStatement }, description);
+		}
 
-		Statement createDataflowStatement() {
+		private Statement createDataflowStatement() {
 			StringBuilder sb= new StringBuilder();
 
 			// 1. Grab the values from the channel
@@ -199,9 +206,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 		private String createInitializationStatements() {
 			StringBuilder sb= new StringBuilder();
 
-			sb.append(String.format("Bundle b = ((Bundle) args[0]);%n"));
+			sb.append(String.format("Bundle b = ((Bundle) args[0]);%n")); //$NON-NLS-1$
 
-			String template= "%s %s = b.%s;%n";
+			String template= "%s %s = b.%s;%n"; //$NON-NLS-1$
 
 			for (ParameterInfo pInfo : parameterInfo) {
 				sb.append(String.format(template, resolveType(pInfo.getOldBinding()), pInfo.getOldName(), pInfo.getOldName()));
@@ -213,17 +220,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 		private String createUpdateStatements() {
 			StringBuilder sb= new StringBuilder();
 
-			String template= "b.%s = %s;%n";
+			String template= "b.%s = %s;%n"; //$NON-NLS-1$
 
 			List<IVariableBinding> arguments= pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes());
 			for (IVariableBinding binding : arguments) {
 				sb.append(String.format(template, binding.getName(), binding.getName()));
 			}
 
-			sb.append(String.format(GENERIC_CHANNEL_NAME + "%d.bind(b);%n", stage.stageName));
+			sb.append(String.format(GENERIC_CHANNEL_NAME + "%d.bind(b);%n", stage.stageName)); //$NON-NLS-1$
 
 			return sb.toString();
 		}
+
 	}
 
 	/**
@@ -302,21 +310,21 @@ public class ExtractClosureRefactoring extends Refactoring {
 	// GPARS
 	////////
 
-	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue";
+	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
 
-	public static final String DATAFLOWMESSAGING_TYPE= "groovyx.gpars.DataflowMessagingRunnable";
+	public static final String DATAFLOWMESSAGING_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
 
-	public static final String GENERIC_CHANNEL_NAME= "channel";
+	public static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
 
-	public static final String CLOSURE_METHOD= "doRun";
+	public static final String CLOSURE_METHOD= "doRun"; //$NON-NLS-1$
 
-	public static final String CLOSURE_TYPE= "DataflowMessagingRunnable";
+	public static final String CLOSURE_TYPE= "DataflowMessagingRunnable"; //$NON-NLS-1$
 
-	public static final String CLOSURE_PACKAGE= "groovyx.gpars";
+	public static final String CLOSURE_PACKAGE= "groovyx.gpars"; //$NON-NLS-1$
 
-	public static final String CLOSURE_QUALIFIED_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE;
+	public static final String CLOSURE_QUALIFIED_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE; //$NON-NLS-1$
 
-	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel";
+	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
 
 	/**
 	 * Creates a new extract closure refactoring
@@ -490,44 +498,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 			MultiTextEdit root= new MultiTextEdit();
 			result.setEdit(root);
 
+			// 1. Create the bundle class
 			createMethodBundle(result);
+			// 2. Create the channels
 			createChannels(result);
+			// 3. Replace the original statements with DataflowMessagingRunnable closures
+			replaceStatements(result);
 
-			for (Stage stage : stages.values()) {
-				Statement statement= stage.createDataflowStatement();
-				System.out.println(statement);
-			}
-
-//
-//			ASTNode[] selectedNodes= fAnalyzer.getSelectedNodes();
-//
-//			TextEditGroup closureEditGroup= new TextEditGroup("Extract to Closure");
-//			result.addTextEditGroup(closureEditGroup);
-//
-//			// A sentinel is just a placeholder to keep track of the position of insertion
-//			// For this refactoring, we need to insert two things:
-//			// 1) The DataflowChannels (if necessary)
-//			// 2) The DataflowMessagingRunnable
-//			Block sentinel= fAST.newBlock();
-//			ListRewrite sentinelRewriter= fRewriter.getListRewrite(selectedNodes[0].getParent(), (ChildListPropertyDescriptor)selectedNodes[0].getLocationInParent());
-//			sentinelRewriter.insertBefore(sentinel, selectedNodes[0], null);
-//
-//			// Add the dataflowChannels that are required
-//			addDataflowChannels(declaration, sentinel, sentinelRewriter, closureEditGroup, pm);
-//
-//			// Update all references to values written in the closure body to read from channels
-//			List<ASTNode> channels= createTempVariablesForChannels(declaration, closureEditGroup, pm);
-//			for (ASTNode astNode : channels) {
-//				sentinelRewriter.insertAfter(astNode, sentinel, closureEditGroup);
-//			}
-//
-//			// Handle InterruptedException from using DataflowChannels
-//			updateExceptions(declaration, closureEditGroup);
-//
-//			// Replace the placeholder sentinel with the actual code
-//			ExpressionStatement closureInvocationStatement= createClosureInvocationStatement(declaration, selectedNodes, closureEditGroup, pm);
-//			sentinelRewriter.replace(sentinel, closureInvocationStatement, closureEditGroup);
-//
 			// IMPORTS
 			//////////
 
@@ -545,6 +522,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			pm.done();
 		}
 	}
+
 
 	private void createMethodBundle(final CompilationUnitChange result) {
 		BodyDeclaration methodDecl= locateSelectedMethod();
@@ -592,5 +570,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 
 		return channelStatements;
+	}
+
+	private void replaceStatements(CompilationUnitChange result) {
+		TextEditGroup replaceOriginalWithDataflowDesc= new TextEditGroup(JFlowRefactoringCoreMessages.ExtractClosureRefactoring_replace_statement_textedit_description);
+		result.addTextEditGroup(replaceOriginalWithDataflowDesc);
+
+		for (Stage stage : stages.values()) {
+			stage.rewriteAsDataflow(replaceOriginalWithDataflowDesc);
+		}
 	}
 }

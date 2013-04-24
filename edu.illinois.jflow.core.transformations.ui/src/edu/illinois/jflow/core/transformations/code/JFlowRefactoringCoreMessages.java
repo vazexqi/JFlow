@@ -33,6 +33,8 @@ public class JFlowRefactoringCoreMessages extends NLS {
 
 	public static String ExtractClosureRefactoring_replace_occurrences;
 
+	public static String ExtractClosureRefactoring_replace_statement_textedit_description;
+
 	public static String ExtractClosureRefactoring_substitute_with_call;
 
 	public static String ExtractClosureRefactoring_visibility_pattern;
