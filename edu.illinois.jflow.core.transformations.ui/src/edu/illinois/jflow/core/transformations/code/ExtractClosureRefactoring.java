@@ -198,9 +198,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 				sb.append(NEWLINE);
 			}
 
-			// 3. Pump new value into the channel
-			String updateStmts= createUpdateStatements();
-			sb.append(updateStmts);
+			// 3. Pump new value into the channel - only if not the last channel
+			// XXX: Revisit this assumption: what if we have a value that we want to read outside the loop?
+			if (stage.stageName != stages.size()) {
+				String updateStmts= createUpdateStatements();
+				sb.append(updateStmts);
+			}
 
 			String closureInvocation= String.format(DATAFLOW_MESSAGING_RUNNABLE_TEMPLATE, sb.toString(), stage.stageName - 1);
 			return (Statement)ASTNodeFactory.newStatement(fAST, closureInvocation);
