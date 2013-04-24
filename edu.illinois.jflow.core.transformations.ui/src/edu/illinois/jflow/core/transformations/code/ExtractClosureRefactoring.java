@@ -108,8 +108,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 				"			%s \n" +
 				"		} catch (Exception e) {}\n" +
 				"	} \n" +
-				"}.call(channel%s.getVal());\n" +
-				"";
+				"}.call(channel%s.getVal());";
 
 		final String NEWLINE= String.format("%n"); //$NON-NLS-1$
 
