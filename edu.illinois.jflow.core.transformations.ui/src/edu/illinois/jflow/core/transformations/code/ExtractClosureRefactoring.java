@@ -641,23 +641,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 		List<Statement> channelStatements= createChannelStatements();
 
 		ChildListPropertyDescriptor forStatementDescriptor= (ChildListPropertyDescriptor)forStatement.getLocationInParent();
-		ListRewrite forStatementContainer= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
+		ListRewrite forStatementListRewrite= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
 
-		//XXX: Seems like we can clean this up no need for if...else...
-		for (int index= 0; index < channelStatements.size(); index++) {
-			if (index == 0) { // First one
-				forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
-			} else {
-				forStatementContainer.insertBefore(channelStatements.get(index), forStatement, insertChannelDesc);
-			}
+		// We use the loop at the anchor point and insert everything before it in alphabetical channel name order
+		for (Statement stmt : channelStatements) {
+			forStatementListRewrite.insertBefore(stmt, forStatement, insertChannelDesc);
 		}
 	}
 
 	private List<Statement> createChannelStatements() {
 		List<Statement> channelStatements= new ArrayList<Statement>();
 
-		// Create the statements in reverse order to make it easier to insert later
-		for (int i= stages.size() - 1; i >= 0; i--) {
+		for (int i= 0; i < stages.size(); i++) {
 			String channelDeclarationStatement= String.format("final DataflowQueue<%s> %s%d = new DataflowQueue<%s>();", BundleCreator.BUNDLE_CLASS_NAME, GENERIC_CHANNEL_NAME, i, //$NON-NLS-1$
 					BundleCreator.BUNDLE_CLASS_NAME);
 			Statement newStatement= (Statement)ASTNodeFactory.newStatement(fAST, channelDeclarationStatement);
