@@ -220,7 +220,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 				sb.append(String.format(template, binding.getName(), binding.getName()));
 			}
 
-			sb.append(String.format(GENERIC_CHANNEL_NAME + "%d.bind(b)", stage.stageName));
+			sb.append(String.format(GENERIC_CHANNEL_NAME + "%d.bind(b);%n", stage.stageName));
 
 			return sb.toString();
 		}
