@@ -407,8 +407,6 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	public static final String DATAFLOWQUEUE_TYPE= "groovyx.gpars.dataflow.DataflowQueue"; //$NON-NLS-1$
 
-	public static final String DATAFLOWMESSAGING_TYPE= "groovyx.gpars.DataflowMessagingRunnable"; //$NON-NLS-1$
-
 	public static final String GENERIC_CHANNEL_NAME= "channel"; //$NON-NLS-1$
 
 	public static final String CLOSURE_METHOD= "doRun"; //$NON-NLS-1$
@@ -417,7 +415,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	public static final String CLOSURE_PACKAGE= "groovyx.gpars"; //$NON-NLS-1$
 
-	public static final String CLOSURE_QUALIFIED_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE; //$NON-NLS-1$
+	public static final String DATAFLOWMESSAGING_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE; //$NON-NLS-1$
 
 	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
 
