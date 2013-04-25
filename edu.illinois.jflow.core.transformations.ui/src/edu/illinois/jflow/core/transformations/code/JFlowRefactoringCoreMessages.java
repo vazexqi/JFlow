@@ -9,6 +9,10 @@ public class JFlowRefactoringCoreMessages extends NLS {
 
 	public static String InvertLoopAnalyzer_not_on_loop;
 
+	public static String InvertLoopRefactoring_hoist_closure_textedit_description;
+
+	public static String InvertLoopRefactoring_introduce_flowgraph_textedit_description;
+
 	public static String InvertLoopRefactoring_name;
 
 	public static String ExtractClosureRefactoring_bundle_textedit_description;

@@ -83,7 +83,7 @@ public class InvertLoopRefactoring extends Refactoring {
 			if (stageName != size)
 				return ExtractClosureRefactoring.GENERIC_CHANNEL_NAME + stageName;
 			else
-				return ""; // Empty list of next output channel
+				return ""; // Empty list of next output channel //$NON-NLS-1$
 		}
 	}
 
@@ -170,7 +170,7 @@ public class InvertLoopRefactoring extends Refactoring {
 
 	@Override
 	public Change createChange(IProgressMonitor pm) throws CoreException, OperationCanceledException {
-		pm.beginTask("", 2);
+		pm.beginTask("", 2); //$NON-NLS-1$
 		try {
 			BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
 			fRewriter= ASTRewrite.create(declaration.getAST());
@@ -203,7 +203,7 @@ public class InvertLoopRefactoring extends Refactoring {
 	}
 
 	private void setupFlowGraph(final CompilationUnitChange result) {
-		TextEditGroup createFlowGraphDesc= new TextEditGroup("Introduce FlowGraph");
+		TextEditGroup createFlowGraphDesc= new TextEditGroup(JFlowRefactoringCoreMessages.InvertLoopRefactoring_introduce_flowgraph_textedit_description);
 		result.addTextEditGroup(createFlowGraphDesc);
 
 		Statement forStatement= locateEnclosingLoopStatement();
@@ -220,7 +220,7 @@ public class InvertLoopRefactoring extends Refactoring {
 	}
 
 	private void hoistClosures(final CompilationUnitChange result) {
-		TextEditGroup hoistClosureDesc= new TextEditGroup("Hoist closures out of loop body");
+		TextEditGroup hoistClosureDesc= new TextEditGroup(JFlowRefactoringCoreMessages.InvertLoopRefactoring_hoist_closure_textedit_description);
 		result.addTextEditGroup(hoistClosureDesc);
 
 		Statement forStatement= locateEnclosingLoopStatement();
