@@ -91,6 +91,7 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 		fClosures= new ArrayList<ExpressionStatement>();
 	}
 
+
 	public RefactoringStatus checkInitialConditions(ImportRewrite fImportRewriter) {
 		RefactoringStatus status= fStatus;
 
@@ -134,5 +135,12 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 
 	public BodyDeclaration getEnclosingBodyDeclaration() {
 		return (BodyDeclaration)ASTNodes.getParent(locateEnclosingLoopStatement(), BodyDeclaration.class);
+	}
+
+	/*
+	 * Because we are visiting the DataflowMessagingRunnables in order, we can be certain that we are listing them by stage ordering. That means the first one is stage1, the second is stage2, etc.
+	 */
+	public List<ExpressionStatement> getfClosures() {
+		return fClosures;
 	}
 }

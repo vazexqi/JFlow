@@ -10,6 +10,7 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.refactoring.CompilationUnitChange;
@@ -116,9 +117,6 @@ public class InvertLoopRefactoring extends Refactoring {
 	@Override
 	public RefactoringStatus checkFinalConditions(IProgressMonitor pm) throws CoreException, OperationCanceledException {
 		RefactoringStatus status= new RefactoringStatus();
-
-		//TODO: Do we need any additional inputs from the user?
-
 		return status;
 	}
 
@@ -134,9 +132,12 @@ public class InvertLoopRefactoring extends Refactoring {
 
 			MultiTextEdit root= new MultiTextEdit();
 			result.setEdit(root);
-//
-//			TextEditGroup inverterEditGroup= new TextEditGroup("Invert Loop");
-//			result.addTextEditGroup(inverterEditGroup);
+
+			TextEditGroup hoiseClosureDesc= new TextEditGroup("Hoise closures out of loop body");
+			result.addTextEditGroup(hoiseClosureDesc);
+			for (Statement originalClosures : fAnalyzer.getfClosures()) {
+				fRewriter.remove(originalClosures, hoiseClosureDesc);
+			}
 //
 //			ASTNode selectedLoopStatement= fAnalyzer.getSelectedLoopStatement();
 //			ListRewrite rewriter= fRewriter.getListRewrite(selectedLoopStatement.getParent(), (ChildListPropertyDescriptor)selectedLoopStatement.getLocationInParent());
