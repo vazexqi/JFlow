@@ -60,9 +60,10 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 				for (IType classType : allClasses) {
 					String fullyQualifiedName= classType.getFullyQualifiedName();
 					if (fullyQualifiedName.equals(ExtractClosureRefactoring.DATAFLOWMESSAGING_TYPE)) {
+						fClassInstanceCreations.add(node);
 						// Grab the top level ExpressionStatement
 						ExpressionStatement expressionStatement= (ExpressionStatement)ASTNodes.getParent(node, ExpressionStatement.class);
-						fClosures.add(expressionStatement);
+						fClosuresStatements.add(expressionStatement);
 					}
 				}
 			} catch (JavaModelException e) {
@@ -77,7 +78,9 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 
 	private IProgressMonitor fPM;
 
-	private List<ExpressionStatement> fClosures;
+	private List<ExpressionStatement> fClosuresStatements= new ArrayList<ExpressionStatement>();
+
+	private List<ClassInstanceCreation> fClassInstanceCreations= new ArrayList<ClassInstanceCreation>();
 
 	private CompilationUnit fRoot;
 
@@ -88,7 +91,6 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 		this.fPM= pm;
 
 		fStatus= new RefactoringStatus();
-		fClosures= new ArrayList<ExpressionStatement>();
 	}
 
 
@@ -113,12 +115,12 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 	private void checkContainsDataflowClosure(RefactoringStatus status) {
 		DataflowVisitor visitor= new DataflowVisitor();
 		locateEnclosingLoopStatement().accept(visitor);
-		if (fClosures.size() <= 0) {
+		if (fClosuresStatements.size() <= 0) {
 			status.addFatalError(JFlowRefactoringCoreMessages.InvertLoopAnalyzer_does_not_contain_closure);
 		}
 
 		// DEBUGGING
-		for (ExpressionStatement expr : fClosures) {
+		for (ExpressionStatement expr : fClosuresStatements) {
 			System.out.println(ASTNodes.asString(expr));
 		}
 	}
@@ -140,7 +142,12 @@ class InvertLoopAnalyzer extends SelectionAnalyzer {
 	/*
 	 * Because we are visiting the DataflowMessagingRunnables in order, we can be certain that we are listing them by stage ordering. That means the first one is stage1, the second is stage2, etc.
 	 */
-	public List<ExpressionStatement> getfClosures() {
-		return fClosures;
+
+	public List<ExpressionStatement> getClosureStatements() {
+		return fClosuresStatements;
+	}
+
+	public List<ClassInstanceCreation> getClosureInstantiations() {
+		return fClassInstanceCreations;
 	}
 }

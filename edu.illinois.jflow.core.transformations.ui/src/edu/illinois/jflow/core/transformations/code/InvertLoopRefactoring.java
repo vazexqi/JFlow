@@ -1,5 +1,7 @@
 package edu.illinois.jflow.core.transformations.code;
 
+import java.util.List;
+
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -7,14 +9,23 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
+import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
+import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.ForStatement;
+import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
+import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 import org.eclipse.jdt.core.refactoring.CompilationUnitChange;
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
+import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.Selection;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
@@ -36,6 +47,45 @@ import org.eclipse.text.edits.TextEditGroup;
  */
 @SuppressWarnings("restriction")
 public class InvertLoopRefactoring extends Refactoring {
+
+	class HoistedClosureCreator {
+		// Though using string templates might seems like a foolish idea, it is much more succinct that building
+		// this entire thing programmatically. This is true whenever we are doing more code generation than just manipulation
+		// e.g. replace or modify.
+		static final String FLOWGRAPH_OPERATOR_TEMPLATE= FLOWGRAPH_VARIABLE_NAME + ".operator(Arrays.asList(%s), Arrays.asList(%s), %s);";
+
+		private int stageName;
+
+		private ClassInstanceCreation instanceCreation;
+
+		public HoistedClosureCreator(int stageName, ClassInstanceCreation instanceCreation) {
+			this.stageName= stageName;
+			this.instanceCreation= instanceCreation;
+		}
+
+		Statement generateHoistedStatement() {
+			String hoistedStatement= String.format(FLOWGRAPH_OPERATOR_TEMPLATE, getInputChannel(), getOutputChannel(), extractDataflowMessasingRunnableClass());
+			return (Statement)ASTNodeFactory.newStatement(fAST, hoistedStatement);
+		}
+
+		// We just need to extract the anonymous inner class and stick it into the operator statement
+		private String extractDataflowMessasingRunnableClass() {
+			return instanceCreation.toString();
+		}
+
+		private String getInputChannel() {
+			int inputChannelNumber= stageName - 1;
+			return ExtractClosureRefactoring.GENERIC_CHANNEL_NAME + inputChannelNumber;
+		}
+
+		private String getOutputChannel() {
+			int size= fAnalyzer.getClosureStatements().size();
+			if (stageName != size)
+				return ExtractClosureRefactoring.GENERIC_CHANNEL_NAME + stageName;
+			else
+				return ""; // Empty list of next output channel
+		}
+	}
 
 	private ICompilationUnit fCUnit;
 
@@ -133,11 +183,29 @@ public class InvertLoopRefactoring extends Refactoring {
 			MultiTextEdit root= new MultiTextEdit();
 			result.setEdit(root);
 
-			TextEditGroup hoiseClosureDesc= new TextEditGroup("Hoise closures out of loop body");
-			result.addTextEditGroup(hoiseClosureDesc);
-			for (Statement originalClosures : fAnalyzer.getfClosures()) {
-				fRewriter.remove(originalClosures, hoiseClosureDesc);
+			TextEditGroup hoistClosureDesc= new TextEditGroup("Hoist closures out of loop body");
+			result.addTextEditGroup(hoistClosureDesc);
+
+			Statement forStatement= locateEnclosingLoopStatement();
+			ChildListPropertyDescriptor forStatementDescriptor= (ChildListPropertyDescriptor)forStatement.getLocationInParent();
+			ListRewrite forStatementListRewrite= fRewriter.getListRewrite(forStatement.getParent(), forStatementDescriptor);
+
+			// Hoist the old closures from the loop body - iterate in reverse order so we can add them in order using
+			// the for loop as a pivot point
+			List<ExpressionStatement> closuresExpressions= fAnalyzer.getClosureStatements();
+			List<ClassInstanceCreation> closureInstances= fAnalyzer.getClosureInstantiations();
+			for (int stage= 0; stage < closuresExpressions.size(); stage++) {
+				// Remove old closure
+				ExpressionStatement node= closuresExpressions.get(stage);
+				fRewriter.remove(node, hoistClosureDesc);
+
+				// Insert newly hoistedClosure
+				HoistedClosureCreator hc= new HoistedClosureCreator(stage + 1, closureInstances.get(stage));
+				Statement hoistedStatement= hc.generateHoistedStatement();
+				forStatementListRewrite.insertBefore(hoistedStatement, forStatement, hoistClosureDesc);
+
 			}
+
 //
 //			ASTNode selectedLoopStatement= fAnalyzer.getSelectedLoopStatement();
 //			ListRewrite rewriter= fRewriter.getListRewrite(selectedLoopStatement.getParent(), (ChildListPropertyDescriptor)selectedLoopStatement.getLocationInParent());
@@ -150,6 +218,11 @@ public class InvertLoopRefactoring extends Refactoring {
 //
 //			rewriter.remove(selectedLoopStatement, inverterEditGroup);
 
+			// IMPORTS
+			//////////
+
+			fImportRewriter.addImport(ARRAYS_TYPE);
+			fImportRewriter.addImport(FLOWGRAPH_QUALIFIED_TYPE);
 			if (fImportRewriter.hasRecordedChanges()) {
 				TextEdit edit= fImportRewriter.rewriteImports(null);
 				root.addChild(edit);
@@ -161,6 +234,15 @@ public class InvertLoopRefactoring extends Refactoring {
 		} finally {
 			pm.done();
 		}
+	}
+
+	private Statement locateEnclosingLoopStatement() {
+		NodeFinder nodeFinder= new NodeFinder(fRoot, fSelectionStart, fSelectionLength);
+		ASTNode node= nodeFinder.getCoveringNode();
+		do {
+			node= node.getParent();
+		} while (node != null && !(node instanceof EnhancedForStatement || node instanceof ForStatement));
+		return (Statement)node;
 	}
 
 //	private void createFlowGraph(ASTNode selectedLoopStatement, ListRewrite rewriter, TextEditGroup inverterEditGroup) {
@@ -270,7 +352,7 @@ public class InvertLoopRefactoring extends Refactoring {
 //	}
 //
 //
-//	private Expression createOutputChannelExpression(List<VariableDeclarationFragment> output) {
+//	private Expression createChannelExpression(List<VariableDeclarationFragment> output) {
 //		MethodInvocation arrays= generateArraysAsListMethodInvocation();
 //
 //		// This is safe since MethodInvocation.arguments() returns a list of Expression
