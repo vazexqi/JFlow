@@ -619,10 +619,22 @@ public class ExtractClosureRefactoring extends Refactoring {
 		// IDocument starts counting from 0 but we want to follow what the user sees in the editor
 		// that starts from 1.
 		try {
-			int start= fDoc.getLineOfOffset(forLoop.getStartPosition()) + 1;
-			int end= fDoc.getLineOfOffset(forLoop.getStartPosition() + forLoop.getLength()) + 1;
-			for (int line= start; line <= end; line++) {
-				lines.add(line);
+			if (forLoop instanceof ForStatement) {
+				ForStatement forStmt= (ForStatement)forLoop;
+				int start= fDoc.getLineOfOffset(forLoop.getStartPosition()) + 1;
+				int end= fDoc.getLineOfOffset(forStmt.getBody().getStartPosition()) + 1;
+				for (int line= start; line <= end; line++) {
+					lines.add(line);
+				}
+			}
+
+			if (forLoop instanceof EnhancedForStatement) {
+				EnhancedForStatement forStmt= (EnhancedForStatement)forLoop;
+				int start= fDoc.getLineOfOffset(forStmt.getStartPosition()) + 1;
+				int end= fDoc.getLineOfOffset(forStmt.getBody().getStartPosition()) + 1;
+				for (int line= start; line <= end; line++) {
+					lines.add(line);
+				}
 			}
 		} catch (BadLocationException e) {
 			e.printStackTrace();
