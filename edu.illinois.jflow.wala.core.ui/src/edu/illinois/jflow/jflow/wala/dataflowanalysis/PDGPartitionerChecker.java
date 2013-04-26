@@ -169,7 +169,7 @@ public class PDGPartitionerChecker {
 	 */
 	private Set<PipelineStage> getSetOfAllStagesExcluding(PipelineStage excluded) {
 		Set<PipelineStage> otherStages= new HashSet<PipelineStage>();
-		for (int stageNumber= 1; stageNumber <= stages.size(); stageNumber++) {
+		for (int stageNumber= 1; stageNumber < stages.size(); stageNumber++) {
 			PipelineStage stage= stages.get(stageNumber);
 			if (stage != excluded) {
 				otherStages.add(stage);
