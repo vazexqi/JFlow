@@ -45,6 +45,8 @@ public class PDGPartitionerChecker {
 
 	private Map<CGNode, OrdinalSet<MethodReference>> ignored;
 
+	private ArrayList<StageInterferenceInfo> interferenceInfos;
+
 	public static PDGPartitionerChecker makePartitionChecker(ProgramDependenceGraph pdg, List<List<Integer>> selections) {
 		PDGPartitionerChecker temp= new PDGPartitionerChecker(pdg);
 		temp.convertSelectionToStages(selections);
@@ -165,7 +167,7 @@ public class PDGPartitionerChecker {
 
 	/*
 	 * Returns a set of all the stages in this pipeline minus the parameter.
-	 * XXX: This does not consider the generator for now.
+	 * XXX: This does not consider the generator.
 	 */
 	private Set<PipelineStage> getSetOfAllStagesExcluding(PipelineStage excluded) {
 		Set<PipelineStage> otherStages= new HashSet<PipelineStage>();
@@ -176,6 +178,34 @@ public class PDGPartitionerChecker {
 			}
 		}
 		return otherStages;
+	}
+
+	public void checkInterference() {
+		interferenceInfos= new ArrayList<StageInterferenceInfo>();
+		for (int stage= 1; stage < stages.size(); stage++) {
+			StageInterferenceInfo interferenceInfo= new StageInterferenceInfo(getStage(stage));
+			interferenceInfo.checkInteference();
+			interferenceInfos.add(interferenceInfo);
+		}
+	}
+
+	public boolean hasInteference() {
+		for (StageInterferenceInfo info : interferenceInfos) {
+			if (info.hasInterference())
+				return true;
+		}
+		return false;
+	}
+
+	// XXX: Make this human understandable
+	public List<String> getInterferenceMessages() {
+		List<String> interferenceMessages= new ArrayList<String>();
+
+		for (StageInterferenceInfo info : interferenceInfos) {
+			interferenceMessages.addAll(info.getInterferenceMessages());
+		}
+
+		return interferenceMessages;
 	}
 
 	/**
@@ -194,9 +224,6 @@ public class PDGPartitionerChecker {
 	 * @author nchen
 	 * 
 	 */
-	class InterferenceChecker {
-	}
-
 	public class StageInterferenceInfo {
 		private PipelineStage pipelineStage;
 
@@ -212,6 +239,27 @@ public class PDGPartitionerChecker {
 				Set<PointerKey> set= interferences.get(stage);
 				set.retainAll(stage.getMods());
 			}
+		}
+
+		public boolean hasInterference() {
+			for (Set<PointerKey> pKeys : interferences.values()) {
+				if (!pKeys.isEmpty())
+					return true;
+			}
+			return false;
+		}
+
+		public List<String> getInterferenceMessages() {
+			List<String> interferenceMessages= new ArrayList<String>();
+
+			for (PipelineStage stage : interferences.keySet()) {
+				Set<PointerKey> pKeys= interferences.get(stage);
+				for (PointerKey pKey : pKeys) {
+					interferenceMessages.add(String.format("Stage %d has possible interference with stage %d through %s", pipelineStage.getStageNumber(), stage.getStageNumber(), pKey));
+				}
+			}
+
+			return interferenceMessages;
 		}
 
 		@Override

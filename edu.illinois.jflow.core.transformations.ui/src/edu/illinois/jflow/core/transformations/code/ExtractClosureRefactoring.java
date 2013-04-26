@@ -52,6 +52,7 @@ import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
@@ -64,18 +65,17 @@ import org.eclipse.text.edits.TextEditGroup;
 
 import com.ibm.wala.cast.java.ipa.callgraph.JavaSourceAnalysisScope;
 import com.ibm.wala.cast.java.translator.jdt.JDTIdentityMapper;
-import com.ibm.wala.classLoader.IMethod;
 import com.ibm.wala.client.AbstractAnalysisEngine;
-import com.ibm.wala.ipa.callgraph.AnalysisCache;
-import com.ibm.wala.ipa.callgraph.AnalysisOptions;
-import com.ibm.wala.ipa.callgraph.impl.Everywhere;
-import com.ibm.wala.ipa.cha.IClassHierarchy;
+import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.util.CancelException;
+import com.ibm.wala.util.debug.Assertions;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.utils.EclipseProjectAnalysisEngine;
 
@@ -402,6 +402,8 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private IDocument fDoc;
 
+	private PDGPartitionerChecker fChecker;
+
 	// GPARS
 	////////
 
@@ -418,6 +420,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 	public static final String DATAFLOWMESSAGING_TYPE= CLOSURE_PACKAGE + "." + CLOSURE_TYPE; //$NON-NLS-1$
 
 	public static final String DATAFLOWQUEUE_INTERFACE= "groovyx.gpars.dataflow.DataflowChannel"; //$NON-NLS-1$
+
+	private AbstractAnalysisEngine fEngine;
+
+	private CallGraph fCallGraph;
 
 	/**
 	 * Creates a new extract closure refactoring
@@ -475,7 +481,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			return result;
 
 		// If we don't have any errors at this point, we can initialize the heavy-lifting parts
-		initializeStageAnalyzers();
+		initializeStageAnalyzers(result);
 
 		// DEBUGGING
 		for (int stageNumber= 0; stageNumber < stages.values().size(); stageNumber++) {
@@ -488,10 +494,24 @@ public class ExtractClosureRefactoring extends Refactoring {
 		return result;
 	}
 
-	private void initializeStageAnalyzers() {
+	private void initializeStageAnalyzers(RefactoringStatus result) {
 		try {
-			// XXX: Check for actual heap and dependencies
 			initializePDGAnalyzers();
+
+			if (fChecker.containsLoopCarriedDependency()) {
+				result.addError("There is a loop carried dependency and we cannot parallelize this loop.");
+			}
+
+			fChecker.computeHeapDependency(fCallGraph, fEngine.getPointerAnalysis());
+			fChecker.checkInterference();
+
+			if (fChecker.hasInteference()) {
+				List<String> messages= fChecker.getInterferenceMessages();
+				for (String message : messages) {
+					result.addWarning(message);
+				}
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -521,22 +541,30 @@ public class ExtractClosureRefactoring extends Refactoring {
 	}
 
 	private void initializePDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
-		// Set up the analysis engine
-		AbstractAnalysisEngine engine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
-		engine.buildAnalysisScope();
-		final IClassHierarchy classHierarchy= engine.buildClassHierarchy();
-		final AnalysisOptions options= new AnalysisOptions();
-		final AnalysisCache cache= engine.makeDefaultCache();
+		fEngine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
+		fCallGraph= fEngine.buildDefaultCallGraph();
 
 		// Get the IR for the selected method
 		// Since all the stages are going to be in the same method, just use the first ExtractClosureAnalyzer
 		MethodDeclaration methodDeclaration= locateSelectedMethod();
 		JDTIdentityMapper mapper= new JDTIdentityMapper(JavaSourceAnalysisScope.SOURCE, fAST);
 		MethodReference methodRef= mapper.getMethodRef(methodDeclaration.resolveBinding());
-		final IMethod resolvedMethod= classHierarchy.resolveMethod(methodRef);
-		IR ir= cache.getSSACache().findOrCreateIR(resolvedMethod, Everywhere.EVERYWHERE, options.getSSAOptions());
-		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, classHierarchy, fDoc);
 
+		Set<CGNode> nodes= fCallGraph.getNodes(methodRef);
+
+		Assertions.productionAssertion(nodes.size() == 1, "Expected a single corresponding CGNode, but got either 0 or more");
+
+		CGNode node= nodes.iterator().next(); // Quick way to get first element of set with single entry since set doesn't implement get();
+		IR ir= node.getIR();
+
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.makeWithSourceCode(ir, fEngine.getClassHierarchy(), fDoc);
+
+		initializePDGExtractClosureAnalyzers(pdg);
+		initializePDGPartitionChecker(pdg);
+	}
+
+
+	private void initializePDGExtractClosureAnalyzers(ProgramDependenceGraph pdg) {
 		for (int stageNumber= 0; stageNumber < stages.keySet().size(); stageNumber++) {
 			Stage stage= stages.get(stageNumber);
 			PDGExtractClosureAnalyzer pdgAnalyzer= new PDGExtractClosureAnalyzer(pdg, stageNumber, stage.getStage().getStageLines());
@@ -544,6 +572,18 @@ public class ExtractClosureRefactoring extends Refactoring {
 			pdgAnalyzer.analyzeSelection();
 			stage.initializeParameterInfos();
 		}
+	}
+
+	private void initializePDGPartitionChecker(ProgramDependenceGraph pdg) {
+		List<List<Integer>> selections= new ArrayList<List<Integer>>();
+
+		selections.add(getEnclosingLoopLines());
+		for (int stageNumber= 0; stageNumber < stages.keySet().size(); stageNumber++) {
+			Stage stage= stages.get(stageNumber);
+			selections.add(stage.getStage().getStageLines());
+		}
+
+		fChecker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 	}
 
 	// LOCATING NODES
@@ -563,6 +603,23 @@ public class ExtractClosureRefactoring extends Refactoring {
 			node= node.getParent();
 		} while (node != null && !(node instanceof EnhancedForStatement || node instanceof ForStatement));
 		return (Statement)node;
+	}
+
+	List<Integer> getEnclosingLoopLines() {
+		List<Integer> lines= new ArrayList<Integer>();
+		Statement forLoop= locateEnclosingLoopStatement();
+		// IDocument starts counting from 0 but we want to follow what the user sees in the editor
+		// that starts from 1.
+		try {
+			int start= fDoc.getLineOfOffset(forLoop.getStartPosition()) + 1;
+			int end= fDoc.getLineOfOffset(forLoop.getStartPosition() + forLoop.getLength()) + 1;
+			for (int line= start; line <= end; line++) {
+				lines.add(line);
+			}
+		} catch (BadLocationException e) {
+			e.printStackTrace();
+		}
+		return lines;
 	}
 
 	/* (non-Javadoc)

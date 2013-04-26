@@ -67,7 +67,6 @@ public final class AnnotatedStage {
 	/*
 	 * Returns a Selection object representing the current stage
 	 */
-	@SuppressWarnings("restriction")
 	public Selection getSelection() {
 		return Selection.createFromStartEnd(getStageStartOffset(), getStageEndOffset());
 	}
