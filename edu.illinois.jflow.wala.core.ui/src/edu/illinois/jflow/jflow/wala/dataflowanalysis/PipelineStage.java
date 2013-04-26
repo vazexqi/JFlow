@@ -37,6 +37,9 @@ import com.ibm.wala.util.intset.OrdinalSet;
  * 
  */
 public class PipelineStage {
+
+	private int stageNumber;
+
 	private ProgramDependenceGraph pdg;
 
 	private List<Integer> selectedLines; // This is 1-based following how things "look" in the editor
@@ -64,14 +67,15 @@ public class PipelineStage {
 	/*
 	 * Convenience method to create a new pipeline stage and begin the analysis immediately
 	 */
-	public static PipelineStage makePipelineStage(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
-		PipelineStage temp= new PipelineStage(pdg, selectedLines);
+	public static PipelineStage makePipelineStage(ProgramDependenceGraph pdg, int stageNumber, List<Integer> selectedLines) {
+		PipelineStage temp= new PipelineStage(pdg, stageNumber, selectedLines);
 		temp.analyzeSelection();
 		return temp;
 	}
 
-	public PipelineStage(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
+	public PipelineStage(ProgramDependenceGraph pdg, int stageNumber, List<Integer> selectedLines) {
 		this.pdg= pdg;
+		this.stageNumber= stageNumber;
 		this.selectedLines= selectedLines;
 	}
 
@@ -157,6 +161,10 @@ public class PipelineStage {
 
 	public List<PDGNode> getSelectedStatements() {
 		return selectedStatements;
+	}
+
+	public int getStageNumber() {
+		return stageNumber;
 	}
 
 	private List<SSAInstruction> retrieveAllSSAInstructions() {

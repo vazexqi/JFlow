@@ -10,7 +10,6 @@ import java.util.Set;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jface.text.IDocument;
 
 import edu.illinois.jflow.source.utils.BindingsFinder;
 
@@ -23,19 +22,18 @@ import edu.illinois.jflow.source.utils.BindingsFinder;
  * 
  */
 public class PDGExtractClosureAnalyzer {
+	private static final int SINGLE_STAGE_PIPELINE= 1;
+
 	private static final String THIS_PARAMETER= "this";
 
 	private PipelineStage stage;
 
-	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, IDocument doc, List<Integer> selectedLines) {
-		stage= new PipelineStage(pdg, selectedLines);
+	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
+		stage= new PipelineStage(pdg, SINGLE_STAGE_PIPELINE, selectedLines);
 	}
 
-	/*
-	 * This is mainly for testing purposes where we can test the line selections without the IDocument (UI-based)
-	 */
-	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, List<Integer> selectedLines) {
-		stage= new PipelineStage(pdg, selectedLines);
+	public PDGExtractClosureAnalyzer(ProgramDependenceGraph pdg, int stageNumber, List<Integer> selectedLines) {
+		stage= new PipelineStage(pdg, stageNumber, selectedLines);
 	}
 
 	/**

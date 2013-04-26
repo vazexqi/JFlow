@@ -2,6 +2,7 @@ package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,8 +57,8 @@ public class PDGPartitionerChecker {
 	}
 
 	public List<PipelineStage> convertSelectionToStages(List<List<Integer>> selections) {
-		for (List<Integer> selection : selections) {
-			PipelineStage stage= PipelineStage.makePipelineStage(pdg, selection);
+		for (int index= 0; index < selections.size(); index++) {
+			PipelineStage stage= PipelineStage.makePipelineStage(pdg, index, selections.get(index));
 			stages.add(stage);
 		}
 		return stages;

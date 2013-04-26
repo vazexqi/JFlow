@@ -539,7 +539,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 		for (int stageNumber= 0; stageNumber < stages.keySet().size(); stageNumber++) {
 			Stage stage= stages.get(stageNumber);
-			PDGExtractClosureAnalyzer pdgAnalyzer= new PDGExtractClosureAnalyzer(pdg, fDoc, stage.getStage().getStageLines());
+			PDGExtractClosureAnalyzer pdgAnalyzer= new PDGExtractClosureAnalyzer(pdg, stageNumber, stage.getStage().getStageLines());
 			stage.setPdgAnalyzer(pdgAnalyzer);
 			pdgAnalyzer.analyzeSelection();
 			stage.initializeParameterInfos();
