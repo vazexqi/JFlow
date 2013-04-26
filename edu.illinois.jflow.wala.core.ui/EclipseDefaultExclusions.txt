@@ -15,6 +15,5 @@ groovyjarjarasm\/.*
 groovyjarjarcommonscli\/.*
 org.codehaus.groovy\/.*
 groovyx\/.*
-org\/apache\/.*
 org\/hamcrest\/.*
 org\/junit\/.*
