@@ -162,4 +162,84 @@ public class PDGPartitionerChecker {
 	public PipelineStage getGenerator() {
 		return stages.get(0);
 	}
+
+	/*
+	 * Returns a set of all the stages in this pipeline minus the parameter.
+	 * XXX: This does not consider the generator for now.
+	 */
+	private Set<PipelineStage> getSetOfAllStagesExcluding(PipelineStage excluded) {
+		Set<PipelineStage> otherStages= new HashSet<PipelineStage>();
+		for (int stageNumber= 1; stageNumber <= stages.size(); stageNumber++) {
+			PipelineStage stage= stages.get(stageNumber);
+			if (stage != excluded) {
+				otherStages.add(stage);
+			}
+		}
+		return otherStages;
+	}
+
+	/**
+	 * This class checks for interferences between different stages.
+	 * 
+	 * It needs to know the set of all stages, S = {stage1, stage2, stage3, ..., stageN}. Then given
+	 * a particular stage which is an element of S, call it stageK, it lists the interference that
+	 * stageK might have with S \ {stageK}.
+	 * 
+	 * We define interference for stageK as a read of a PointerKey that is potentially modified by
+	 * another stage. More concretely, we check if the elements of the REF set of stageK is part of
+	 * the MOD set of the other stages.
+	 * 
+	 * We do this for each stage.
+	 * 
+	 * @author nchen
+	 * 
+	 */
+	class InterferenceChecker {
+	}
+
+	public class StageInterferenceInfo {
+		private PipelineStage pipelineStage;
+
+		Map<PipelineStage, Set<PointerKey>> interferences;
+
+		public StageInterferenceInfo(PipelineStage pipelineStage) {
+			this.pipelineStage= pipelineStage;
+		}
+
+		public void checkInteference() {
+			initRecords();
+			for (PipelineStage stage : interferences.keySet()) {
+				Set<PointerKey> set= interferences.get(stage);
+				set.retainAll(stage.getMods());
+			}
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder sb= new StringBuilder();
+
+			sb.append(String.format("Interference information for Stage %d%n", pipelineStage.getStageNumber()));
+			sb.append(String.format("======%n"));
+			sb.append(pipelineStage.getSelectedStatements());
+			sb.append(String.format("%n%n"));
+
+			for (PipelineStage stage : interferences.keySet()) {
+				sb.append(String.format("With Stage %d%n", stage.getStageNumber()));
+				sb.append(String.format("=====%n"));
+				sb.append(interferences.get(stage));
+				sb.append(String.format("%n%n"));
+			}
+
+			return sb.toString();
+		}
+
+		private void initRecords() {
+			interferences= new HashMap<PipelineStage, Set<PointerKey>>();
+			Set<PipelineStage> otherStages= getSetOfAllStagesExcluding(pipelineStage);
+			for (PipelineStage stage : otherStages) {
+				// We pre-populate the ref set with a copy so that we can do retainAll(), i.e., set intersection, which is destructive in Java
+				interferences.put(stage, new HashSet<PointerKey>(pipelineStage.getRefs()));
+			}
+		}
+	}
 }

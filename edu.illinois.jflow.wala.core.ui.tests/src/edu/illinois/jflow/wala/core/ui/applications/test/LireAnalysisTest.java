@@ -15,6 +15,7 @@ import com.ibm.wala.util.CancelException;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.DataDependence;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker.StageInterferenceInfo;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PipelineStage;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.core.ui.tests.Activator;
@@ -105,7 +106,8 @@ public class LireAnalysisTest extends JFlowTest {
 		PipelineStage generator= checker.getGenerator();
 
 		PipelineStage stage1= checker.getStage(1);
-		printModRefInfo(stage1);
+		StageInterferenceInfo stage1Info= checker.new StageInterferenceInfo(stage1);
+		System.out.println(stage1Info);
 
 		PipelineStage stage2= checker.getStage(2);
 		printModRefInfo(stage2);
