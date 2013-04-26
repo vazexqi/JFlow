@@ -512,6 +512,14 @@ public class ExtractClosureRefactoring extends Refactoring {
 				}
 			}
 
+			List<String> ignoredMethodCalls= fChecker.getIgnoredMethodCalls();
+			if (!ignoredMethodCalls.isEmpty()) {
+				for (String ignored : ignoredMethodCalls) {
+					result.addWarning(ignored);
+				}
+			}
+
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

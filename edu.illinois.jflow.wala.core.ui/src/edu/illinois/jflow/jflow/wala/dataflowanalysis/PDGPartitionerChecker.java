@@ -1,11 +1,13 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
@@ -206,6 +208,25 @@ public class PDGPartitionerChecker {
 		}
 
 		return interferenceMessages;
+	}
+
+	public List<String> getIgnoredMethodCalls() {
+		Set<MethodReference> ignoredMethods= new TreeSet<MethodReference>(new Comparator<MethodReference>() {
+
+			@Override
+			public int compare(MethodReference mRefLeft, MethodReference mRefRight) {
+				return mRefLeft.toString().compareTo(mRefRight.toString());
+			}
+		});
+		for (PipelineStage stage : stages) {
+			ignoredMethods.addAll(stage.getIgnoreds());
+		}
+
+		List<String> ignored= new ArrayList<String>();
+		for (MethodReference mRef : ignoredMethods) {
+			ignored.add(mRef.toString());
+		}
+		return ignored;
 	}
 
 	/**

@@ -229,10 +229,6 @@ public class PipelineStage {
 		return ref;
 	}
 
-	public Map<CGNode, OrdinalSet<MethodReference>> getIgnored() {
-		return ignored;
-	}
-
 	public HeapExclusions getExclusions() {
 		return exclusions;
 	}
@@ -262,7 +258,7 @@ public class PipelineStage {
 		void computeHeapDependencies() {
 			computeRefs();
 			computeMods();
-			computeIgnores(); // This is not a heap dependency per-se but it is an important part of checking if our analysis is sound
+			computeIgnores();
 		}
 
 		private void computeIgnores() {
@@ -334,6 +330,10 @@ public class PipelineStage {
 
 	public Set<PointerKey> getMods() {
 		return mods;
+	}
+
+	public Set<MethodReference> getIgnoreds() {
+		return ignoreds;
 	}
 
 	// For some simple eyeballing statistics of the "shape" of the mod/ref
