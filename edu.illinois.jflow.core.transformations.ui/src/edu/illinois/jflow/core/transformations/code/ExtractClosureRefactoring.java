@@ -47,6 +47,8 @@ import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRe
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
+import org.eclipse.jdt.internal.corext.dom.Selection;
+import org.eclipse.jdt.internal.corext.dom.SelectionAnalyzer;
 import org.eclipse.jdt.internal.corext.dom.StatementRewrite;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.ParameterInfo;
@@ -142,7 +144,12 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 
 		void initializeParameterInfos() {
-			List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
+			Statement loopStatement= locateEnclosingLoopStatement();
+			Selection loopSelection= Selection.createFromStartLength(loopStatement.getStartPosition(), loopStatement.getLength());
+			SelectionAnalyzer methodLevelSelectionAnalyzer= new SelectionAnalyzer(loopSelection, false);
+			loopStatement.accept(methodLevelSelectionAnalyzer);
+
+			List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(methodLevelSelectionAnalyzer.getSelectedNodes());
 			parameterInfo= new ArrayList<ParameterInfo>(arguments.size());
 			ASTNode root= analyzer.getEnclosingBodyDeclaration();
 
