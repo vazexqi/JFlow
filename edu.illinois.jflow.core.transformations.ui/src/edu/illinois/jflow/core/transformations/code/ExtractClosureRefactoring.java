@@ -34,8 +34,10 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.NodeFinder;
+import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
@@ -284,7 +286,22 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 				FieldDeclaration field= fAST.newFieldDeclaration(fragment);
 				IVariableBinding varType= pInfo.getOldBinding();
-				field.setType(fAST.newSimpleType(fAST.newSimpleName(resolveType(varType))));
+
+				ITypeBinding type= varType.getType();
+				if (type.isPrimitive()) {
+					field.setType(fAST.newPrimitiveType(PrimitiveType.toCode(resolveType(varType))));
+				} else if (type.isArray()) {
+					ITypeBinding elementType= type.getElementType();
+					Type arrayType= null;
+					if (elementType.isPrimitive()) {
+						arrayType= fAST.newPrimitiveType(PrimitiveType.toCode(elementType.getName()));
+					} else {
+						arrayType= fAST.newSimpleType(fAST.newSimpleName(elementType.getName()));
+					}
+					field.setType(fAST.newArrayType(arrayType, type.getDimensions()));
+				} else {
+					field.setType(fAST.newSimpleType(fAST.newSimpleName(resolveType(varType))));
+				}
 
 				bodyDeclarations.add(field);
 			}
