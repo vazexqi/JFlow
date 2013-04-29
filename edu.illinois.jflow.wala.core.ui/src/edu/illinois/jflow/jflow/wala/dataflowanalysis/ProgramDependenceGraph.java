@@ -226,9 +226,6 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			for (int def= 0; def < instruction.getNumberOfDefs(); def++) {
 				int SSAVariable= instruction.getDef(def);
 				for (SSAInstruction use : Iterator2Iterable.make(DU.getUses(SSAVariable))) {
-					if (use instanceof SSAPhiInstruction) {
-						break; // We don't need to consider Phi instructions as uses
-					}
 					Statement useStatement= instruction2Statement.get(use);
 					String variableName= SSAVariableToLocalNameIfPossible(use, SSAVariable, ir);
 					TypeReference variableType= SSAVariableToTypeIfPossible(SSAVariable);
@@ -260,7 +257,15 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 		Integer instructionIndex= instruction2Index.get(instruction);
 		StringBuilder sb= new StringBuilder();
 		if (instructionIndex == null) {
-			sb.append(String.format("v%d", SSAVariable));
+			// Try to get the first "real" instruction in the basic block
+			ISSABasicBlock bBlock= ir.getBasicBlockForInstruction(instruction);
+			int firstInstructionIndex= bBlock.getFirstInstructionIndex();
+			String[] localNames= ir.getLocalNames(firstInstructionIndex, SSAVariable);
+			if (localNames != null) {
+				sb.append(Arrays.toString(localNames));
+			} else {
+				sb.append(String.format("v%d", SSAVariable));
+			}
 		} else {
 			String[] localNames= ir.getLocalNames(instructionIndex, SSAVariable);
 			if (localNames != null) {
