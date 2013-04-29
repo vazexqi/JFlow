@@ -226,6 +226,9 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 			for (int def= 0; def < instruction.getNumberOfDefs(); def++) {
 				int SSAVariable= instruction.getDef(def);
 				for (SSAInstruction use : Iterator2Iterable.make(DU.getUses(SSAVariable))) {
+					if (use instanceof SSAPhiInstruction) {
+						break; // We don't need to consider Phi instructions as uses
+					}
 					Statement useStatement= instruction2Statement.get(use);
 					String variableName= SSAVariableToLocalNameIfPossible(use, SSAVariable, ir);
 					TypeReference variableType= SSAVariableToTypeIfPossible(SSAVariable);
