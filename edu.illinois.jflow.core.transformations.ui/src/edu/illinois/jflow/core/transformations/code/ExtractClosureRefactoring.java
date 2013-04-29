@@ -146,12 +146,9 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 
 		void initializeParameterInfos() {
-			Statement loopStatement= locateEnclosingLoopStatement();
-			Selection loopSelection= Selection.createFromStartLength(loopStatement.getStartPosition(), loopStatement.getLength());
-			SelectionAnalyzer methodLevelSelectionAnalyzer= new SelectionAnalyzer(loopSelection, false);
-			loopStatement.accept(methodLevelSelectionAnalyzer);
+			ASTNode[] selectedNodes= getASTNodesInLoop();
 
-			List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(methodLevelSelectionAnalyzer.getSelectedNodes());
+			List<IVariableBinding> arguments= pdgAnalyzer.getInputBindings(selectedNodes);
 			parameterInfo= new ArrayList<ParameterInfo>(arguments.size());
 			ASTNode root= analyzer.getEnclosingBodyDeclaration();
 
@@ -174,6 +171,15 @@ public class ExtractClosureRefactoring extends Refactoring {
 			if (vararg != null) {
 				parameterInfo.add(vararg);
 			}
+		}
+
+		private ASTNode[] getASTNodesInLoop() {
+			Statement loopStatement= locateEnclosingLoopStatement();
+			Selection loopSelection= Selection.createFromStartLength(loopStatement.getStartPosition(), loopStatement.getLength());
+			SelectionAnalyzer methodLevelSelectionAnalyzer= new SelectionAnalyzer(loopSelection, false);
+			loopStatement.accept(methodLevelSelectionAnalyzer);
+			ASTNode[] selectedNodes= methodLevelSelectionAnalyzer.getSelectedNodes();
+			return selectedNodes;
 		}
 
 		private String getType(VariableDeclaration declaration, boolean isVarargs) {
@@ -247,11 +253,13 @@ public class ExtractClosureRefactoring extends Refactoring {
 		}
 
 		public Collection<IVariableBinding> getOutputs() {
-			return pdgAnalyzer.getOutputBindings(analyzer.getSelectedNodes());
+			ASTNode[] selectedNodes= getASTNodesInLoop();
+			return pdgAnalyzer.getOutputBindings(selectedNodes);
 		}
 
 		public Collection<IVariableBinding> getInputs() {
-			return pdgAnalyzer.getInputBindings(analyzer.getSelectedNodes());
+			ASTNode[] selectedNodes= getASTNodesInLoop();
+			return pdgAnalyzer.getInputBindings(selectedNodes);
 		}
 	}
 
