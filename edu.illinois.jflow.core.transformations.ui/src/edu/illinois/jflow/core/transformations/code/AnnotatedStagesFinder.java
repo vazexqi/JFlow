@@ -57,13 +57,15 @@ public class AnnotatedStagesFinder {
 					try {
 						String commentString= doc.get(comment.getStartPosition(), comment.getLength());
 						Integer stageNumber= locateStageNameIfPossible(commentString);
-						AnnotatedStage stageAnnotation= stages.get(stageNumber);
-						if (stageAnnotation == null) {
-							AnnotatedStage newStageAnnotation= new AnnotatedStage(stageNumber, doc);
-							stages.put(stageNumber, newStageAnnotation);
-							stageAnnotation= newStageAnnotation;
+						if (stageNumber != null) {
+							AnnotatedStage stageAnnotation= stages.get(stageNumber);
+							if (stageAnnotation == null) {
+								AnnotatedStage newStageAnnotation= new AnnotatedStage(stageNumber, doc);
+								stages.put(stageNumber, newStageAnnotation);
+								stageAnnotation= newStageAnnotation;
+							}
+							stageAnnotation.addComment(comment);
 						}
-						stageAnnotation.addComment(comment);
 					} catch (BadLocationException e) {
 						// This should not happen given that we get the offset from the compilation unit so the offsets should be valid
 						e.printStackTrace();
