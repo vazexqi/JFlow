@@ -57,6 +57,10 @@ public abstract class JFlowTest extends JDTJavaTest {
 		return getTestPackageName() + "/" + singleInputForTest();
 	}
 
+	protected String constructFullyQualifiedClass(String name) {
+		return getTestPackageName() + "/" + name;
+	}
+
 	@Override
 	protected AbstractAnalysisEngine getAnalysisEngine(final String[] mainClassDescriptors, List<String> libs) {
 		return makeAnalysisEngine(mainClassDescriptors, libs, projectName);
@@ -155,14 +159,14 @@ public abstract class JFlowTest extends JDTJavaTest {
 				Shell parent= getParent();
 				Shell shell= new Shell(parent, SWT.EMBEDDED | SWT.SHELL_TRIM | SWT.APPLICATION_MODAL);
 				shell.setSize(600, 800);
-	
+
 				Frame frame= SWT_AWT.new_Frame(shell);
 				frame.setSize(600, 800);
 				frame.setLayout(new BorderLayout());
 				frame.add(new WalaViewer(callGraph, engine.getPointerAnalysis()), BorderLayout.CENTER);
 				frame.pack();
 				frame.setVisible(true);
-	
+
 				shell.pack();
 				shell.open();
 				Display display= parent.getDisplay();

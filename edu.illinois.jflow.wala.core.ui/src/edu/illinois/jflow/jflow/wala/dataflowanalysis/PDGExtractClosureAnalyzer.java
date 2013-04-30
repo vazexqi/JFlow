@@ -24,7 +24,7 @@ import edu.illinois.jflow.source.utils.BindingsFinder;
 public class PDGExtractClosureAnalyzer {
 	private static final int SINGLE_STAGE_PIPELINE= 1;
 
-	private static final String THIS_PARAMETER= "this";
+	public static final String THIS_PARAMETER= "this";
 
 	private PipelineStage stage;
 
@@ -92,7 +92,7 @@ public class PDGExtractClosureAnalyzer {
 		return transformNamesToBindings(nodes, names);
 	}
 
-	private Set<String> extractNamesFromDependencies(Collection<DataDependence> dependencies) {
+	public static Set<String> extractNamesFromDependencies(Collection<DataDependence> dependencies) {
 		Set<String> names= new HashSet<String>();
 
 		for (DataDependence dependence : dependencies) {
