@@ -35,7 +35,7 @@ public class MonteCarloAnalysisTest extends JFlowTest {
 	}
 
 	@Test
-	public void testAppDemo_ScalarDependencies() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
+	public void testJGFMonteCarloBench_ScalarDependencies() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "runSerial", "", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 167 }, { 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185 },
