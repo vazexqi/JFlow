@@ -26,7 +26,7 @@ import com.ibm.wala.util.intset.IntSetUtil;
  */
 public class JFlowCustomContextSelector implements ContextSelector {
 
-	public static final int K= 3;
+	public static final int K= 2;
 
 	public static final ContextKey RECEIVER_STRING= new ContextKey() {
 		@Override
