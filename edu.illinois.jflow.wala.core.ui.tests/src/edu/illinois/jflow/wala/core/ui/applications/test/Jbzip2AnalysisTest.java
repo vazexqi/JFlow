@@ -76,15 +76,4 @@ public class Jbzip2AnalysisTest extends JFlowTest {
 		PipelineStage stage2= checker.getStage(2);
 		printModRefInfo(stage2);
 	}
-
-	private void printModRefInfo(PipelineStage stage) {
-		System.err.println("<<<REF>>>");
-		System.err.println(stage.getPrettyPrintRefs());
-
-		System.err.println("<<<MOD>>>");
-		System.err.println(stage.getPrettyPrintMods());
-
-		System.err.println("<<IGNORED>>");
-		System.err.println(stage.getPrettyPrintIgnored());
-	}
 }

@@ -39,6 +39,7 @@ import com.ibm.wala.util.CancelException;
 import com.ibm.wala.util.debug.Assertions;
 import com.ibm.wala.viz.viewer.WalaViewer;
 
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PipelineStage;
 import edu.illinois.jflow.wala.utils.JFlowAnalysisUtil;
 
 public abstract class JFlowTest extends JDTJavaTest {
@@ -176,6 +177,17 @@ public abstract class JFlowTest extends JDTJavaTest {
 				}
 			}
 		}).open();
+	}
+
+	protected void printModRefInfo(PipelineStage stage) {
+		System.err.println("<<<REF>>>");
+		System.err.println(stage.getPrettyPrintRefs());
+	
+		System.err.println("<<<MOD>>>");
+		System.err.println(stage.getPrettyPrintMods());
+	
+		System.err.println("<<IGNORED>>");
+		System.err.println(stage.getPrettyPrintIgnored());
 	}
 
 }

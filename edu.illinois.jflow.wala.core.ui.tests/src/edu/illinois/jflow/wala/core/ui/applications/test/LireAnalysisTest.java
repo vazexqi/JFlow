@@ -129,15 +129,4 @@ public class LireAnalysisTest extends JFlowTest {
 		System.out.println(stage1Info);
 		printModRefInfo(stage4);
 	}
-
-	private void printModRefInfo(PipelineStage stage) {
-		System.err.println("<<<REF>>>");
-		System.err.println(stage.getPrettyPrintRefs());
-
-		System.err.println("<<<MOD>>>");
-		System.err.println(stage.getPrettyPrintMods());
-
-		System.err.println("<<IGNORED>>");
-		System.err.println(stage.getPrettyPrintIgnored());
-	}
 }

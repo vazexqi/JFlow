@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
@@ -17,6 +18,7 @@ import com.ibm.wala.util.CancelException;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.DataDependence;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGExtractClosureAnalyzer;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker.StageInterferenceInfo;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PipelineStage;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
 import edu.illinois.jflow.wala.core.ui.tests.Activator;
@@ -39,6 +41,7 @@ public class MonteCarloAnalysisTest extends JFlowTest {
 		return "edu/illinois/jflow/benchmark";
 	}
 
+	@Ignore
 	@Test
 	public void testJGFMonteCarloBench_ScalarDependencies() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass("AppDemo"), "runSerial", "", "V");
@@ -82,4 +85,26 @@ public class MonteCarloAnalysisTest extends JFlowTest {
 
 	}
 
+	@Test
+	public void testJGFMonteCarloBench_HeapDependencies() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass("AppDemo"), "runSerial", "", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 168 }, { 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186 },
+				{ 188, 189, 190, 191, 192, 193, 194, 195 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+
+		PipelineStage stage1= checker.getStage(1);
+		StageInterferenceInfo stage1Info= checker.new StageInterferenceInfo(stage1);
+		stage1Info.checkInteference();
+		System.out.println(stage1Info);
+		printModRefInfo(stage1);
+
+		PipelineStage stage2= checker.getStage(2);
+		StageInterferenceInfo stage2Info= checker.new StageInterferenceInfo(stage2);
+		stage2Info.checkInteference();
+		System.out.println(stage2Info);
+		printModRefInfo(stage2);
+	}
 }

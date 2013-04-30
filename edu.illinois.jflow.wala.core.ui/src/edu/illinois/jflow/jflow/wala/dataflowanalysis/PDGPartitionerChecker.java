@@ -295,7 +295,13 @@ public class PDGPartitionerChecker {
 			for (PipelineStage stage : interferences.keySet()) {
 				sb.append(String.format("With Stage %d%n", stage.getStageNumber()));
 				sb.append(String.format("=====%n"));
-				sb.append(interferences.get(stage));
+				Set<PointerKey> obj= interferences.get(stage);
+
+				for (PointerKey pKey : obj) {
+					sb.append(pKey);
+					sb.append(String.format("%n%n"));
+				}
+
 				sb.append(String.format("%n%n"));
 			}
 
