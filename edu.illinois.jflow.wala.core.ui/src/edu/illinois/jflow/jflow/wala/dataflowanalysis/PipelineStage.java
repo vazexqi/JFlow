@@ -339,11 +339,11 @@ public class PipelineStage {
 	// For some simple eyeballing statistics of the "shape" of the mod/ref
 
 	public String getPrettyPrintMods() {
-		return prettyPrint(mods);
+		return prettyPrint(mods, pointerAnalysis);
 	}
 
 	public String getPrettyPrintRefs() {
-		return prettyPrint(refs);
+		return prettyPrint(refs, pointerAnalysis);
 	}
 
 	public String getPrettyPrintIgnored() {
@@ -355,7 +355,10 @@ public class PipelineStage {
 		return sb.toString();
 	}
 
-	private String prettyPrint(Set<PointerKey> set) {
+	// Reusable PointerKey printers
+	///////////////////////////////
+
+	public static String prettyPrint(Set<PointerKey> set, PointerAnalysis pointerAnalysis) {
 		StringBuilder sb= new StringBuilder();
 
 		/**
@@ -368,7 +371,7 @@ public class PipelineStage {
 			}
 		});
 		Collections.sort(instanceFieldKeys, new InstanceStringComparator());
-		addListToBuffer("InstanceFieldKeys", instanceFieldKeys, sb);
+		addListToBuffer("InstanceFieldKeys", instanceFieldKeys, sb, pointerAnalysis);
 
 		List<PointerKey> arrayLengthKeys= filter(set, new Predicate<PointerKey>() {
 			@Override
@@ -377,7 +380,7 @@ public class PipelineStage {
 			}
 		});
 		Collections.sort(arrayLengthKeys, new InstanceStringComparator());
-		addListToBuffer("ArrayLengthKeys", arrayLengthKeys, sb);
+		addListToBuffer("ArrayLengthKeys", arrayLengthKeys, sb, pointerAnalysis);
 
 		List<PointerKey> arrayContentsKeys= filter(set, new Predicate<PointerKey>() {
 			@Override
@@ -386,7 +389,7 @@ public class PipelineStage {
 			}
 		});
 		Collections.sort(arrayContentsKeys, new InstanceStringComparator());
-		addListToBuffer("ArrayContentsKeys", arrayContentsKeys, sb);
+		addListToBuffer("ArrayContentsKeys", arrayContentsKeys, sb, pointerAnalysis);
 
 		List<PointerKey> staticFieldKeys= filter(set, new Predicate<PointerKey>() {
 
@@ -395,12 +398,12 @@ public class PipelineStage {
 				return t instanceof StaticFieldKey;
 			}
 		});
-		addListToBuffer("Static Fields", staticFieldKeys, sb);
+		addListToBuffer("Static Fields", staticFieldKeys, sb, pointerAnalysis);
 
 		return sb.toString();
 	}
 
-	private void addListToBuffer(String header, List<PointerKey> instanceFieldKeys, StringBuilder sb) {
+	private static void addListToBuffer(String header, List<PointerKey> instanceFieldKeys, StringBuilder sb, PointerAnalysis pointerAnalysis) {
 		sb.append(String.format("%s%n%n", header));
 
 		for (PointerKey pointerKey : instanceFieldKeys) {
@@ -412,11 +415,11 @@ public class PipelineStage {
 		}
 	}
 
-	private List<PointerKey> filter(Set<PointerKey> set, Predicate<PointerKey> filter) {
+	private static List<PointerKey> filter(Set<PointerKey> set, Predicate<PointerKey> filter) {
 		return Predicate.filter(set.iterator(), filter);
 	}
 
-	private final class InstanceStringComparator implements Comparator<PointerKey> {
+	private static final class InstanceStringComparator implements Comparator<PointerKey> {
 		@Override
 		public int compare(PointerKey o1, PointerKey o2) {
 			AbstractFieldPointerKey key1= (AbstractFieldPointerKey)o1;

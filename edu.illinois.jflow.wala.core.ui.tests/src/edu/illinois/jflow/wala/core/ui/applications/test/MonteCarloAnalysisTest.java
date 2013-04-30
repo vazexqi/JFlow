@@ -99,12 +99,12 @@ public class MonteCarloAnalysisTest extends JFlowTest {
 		StageInterferenceInfo stage1Info= checker.new StageInterferenceInfo(stage1);
 		stage1Info.checkInteference();
 		System.out.println(stage1Info);
-		printModRefInfo(stage1);
+//		printModRefInfo(stage1);
 
 		PipelineStage stage2= checker.getStage(2);
 		StageInterferenceInfo stage2Info= checker.new StageInterferenceInfo(stage2);
 		stage2Info.checkInteference();
 		System.out.println(stage2Info);
-		printModRefInfo(stage2);
+//		printModRefInfo(stage2);
 	}
 }
