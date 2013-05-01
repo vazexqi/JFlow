@@ -2,12 +2,11 @@ package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.Collection;
 
-import com.ibm.wala.analysis.reflection.InstanceKeyWithNode;
 import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.propagation.AllocationSiteInNode;
 import com.ibm.wala.ipa.callgraph.propagation.ArrayContentsKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
-import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.callgraph.propagation.StaticFieldKey;
 import com.ibm.wala.ipa.modref.ArrayLengthKey;
@@ -29,15 +28,12 @@ import com.ibm.wala.util.debug.Assertions;
  * 
  */
 public class PointerKeyPrettyPrinter {
-	private PointerAnalysis pointerAnalysis; // Not sure if we are going to report this yet
-
 	private Collection<PointerKey> keys;
 
 	private StringBuilder sb= new StringBuilder();
 
-	public PointerKeyPrettyPrinter(Collection<PointerKey> keys, PointerAnalysis pointerAnalysis) {
+	public PointerKeyPrettyPrinter(Collection<PointerKey> keys) {
 		this.keys= keys;
-		this.pointerAnalysis= pointerAnalysis;
 	}
 
 	// Don't want to modify the core classes in WALA so we have to use poor-man's dispatch based on instanceof checks
@@ -68,8 +64,9 @@ public class PointerKeyPrettyPrinter {
 	}
 
 	void handle(InstanceFieldKey instanceFieldKey) {
-		String template= "Field <%s> in object of type <%s> allocated in method <%s>.%n";
+		String template= "Field <%s> in instance[@%d] of class <%s> allocated in method <%s>.%n";
 		String fieldName= null;
+		int instanceID= -1;
 		String typeName= null;
 		String methodName= null;
 
@@ -78,9 +75,10 @@ public class PointerKeyPrettyPrinter {
 		typeName= formatTypeName(fieldRef);
 
 		InstanceKey instanceKey= instanceFieldKey.getInstanceKey();
-		if (instanceKey instanceof InstanceKeyWithNode) {
-			InstanceKeyWithNode nodeKey= (InstanceKeyWithNode)instanceKey;
-			CGNode node= nodeKey.getNode();
+		if (instanceKey instanceof AllocationSiteInNode) {
+			AllocationSiteInNode allocSiteInNode= (AllocationSiteInNode)instanceKey;
+			instanceID= allocSiteInNode.getSite().getProgramCounter();
+			CGNode node= allocSiteInNode.getNode();
 			MethodReference methodRef= node.getMethod().getReference();
 			methodName= methodRef.getSignature();
 
@@ -88,15 +86,34 @@ public class PointerKeyPrettyPrinter {
 			// This should not happen since we will always have a context even if it is Everywhere
 			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
 		}
-		sb.append(String.format(template, fieldName, typeName, methodName));
+		sb.append(String.format(template, fieldName, instanceID, typeName, methodName));
 	}
 
 	void handle(ArrayLengthKey arrayLengthKey) {
+		//XXX: Never actually seen this before yet so when we do encounter one we can better pretty print it
 		sb.append(String.format("%s%n", arrayLengthKey.toString()));
 	}
 
 	void handle(ArrayContentsKey arrayContentsKey) {
-		sb.append(String.format("%s%n", arrayContentsKey.toString()));
+		String template= "Content of array[@%d] of type <%s> allocated in method <%s>.%n";
+		int instanceID= -1;
+		String typeName= null;
+		String methodName= null;
+
+		InstanceKey instanceKey= arrayContentsKey.getInstanceKey();
+		typeName= formatTypeName(instanceKey.getConcreteType().getReference());
+		if (instanceKey instanceof AllocationSiteInNode) {
+			AllocationSiteInNode allocSiteInNode= (AllocationSiteInNode)instanceKey;
+			instanceID= allocSiteInNode.getSite().getProgramCounter();
+			CGNode node= allocSiteInNode.getNode();
+			MethodReference methodRef= node.getMethod().getReference();
+			methodName= methodRef.getSignature();
+
+		} else {
+			// This should not happen since we will always have a context even if it is Everywhere
+			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
+		}
+		sb.append(String.format(template, instanceID, typeName, methodName));
 	}
 
 	void handle(StaticFieldKey staticFieldKey) {
@@ -108,7 +125,6 @@ public class PointerKeyPrettyPrinter {
 		fieldName= fieldRef.getName().toString();
 		typeName= formatTypeName(fieldRef);
 		sb.append(String.format(template, fieldName, typeName));
-
 	}
 
 	// Default fall-back: this shouldn't happen in our case but it best to be safe
@@ -118,6 +134,10 @@ public class PointerKeyPrettyPrinter {
 
 	private String formatTypeName(FieldReference reference) {
 		TypeReference typeRef= reference.getDeclaringClass();
+		return formatTypeName(typeRef);
+	}
+
+	private String formatTypeName(TypeReference typeRef) {
 		if (typeRef.isPrimitiveType()) {
 			return typeRef.getName().toString();
 		} else if (typeRef.isArrayType()) {
