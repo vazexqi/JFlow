@@ -38,6 +38,8 @@ import com.ibm.wala.util.intset.OrdinalSet;
  */
 public class PipelineStage {
 
+	private static final boolean DEBUG= false; // For more detailed, but not human-friendly printing
+
 	private int stageNumber;
 
 	private ProgramDependenceGraph pdg;
@@ -403,15 +405,20 @@ public class PipelineStage {
 		return sb.toString();
 	}
 
-	private static void addListToBuffer(String header, List<PointerKey> instanceFieldKeys, StringBuilder sb, PointerAnalysis pointerAnalysis) {
+	private static void addListToBuffer(String header, List<PointerKey> pointerKeys, StringBuilder sb, PointerAnalysis pointerAnalysis) {
 		sb.append(String.format("%s%n%n", header));
 
-		for (PointerKey pointerKey : instanceFieldKeys) {
-			sb.append(String.format("%s%n", pointerKey.toString()));
-			sb.append(String.format("-- points to -->%n"));
-			OrdinalSet<InstanceKey> pointsToSet= pointerAnalysis.getPointsToSet(pointerKey);
-			sb.append(String.format("%s%n", pointsToSet.toString()));
-			sb.append(String.format("%n"));
+		if (DEBUG) {
+			for (PointerKey pointerKey : pointerKeys) {
+				sb.append(String.format("%s%n", pointerKey.toString()));
+				sb.append(String.format("-- points to -->%n"));
+				OrdinalSet<InstanceKey> pointsToSet= pointerAnalysis.getPointsToSet(pointerKey);
+				sb.append(String.format("%s%n", pointsToSet.toString()));
+				sb.append(String.format("%n"));
+			}
+		} else {
+			PointerKeyPrettyPrinter printer= new PointerKeyPrettyPrinter(pointerKeys, pointerAnalysis);
+			sb.append(printer.prettyPrint());
 		}
 	}
 

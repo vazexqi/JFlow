@@ -12,13 +12,13 @@ import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 /**
  * This class checks for interferences between different stages.
  * 
- * It needs to know the set of all stages, S = {stage1, stage2, stage3, ..., stageN}. Then given
- * a particular stage which is an element of S, call it stageK, it lists the interference that
- * stageK might have with S \ {stageK}.
+ * It needs to know the set of all stages, S = {stage1, stage2, stage3, ..., stageN}. Then given a
+ * particular stage which is an element of S, call it stageK, it lists the interference that stageK
+ * might have with S \ {stageK}.
  * 
  * We define interference for stageK as a read of a PointerKey that is potentially modified by
- * another stage. More concretely, we check if the elements of the REF set of stageK is part of
- * the MOD set of the other stages.
+ * another stage. More concretely, we check if the elements of the REF set of stageK is part of the
+ * MOD set of the other stages.
  * 
  * We do this for each stage.
  * 
@@ -26,12 +26,9 @@ import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
  * 
  */
 public class StageInterferenceInfo {
-	/**
-	 * 
-	 */
 	private final PDGPartitionerChecker pdgPartitionerChecker;
 
-	private PipelineStage pipelineStage;
+	private final PipelineStage pipelineStage;
 
 	Map<PipelineStage, Set<PointerKey>> interferences;
 
