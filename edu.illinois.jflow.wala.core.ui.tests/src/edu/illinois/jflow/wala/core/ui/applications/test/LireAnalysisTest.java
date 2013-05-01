@@ -15,9 +15,9 @@ import com.ibm.wala.util.CancelException;
 
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.DataDependence;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker;
-import edu.illinois.jflow.jflow.wala.dataflowanalysis.PDGPartitionerChecker.StageInterferenceInfo;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.PipelineStage;
 import edu.illinois.jflow.jflow.wala.dataflowanalysis.ProgramDependenceGraph;
+import edu.illinois.jflow.jflow.wala.dataflowanalysis.StageInterferenceInfo;
 import edu.illinois.jflow.wala.core.ui.tests.Activator;
 import edu.illinois.jflow.wala.core.ui.tests.JFlowTest;
 
@@ -106,25 +106,25 @@ public class LireAnalysisTest extends JFlowTest {
 		PipelineStage generator= checker.getGenerator();
 
 		PipelineStage stage1= checker.getStage(1);
-		StageInterferenceInfo stage1Info= checker.new StageInterferenceInfo(stage1);
+		StageInterferenceInfo stage1Info= new StageInterferenceInfo(checker, stage1);
 		stage1Info.checkInteference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage1);
 
 		PipelineStage stage2= checker.getStage(2);
-		StageInterferenceInfo stage2Info= checker.new StageInterferenceInfo(stage2);
+		StageInterferenceInfo stage2Info= new StageInterferenceInfo(checker, stage2);
 		stage2Info.checkInteference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage2);
 
 		PipelineStage stage3= checker.getStage(3);
-		StageInterferenceInfo stage3Info= checker.new StageInterferenceInfo(stage3);
+		StageInterferenceInfo stage3Info= new StageInterferenceInfo(checker, stage3);
 		stage3Info.checkInteference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage3);
 
 		PipelineStage stage4= checker.getStage(4);
-		StageInterferenceInfo stage4Info= checker.new StageInterferenceInfo(stage4);
+		StageInterferenceInfo stage4Info= new StageInterferenceInfo(checker, stage4);
 		stage4Info.checkInteference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage4);
