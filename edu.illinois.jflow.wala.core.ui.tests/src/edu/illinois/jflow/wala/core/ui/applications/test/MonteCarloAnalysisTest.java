@@ -94,6 +94,14 @@ public class MonteCarloAnalysisTest extends JFlowTest {
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+		checker.checkInterference();
+
+		if (checker.hasInterference()) {
+			for (String message : checker.getInterferenceMessages()) {
+				System.out.println(message);
+				System.out.println();
+			}
+		}
 
 		PipelineStage stage1= checker.getStage(1);
 		StageInterferenceInfo stage1Info= new StageInterferenceInfo(checker, stage1);

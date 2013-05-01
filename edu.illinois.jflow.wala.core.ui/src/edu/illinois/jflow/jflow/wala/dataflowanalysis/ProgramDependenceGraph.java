@@ -292,4 +292,8 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 	public IR getIr() {
 		return ir;
 	}
+
+	public Map<SSAInstruction, Statement> getInstruction2Statement() {
+		return instruction2Statement;
+	}
 }

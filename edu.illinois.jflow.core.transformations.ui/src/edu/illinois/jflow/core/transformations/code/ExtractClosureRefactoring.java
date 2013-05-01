@@ -537,7 +537,7 @@ public class ExtractClosureRefactoring extends Refactoring {
 			fChecker.computeHeapDependency(fCallGraph, fEngine.getPointerAnalysis());
 			fChecker.checkInterference();
 
-			if (fChecker.hasInteference()) {
+			if (fChecker.hasInterference()) {
 				List<String> messages= fChecker.getInterferenceMessages();
 				for (String message : messages) {
 					result.addWarning(message);

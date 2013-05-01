@@ -2,8 +2,11 @@ package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ssa.IR;
 import com.ibm.wala.ssa.SSAInstruction;
 import com.ibm.wala.util.collections.Pair;
@@ -27,6 +30,10 @@ public class Statement implements PDGNode {
 	private IR ir;
 
 	private List<Pair<? extends SSAInstruction, Integer>> instructions;
+
+	private Set<PointerKey> mods= new HashSet<PointerKey>();
+
+	private Set<PointerKey> refs= new HashSet<PointerKey>();
 
 
 	public Statement(int lineNumber, IR ir) {
@@ -102,5 +109,25 @@ public class Statement implements PDGNode {
 			ssaInstructions.add(pair.fst);
 		}
 		return ssaInstructions;
+	}
+
+	@Override
+	public Set<PointerKey> getRefs() {
+		return refs;
+	}
+
+	@Override
+	public Set<PointerKey> getMods() {
+		return mods;
+	}
+
+	@Override
+	public void addRef(PointerKey key) {
+		refs.add(key);
+	}
+
+	@Override
+	public void addMod(PointerKey key) {
+		mods.add(key);
 	}
 }

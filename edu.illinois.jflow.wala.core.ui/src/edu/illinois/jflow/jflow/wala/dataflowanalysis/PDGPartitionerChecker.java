@@ -191,7 +191,7 @@ public class PDGPartitionerChecker {
 		}
 	}
 
-	public boolean hasInteference() {
+	public boolean hasInterference() {
 		for (StageInterferenceInfo info : interferenceInfos) {
 			if (info.hasInterference())
 				return true;

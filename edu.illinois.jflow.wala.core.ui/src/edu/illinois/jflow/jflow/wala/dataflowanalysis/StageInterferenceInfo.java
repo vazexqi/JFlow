@@ -56,10 +56,26 @@ public class StageInterferenceInfo {
 	public List<String> getInterferenceMessages() {
 		List<String> interferenceMessages= new ArrayList<String>();
 
-		for (PipelineStage stage : interferences.keySet()) {
-			Set<PointerKey> pKeys= interferences.get(stage);
+		for (PipelineStage otherStage : interferences.keySet()) {
+			Set<PointerKey> pKeys= interferences.get(otherStage);
 			for (PointerKey pKey : pKeys) {
-				interferenceMessages.add(String.format("Stage %d has possible interference with stage %d through %s", pipelineStage.getStageNumber(), stage.getStageNumber(), pKey));
+				StringBuilder sb= new StringBuilder();
+
+				int stageNumber= pipelineStage.getStageNumber();
+				int otherStageNumber= otherStage.getStageNumber();
+
+				Set<Statement> refStatements= pipelineStage.referringStatements(pKey);
+				Statement firstRef= refStatements.iterator().next();
+				String readStmt= firstRef.getSourceCode().isEmpty() ? firstRef.toString() : firstRef.getSourceCode();
+
+				Set<Statement> modStatements= otherStage.modifyingStatements(pKey);
+				Statement firstMod= modStatements.iterator().next();
+				String writeStmt= firstMod.getSourceCode().isEmpty() ? firstMod.toString() : firstMod.getSourceCode();
+
+				sb.append(String.format("Possible data race between stage #%d and stage #%d through %s", stageNumber, otherStageNumber, PointerKeyPrettyPrinter.prettyPrint(pKey)));
+				sb.append(String.format("Stage #%d reads the value through %s.%n", stageNumber, readStmt));
+				sb.append(String.format("Stage #%d modifies the value through %s.%n", otherStageNumber, writeStmt));
+				interferenceMessages.add(sb.toString());
 			}
 		}
 
@@ -87,7 +103,7 @@ public class StageInterferenceInfo {
 
 	private void initRecords() {
 		interferences= new HashMap<PipelineStage, Set<PointerKey>>();
-		Set<PipelineStage> otherStages= this.pdgPartitionerChecker.getSetOfAllStagesExcluding(pipelineStage);
+		Set<PipelineStage> otherStages= pdgPartitionerChecker.getSetOfAllStagesExcluding(pipelineStage);
 		for (PipelineStage stage : otherStages) {
 			// We pre-populate the ref set with a copy so that we can do retainAll(), i.e., set intersection, which is destructive in Java
 			interferences.put(stage, new HashSet<PointerKey>(pipelineStage.getRefs()));

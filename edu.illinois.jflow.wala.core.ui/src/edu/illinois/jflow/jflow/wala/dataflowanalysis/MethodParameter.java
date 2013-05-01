@@ -1,8 +1,11 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
+import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.types.TypeReference;
 
 /**
@@ -45,5 +48,25 @@ public class MethodParameter implements PDGNode {
 	@Override
 	public List<String> defs() {
 		return new ArrayList<String>();
+	}
+
+	@Override
+	public Set<PointerKey> getRefs() {
+		return Collections.emptySet();
+	}
+
+	@Override
+	public Set<PointerKey> getMods() {
+		return Collections.emptySet();
+	}
+
+	@Override
+	public void addRef(PointerKey key) {
+		// Does nothing
+	}
+
+	@Override
+	public void addMod(PointerKey key) {
+		// Does nothing
 	}
 }

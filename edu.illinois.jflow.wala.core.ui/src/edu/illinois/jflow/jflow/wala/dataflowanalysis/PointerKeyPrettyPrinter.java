@@ -38,6 +38,10 @@ public class PointerKeyPrettyPrinter {
 		return sb.toString();
 	}
 
+	public static String prettyPrint(PointerKey pointerKey) {
+		return dispatchPointerKey(pointerKey);
+	}
+
 	public static String dispatchPointerKey(PointerKey key) {
 		if (key instanceof InstanceFieldKey) {
 			InstanceFieldKey instanceFieldKey= (InstanceFieldKey)key;

@@ -1,8 +1,10 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +67,10 @@ public class PipelineStage {
 	// These are the ignored methods that we do not consider (makes the analysis unsound) so we tell the user
 
 	private Set<MethodReference> ignoreds= new HashSet<MethodReference>();
+
+	private Map<PointerKey, Set<Statement>> ref2Statements= new HashMap<PointerKey, Set<Statement>>();
+
+	private Map<PointerKey, Set<Statement>> mod2Statements= new HashMap<PointerKey, Set<Statement>>();
 
 	/*
 	 * Convenience method to create a new pipeline stage and begin the analysis immediately
@@ -182,6 +188,14 @@ public class PipelineStage {
 		return ssaInstructions;
 	}
 
+	public Set<Statement> referringStatements(PointerKey key) {
+		return ref2Statements.get(key);
+	}
+
+	public Set<Statement> modifyingStatements(PointerKey key) {
+		return mod2Statements.get(key);
+	}
+
 	// Store these values in the outer class so that it is easier for testing
 
 	private CGNode cgNode;
@@ -263,8 +277,20 @@ public class PipelineStage {
 			computeIgnores();
 		}
 
+		private void addPointerKeyRecord(Map<PointerKey, Set<Statement>> record, Collection<PointerKey> pointerKeys, Statement statement) {
+			for (PointerKey key : pointerKeys) {
+				Set<Statement> set= record.get(key);
+				if (set == null) {
+					set= new HashSet<Statement>();
+					record.put(key, set);
+				}
+				set.add(statement);
+			}
+		}
+
 		private void computeIgnores() {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
+
 			for (SSAInstruction instruction : instructions) {
 				if (instruction instanceof SSAAbstractInvokeInstruction) {
 					SSAAbstractInvokeInstruction call= (SSAAbstractInvokeInstruction)instruction;
@@ -281,10 +307,15 @@ public class PipelineStage {
 
 		private void computeMods() {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
+			Map<SSAInstruction, Statement> map= pdg.getInstruction2Statement();
+
 			for (SSAInstruction instruction : instructions) {
+				Statement statement= map.get(instruction);
+
 				// These are direct modifications x.f = <something>
 				Set<PointerKey> instructionMod= modref.getMod(cgNode, heapModel, pointerAnalysis, instruction, null);
 				mods.addAll(instructionMod);
+				addPointerKeyRecord(mod2Statements, instructionMod, statement);
 
 				// These are indirect modifications through calls
 				if (instruction instanceof SSAAbstractInvokeInstruction) {
@@ -293,7 +324,9 @@ public class PipelineStage {
 					Set<CGNode> possibleTargets= callGraph.getPossibleTargets(cgNode, callSite);
 					for (CGNode target : possibleTargets) {
 						OrdinalSet<PointerKey> ordinalSet= mod.get(target);
-						mods.addAll(OrdinalSet.toCollection(ordinalSet));
+						Collection<PointerKey> pointerKeys= OrdinalSet.toCollection(ordinalSet);
+						mods.addAll(pointerKeys);
+						addPointerKeyRecord(mod2Statements, pointerKeys, statement);
 					}
 				}
 			}
@@ -301,10 +334,15 @@ public class PipelineStage {
 
 		private void computeRefs() {
 			List<SSAInstruction> instructions= retrieveAllSSAInstructions();
+			Map<SSAInstruction, Statement> map= pdg.getInstruction2Statement();
+
 			for (SSAInstruction instruction : instructions) {
+				Statement statement= map.get(instruction);
+
 				// These are direct references x.f
 				Set<PointerKey> instructionRef= modref.getRef(cgNode, heapModel, pointerAnalysis, instruction, null);
 				refs.addAll(instructionRef);
+				addPointerKeyRecord(ref2Statements, instructionRef, statement);
 
 				// These are indirect modifications through calls
 				if (instruction instanceof SSAAbstractInvokeInstruction) {
@@ -313,12 +351,15 @@ public class PipelineStage {
 					Set<CGNode> possibleTargets= callGraph.getPossibleTargets(cgNode, callSite);
 					for (CGNode target : possibleTargets) {
 						OrdinalSet<PointerKey> ordinalSet= ref.get(target);
-						refs.addAll(OrdinalSet.toCollection(ordinalSet));
+						Collection<PointerKey> pointerKeys= OrdinalSet.toCollection(ordinalSet);
+						refs.addAll(pointerKeys);
+						addPointerKeyRecord(ref2Statements, pointerKeys, statement);
 					}
 				}
 			}
 		}
 	}
+
 
 	/*
 	 * REMEMBER that we are not doing anything flow-sensitive inside the method bodies. Thus, we are not
@@ -417,8 +458,7 @@ public class PipelineStage {
 				sb.append(String.format("%n"));
 			}
 		} else {
-			PointerKeyPrettyPrinter printer= new PointerKeyPrettyPrinter(pointerKeys);
-			sb.append(printer.prettyPrint());
+			sb.append(PointerKeyPrettyPrinter.prettyPrint(pointerKeys));
 			sb.append(String.format("%n"));
 		}
 	}
