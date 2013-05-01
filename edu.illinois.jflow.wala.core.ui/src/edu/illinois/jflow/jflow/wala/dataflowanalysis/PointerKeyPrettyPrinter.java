@@ -1,6 +1,6 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
-import java.util.Collection;
+import java.util.List;
 
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.propagation.AllocationSiteInNode;
@@ -28,42 +28,36 @@ import com.ibm.wala.util.debug.Assertions;
  * 
  */
 public class PointerKeyPrettyPrinter {
-	private Collection<PointerKey> keys;
+	public static String prettyPrint(List<PointerKey> pointerKeys) {
+		StringBuilder sb= new StringBuilder();
 
-	private StringBuilder sb= new StringBuilder();
-
-	public PointerKeyPrettyPrinter(Collection<PointerKey> keys) {
-		this.keys= keys;
-	}
-
-	// Don't want to modify the core classes in WALA so we have to use poor-man's dispatch based on instanceof checks
-	public String prettyPrint() {
-		for (PointerKey key : keys) {
-			dispatchPointerKey(key);
+		for (PointerKey key : pointerKeys) {
+			sb.append(dispatchPointerKey(key));
 		}
 
 		return sb.toString();
 	}
 
-	private void dispatchPointerKey(PointerKey key) {
+	public static String dispatchPointerKey(PointerKey key) {
 		if (key instanceof InstanceFieldKey) {
 			InstanceFieldKey instanceFieldKey= (InstanceFieldKey)key;
-			handle(instanceFieldKey);
+			return handle(instanceFieldKey);
 		} else if (key instanceof ArrayLengthKey) {
 			ArrayLengthKey arrayLengthKey= (ArrayLengthKey)key;
-			handle(arrayLengthKey);
+			return handle(arrayLengthKey);
 		} else if (key instanceof ArrayContentsKey) {
 			ArrayContentsKey arrayContentsKey= (ArrayContentsKey)key;
-			handle(arrayContentsKey);
+			return handle(arrayContentsKey);
 		} else if (key instanceof StaticFieldKey) {
 			StaticFieldKey staticFieldKey= (StaticFieldKey)key;
-			handle(staticFieldKey);
+			return handle(staticFieldKey);
 		} else {
-			handle(key);
+			return handle(key);
 		}
 	}
 
-	void handle(InstanceFieldKey instanceFieldKey) {
+	static String handle(InstanceFieldKey instanceFieldKey) {
+		StringBuilder sb= new StringBuilder();
 		String template= "Field <%s> in instance[@%d] of class <%s> allocated in method <%s>.%n";
 		String fieldName= null;
 		int instanceID= -1;
@@ -87,14 +81,18 @@ public class PointerKeyPrettyPrinter {
 			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
 		}
 		sb.append(String.format(template, fieldName, instanceID, typeName, methodName));
+		return sb.toString();
 	}
 
-	void handle(ArrayLengthKey arrayLengthKey) {
+	static String handle(ArrayLengthKey arrayLengthKey) {
+		StringBuilder sb= new StringBuilder();
 		//XXX: Never actually seen this before yet so when we do encounter one we can better pretty print it
 		sb.append(String.format("%s%n", arrayLengthKey.toString()));
+		return sb.toString();
 	}
 
-	void handle(ArrayContentsKey arrayContentsKey) {
+	static String handle(ArrayContentsKey arrayContentsKey) {
+		StringBuilder sb= new StringBuilder();
 		String template= "Content of array[@%d] of type <%s> allocated in method <%s>.%n";
 		int instanceID= -1;
 		String typeName= null;
@@ -114,9 +112,11 @@ public class PointerKeyPrettyPrinter {
 			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
 		}
 		sb.append(String.format(template, instanceID, typeName, methodName));
+		return sb.toString();
 	}
 
-	void handle(StaticFieldKey staticFieldKey) {
+	static String handle(StaticFieldKey staticFieldKey) {
+		StringBuilder sb= new StringBuilder();
 		String template= "Static field <%s> in class <%s>.";
 		String fieldName= null;
 		String typeName= null;
@@ -125,19 +125,22 @@ public class PointerKeyPrettyPrinter {
 		fieldName= fieldRef.getName().toString();
 		typeName= formatTypeName(fieldRef);
 		sb.append(String.format(template, fieldName, typeName));
+		return sb.toString();
 	}
 
 	// Default fall-back: this shouldn't happen in our case but it best to be safe
-	private void handle(PointerKey key) {
+	static String handle(PointerKey key) {
+		StringBuilder sb= new StringBuilder();
 		sb.append(String.format("%s%n", key.toString()));
+		return sb.toString();
 	}
 
-	private String formatTypeName(FieldReference reference) {
+	private static String formatTypeName(FieldReference reference) {
 		TypeReference typeRef= reference.getDeclaringClass();
 		return formatTypeName(typeRef);
 	}
 
-	private String formatTypeName(TypeReference typeRef) {
+	private static String formatTypeName(TypeReference typeRef) {
 		if (typeRef.isPrimitiveType()) {
 			return typeRef.getName().toString();
 		} else if (typeRef.isArrayType()) {
@@ -146,4 +149,5 @@ public class PointerKeyPrettyPrinter {
 			return typeRef.getName().toString().substring(1).replace('/', '.');
 		}
 	}
+
 }
