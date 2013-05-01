@@ -419,6 +419,7 @@ public class PipelineStage {
 		} else {
 			PointerKeyPrettyPrinter printer= new PointerKeyPrettyPrinter(pointerKeys, pointerAnalysis);
 			sb.append(printer.prettyPrint());
+			sb.append(String.format("%n"));
 		}
 	}
 

@@ -68,7 +68,7 @@ public class PointerKeyPrettyPrinter {
 	}
 
 	void handle(InstanceFieldKey instanceFieldKey) {
-		String template= "Field <%s> in object of type <%s> allocated in method <%s>%n.";
+		String template= "Field <%s> in object of type <%s> allocated in method <%s>.%n";
 		String fieldName= null;
 		String typeName= null;
 		String methodName= null;
