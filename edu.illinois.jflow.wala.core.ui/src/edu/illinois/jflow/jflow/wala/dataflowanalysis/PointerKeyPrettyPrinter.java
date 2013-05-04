@@ -79,12 +79,11 @@ public class PointerKeyPrettyPrinter {
 			CGNode node= allocSiteInNode.getNode();
 			MethodReference methodRef= node.getMethod().getReference();
 			methodName= methodRef.getSignature();
-
+			sb.append(String.format(template, fieldName, instanceID, typeName, methodName));
 		} else {
-			// This should not happen since we will always have a context even if it is Everywhere
-			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
+			typeName= formatTypeName(instanceKey.getConcreteType().getReference());
+			sb.append(typeName);
 		}
-		sb.append(String.format(template, fieldName, instanceID, typeName, methodName));
 		return sb.toString();
 	}
 

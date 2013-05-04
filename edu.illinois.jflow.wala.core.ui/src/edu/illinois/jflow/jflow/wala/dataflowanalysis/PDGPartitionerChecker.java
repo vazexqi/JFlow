@@ -112,7 +112,6 @@ public class PDGPartitionerChecker {
 		CGNode cgNode= getCurrentCGNode();
 		for (PipelineStage stage : stages) {
 			stage.computeHeapDependencies(cgNode, callGraph, pointerAnalysis, modref, mod, ref, ignored);
-
 		}
 	}
 

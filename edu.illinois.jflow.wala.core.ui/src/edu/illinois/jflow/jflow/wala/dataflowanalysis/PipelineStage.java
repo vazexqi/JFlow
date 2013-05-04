@@ -268,7 +268,11 @@ public class PipelineStage {
 	}
 
 
-
+	/**
+	 * This records the mods/refs for each pipeline stage (transitively).
+	 * @author nchen
+	 * 
+	 */
 	class PipelineStageModRef {
 
 		void computeHeapDependencies() {
