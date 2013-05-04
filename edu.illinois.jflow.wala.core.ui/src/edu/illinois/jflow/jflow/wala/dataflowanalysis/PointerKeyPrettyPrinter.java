@@ -82,7 +82,7 @@ public class PointerKeyPrettyPrinter {
 			sb.append(String.format(template, fieldName, instanceID, typeName, methodName));
 		} else {
 			typeName= formatTypeName(instanceKey.getConcreteType().getReference());
-			sb.append(typeName);
+			sb.append(String.format("%s.%n", typeName));
 		}
 		return sb.toString();
 	}
