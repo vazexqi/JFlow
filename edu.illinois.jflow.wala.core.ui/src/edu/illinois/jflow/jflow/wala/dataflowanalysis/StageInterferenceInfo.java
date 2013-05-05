@@ -105,8 +105,10 @@ public class StageInterferenceInfo {
 		interferences= new HashMap<PipelineStage, Set<PointerKey>>();
 		Set<PipelineStage> otherStages= pdgPartitionerChecker.getSetOfAllStagesExcluding(pipelineStage);
 		for (PipelineStage stage : otherStages) {
-			// We pre-populate the ref set with a copy so that we can do retainAll(), i.e., set intersection, which is destructive in Java
-			interferences.put(stage, new HashSet<PointerKey>(pipelineStage.getRefs()));
+			// We pre-populate the set with a copy of (Ref U Mod) so that we can do retainAll(), i.e., set intersection, which is destructive in Java
+			Set<PointerKey> refs= pipelineStage.getRefs();
+			refs.addAll(pipelineStage.getMods());
+			interferences.put(stage, new HashSet<PointerKey>(refs));
 		}
 	}
 }
