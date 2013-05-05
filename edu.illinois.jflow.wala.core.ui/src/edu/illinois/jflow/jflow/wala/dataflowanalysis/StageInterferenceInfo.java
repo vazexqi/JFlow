@@ -64,18 +64,37 @@ public class StageInterferenceInfo {
 				int stageNumber= pipelineStage.getStageNumber();
 				int otherStageNumber= otherStage.getStageNumber();
 
-				Set<Statement> refStatements= pipelineStage.referringStatements(pKey);
-				Statement firstRef= refStatements.iterator().next();
-				String readStmt= firstRef.getSourceCode().isEmpty() ? firstRef.toString() : firstRef.getSourceCode();
+				// We could have a read-write dependency and/or a write-write dependency
+				// Be sure to add BOTH
 
-				Set<Statement> modStatements= otherStage.modifyingStatements(pKey);
-				Statement firstMod= modStatements.iterator().next();
-				String writeStmt= firstMod.getSourceCode().isEmpty() ? firstMod.toString() : firstMod.getSourceCode();
+				Set<Statement> thisStageRefStatements= pipelineStage.referringStatements(pKey);
+				Set<Statement> thisStageModStatements= pipelineStage.modifyingStatements(pKey);
 
-				sb.append(String.format("Possible data race between stage #%d and stage #%d through %s", stageNumber, otherStageNumber, PointerKeyPrettyPrinter.prettyPrint(pKey)));
-				sb.append(String.format("Stage #%d reads the value through %s.%n", stageNumber, readStmt));
-				sb.append(String.format("Stage #%d modifies the value through %s.%n", otherStageNumber, writeStmt));
-				interferenceMessages.add(sb.toString());
+				Set<Statement> otherStageModStatements= otherStage.modifyingStatements(pKey);
+				Statement otherStageFirstMod= otherStageModStatements.iterator().next();
+				String otherStageWriteStmt= otherStageFirstMod.getSourceCode().isEmpty() ? otherStageFirstMod.toString() : otherStageFirstMod.getSourceCode();
+
+				// Add read-write dependency (if any)
+				if (thisStageRefStatements != null && !thisStageRefStatements.isEmpty()) {
+					Statement firstRef= thisStageRefStatements.iterator().next();
+					String readStmt= firstRef.getSourceCode().isEmpty() ? firstRef.toString() : firstRef.getSourceCode();
+
+					sb.append(String.format("Possible data race between stage #%d and stage #%d through %s", stageNumber, otherStageNumber, PointerKeyPrettyPrinter.prettyPrint(pKey)));
+					sb.append(String.format("Stage #%d reads the value through %s.%n", stageNumber, readStmt));
+					sb.append(String.format("Stage #%d modifies the value through %s.%n", otherStageNumber, otherStageWriteStmt));
+					interferenceMessages.add(sb.toString());
+				}
+
+				// Add write-write dependency (if any)
+				if (thisStageModStatements != null && !thisStageModStatements.isEmpty()) {
+					Statement firstMod= thisStageModStatements.iterator().next();
+					String writeStmt= firstMod.getSourceCode().isEmpty() ? firstMod.toString() : firstMod.getSourceCode();
+
+					sb.append(String.format("Possible data race between stage #%d and stage #%d through %s", stageNumber, otherStageNumber, PointerKeyPrettyPrinter.prettyPrint(pKey)));
+					sb.append(String.format("Stage #%d modifies the value through %s.%n", stageNumber, writeStmt));
+					sb.append(String.format("Stage #%d modifies the value through %s.%n", otherStageNumber, otherStageWriteStmt));
+					interferenceMessages.add(sb.toString());
+				}
 			}
 		}
 
