@@ -185,7 +185,7 @@ public class PDGPartitionerChecker {
 		interferenceInfos= new ArrayList<StageInterferenceInfo>();
 		for (int stage= 1; stage < stages.size(); stage++) {
 			StageInterferenceInfo interferenceInfo= new StageInterferenceInfo(this, getStage(stage));
-			interferenceInfo.checkInteference();
+			interferenceInfo.checkInterference();
 			interferenceInfos.add(interferenceInfo);
 		}
 	}

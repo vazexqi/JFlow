@@ -42,7 +42,7 @@ public class StageInterferenceInfo {
 		this.pipelineStage= pipelineStage;
 	}
 
-	public void checkInteference() {
+	public void checkInterference() {
 		initRecords();
 		for (PipelineStage stage : interferences.keySet()) {
 			Set<PointerKey> set= interferences.get(stage);

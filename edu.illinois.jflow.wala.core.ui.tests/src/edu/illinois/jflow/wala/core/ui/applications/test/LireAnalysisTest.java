@@ -107,25 +107,25 @@ public class LireAnalysisTest extends JFlowTest {
 
 		PipelineStage stage1= checker.getStage(1);
 		StageInterferenceInfo stage1Info= new StageInterferenceInfo(checker, stage1);
-		stage1Info.checkInteference();
+		stage1Info.checkInterference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage1);
 
 		PipelineStage stage2= checker.getStage(2);
 		StageInterferenceInfo stage2Info= new StageInterferenceInfo(checker, stage2);
-		stage2Info.checkInteference();
+		stage2Info.checkInterference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage2);
 
 		PipelineStage stage3= checker.getStage(3);
 		StageInterferenceInfo stage3Info= new StageInterferenceInfo(checker, stage3);
-		stage3Info.checkInteference();
+		stage3Info.checkInterference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage3);
 
 		PipelineStage stage4= checker.getStage(4);
 		StageInterferenceInfo stage4Info= new StageInterferenceInfo(checker, stage4);
-		stage4Info.checkInteference();
+		stage4Info.checkInterference();
 		System.out.println(stage1Info);
 		printModRefInfo(stage4);
 	}
