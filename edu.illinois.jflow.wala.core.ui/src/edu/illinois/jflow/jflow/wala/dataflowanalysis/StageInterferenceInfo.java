@@ -7,7 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldPointerKey;
+import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
+import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
+import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
 
 /**
  * This class checks for interferences between different stages.
@@ -42,6 +47,41 @@ public class StageInterferenceInfo {
 		for (PipelineStage stage : interferences.keySet()) {
 			Set<PointerKey> set= interferences.get(stage);
 			set.retainAll(stage.getMods());
+		}
+
+		// Filter out the pointers that are passed between stages
+		DelegatingExtendedHeapModel heapModel= pipelineStage.getHeapModel();
+		CGNode cgNode= pipelineStage.getCgNode();
+
+		List<DataDependence> inputDataDependences= pipelineStage.getInputDataDependences();
+		for (DataDependence dDep : inputDataDependences) {
+			int SSAVariableNumber= dDep.getSSAVariableNumber();
+			if (SSAVariableNumber != DataDependence.DEFAULT_SSAVARIABLENUMBER) {
+				PointerKey ref= heapModel.getPointerKeyForLocal(cgNode, SSAVariableNumber);
+				if (ref != null) {
+					// Remove this pointer key from the interference of sets
+					for (PipelineStage stage : interferences.keySet()) {
+						Set<PointerKey> set= interferences.get(stage);
+						pruneTransferredObject(ref, set);
+					}
+				}
+			}
+		}
+	}
+
+	// We can only transfer non-static objects - all static objects are otherwise shared
+	private void pruneTransferredObject(PointerKey ref, Set<PointerKey> set) {
+		PointerAnalysis pointerAnalysis= pipelineStage.getPointerAnalysis();
+		for (InstanceKey transferredObject : pointerAnalysis.getPointsToSet(ref)) {
+			for (PointerKey pKey : set) {
+				if (pKey instanceof InstanceFieldPointerKey) {
+					InstanceFieldPointerKey instanceFieldPointerKey= (InstanceFieldPointerKey)pKey;
+					InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
+					if (instanceKey.equals(transferredObject)) {
+						set.remove(pKey);
+					}
+				}
+			}
 		}
 	}
 
