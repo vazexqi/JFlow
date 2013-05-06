@@ -214,9 +214,6 @@ public class PipelineStage {
 
 	private Map<CGNode, OrdinalSet<MethodReference>> ignored;
 
-	private HeapExclusions exclusions;
-
-
 	public CGNode getCgNode() {
 		return cgNode;
 	}
@@ -245,31 +242,37 @@ public class PipelineStage {
 		return ref;
 	}
 
+	private HeapExclusions heapExclusions;
+
 	public HeapExclusions getExclusions() {
-		return exclusions;
+		return heapExclusions;
 	}
 
 	// Modref analysis
 	// Though this might look more complicated, we intentionally split this up (not doing modref upfront).
 	// This facilitates a staged approach to determining feasibility of each pipeline stage and also makes
 	// it easier to test in isolation.
-	void computeHeapDependencies(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, Map<CGNode, OrdinalSet<PointerKey>> mod, Map<CGNode, OrdinalSet<PointerKey>> ref,
+	void computeHeapDependencies(CGNode cgNode, CallGraph callGraph, PointerAnalysis pointerAnalysis, ModRef modref, HeapExclusions heapExclusions, Map<CGNode, OrdinalSet<PointerKey>> mod,
+			Map<CGNode, OrdinalSet<PointerKey>> ref,
 			Map<CGNode, OrdinalSet<MethodReference>> ignored) {
 		this.cgNode= cgNode;
 		this.callGraph= callGraph;
 		this.pointerAnalysis= pointerAnalysis;
 		this.modref= modref;
+		this.heapExclusions= heapExclusions;
 		this.mod= mod;
 		this.ignored= ignored;
 		this.ref= ref;
 		this.heapModel= new DelegatingExtendedHeapModel(pointerAnalysis.getHeapModel());
+
+
 		PipelineStageModRef pipelineStageModRef= new PipelineStageModRef();
 		pipelineStageModRef.computeHeapDependencies();
 	}
 
-
 	/**
 	 * This records the mods/refs for each pipeline stage (transitively).
+	 * 
 	 * @author nchen
 	 * 
 	 */
@@ -317,7 +320,7 @@ public class PipelineStage {
 				Statement statement= map.get(instruction);
 
 				// These are direct modifications x.f = <something>
-				Set<PointerKey> instructionMod= modref.getMod(cgNode, heapModel, pointerAnalysis, instruction, null);
+				Set<PointerKey> instructionMod= modref.getMod(cgNode, heapModel, pointerAnalysis, instruction, heapExclusions);
 				mods.addAll(instructionMod);
 				addPointerKeyRecord(mod2Statements, instructionMod, statement);
 
@@ -344,7 +347,7 @@ public class PipelineStage {
 				Statement statement= map.get(instruction);
 
 				// These are direct references x.f
-				Set<PointerKey> instructionRef= modref.getRef(cgNode, heapModel, pointerAnalysis, instruction, null);
+				Set<PointerKey> instructionRef= modref.getRef(cgNode, heapModel, pointerAnalysis, instruction, heapExclusions);
 				refs.addAll(instructionRef);
 				addPointerKeyRecord(ref2Statements, instructionRef, statement);
 

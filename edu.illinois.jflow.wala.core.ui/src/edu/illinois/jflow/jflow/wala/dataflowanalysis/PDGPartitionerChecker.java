@@ -1,5 +1,6 @@
 package edu.illinois.jflow.jflow.wala.dataflowanalysis;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,7 +14,9 @@ import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.CallGraph;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
+import com.ibm.wala.ipa.slicer.HeapExclusions;
 import com.ibm.wala.types.MethodReference;
+import com.ibm.wala.util.config.FileOfClasses;
 import com.ibm.wala.util.debug.Assertions;
 import com.ibm.wala.util.intset.OrdinalSet;
 
@@ -48,6 +51,8 @@ public class PDGPartitionerChecker {
 	private Map<CGNode, OrdinalSet<MethodReference>> ignored;
 
 	private ArrayList<StageInterferenceInfo> interferenceInfos;
+
+	private HeapExclusions heapExclusions;
 
 	public static PDGPartitionerChecker makePartitionChecker(ProgramDependenceGraph pdg, List<List<Integer>> selections) {
 		PDGPartitionerChecker temp= new PDGPartitionerChecker(pdg);
@@ -111,7 +116,7 @@ public class PDGPartitionerChecker {
 		setupModRefInfrastructure(callGraph, pointerAnalysis);
 		CGNode cgNode= getCurrentCGNode();
 		for (PipelineStage stage : stages) {
-			stage.computeHeapDependencies(cgNode, callGraph, pointerAnalysis, modref, mod, ref, ignored);
+			stage.computeHeapDependencies(cgNode, callGraph, pointerAnalysis, modref, heapExclusions, mod, ref, ignored);
 		}
 	}
 
@@ -127,11 +132,22 @@ public class PDGPartitionerChecker {
 		return node;
 	}
 
+	// We exclude all subclasses of Throwable
+	public static final String exclusionsRegex= ".*Exception\n" +
+			".*Error\n" +
+			"java/lang/Throwable\n" +
+			"java/lang/StackTraceElement\n";
+
 	private void setupModRefInfrastructure(CallGraph callGraph, PointerAnalysis pointerAnalysis) {
 		this.callGraph= callGraph;
 		this.modref= new JFlowModRef();
-		this.mod= modref.computeMod(callGraph, pointerAnalysis);
-		this.ref= modref.computeRef(callGraph, pointerAnalysis);
+		try {
+			this.heapExclusions= new HeapExclusions(new FileOfClasses(exclusionsRegex));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.mod= modref.computeMod(callGraph, pointerAnalysis, heapExclusions);
+		this.ref= modref.computeRef(callGraph, pointerAnalysis, heapExclusions);
 		this.ignored= modref.computeIgnoredCallee(callGraph, pointerAnalysis);
 	}
 
