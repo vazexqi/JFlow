@@ -89,8 +89,24 @@ public class PointerKeyPrettyPrinter {
 
 	static String handle(ArrayLengthKey arrayLengthKey) {
 		StringBuilder sb= new StringBuilder();
-		//XXX: Never actually seen this before yet so when we do encounter one we can better pretty print it
-		sb.append(String.format("%s%n", arrayLengthKey.toString()));
+		String template= "Accessing length field of array[%d] of type <%s> allocated in method <%s>.%n";
+		int instanceID= -1;
+		String typeName= null;
+		String methodName= null;
+
+		InstanceKey instanceKey= arrayLengthKey.getInstanceKey();
+		typeName= formatTypeName(instanceKey.getConcreteType().getReference());
+		if (instanceKey instanceof AllocationSiteInNode) {
+			AllocationSiteInNode allocSiteInNode= (AllocationSiteInNode)instanceKey;
+			instanceID= allocSiteInNode.getSite().getProgramCounter();
+			CGNode node= allocSiteInNode.getNode();
+			MethodReference methodRef= node.getMethod().getReference();
+			methodName= methodRef.getSignature();
+
+		} else {
+			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
+		}
+		sb.append(String.format(template, instanceID, typeName, methodName));
 		return sb.toString();
 	}
 
@@ -111,7 +127,6 @@ public class PointerKeyPrettyPrinter {
 			methodName= methodRef.getSignature();
 
 		} else {
-			// This should not happen since we will always have a context even if it is Everywhere
 			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
 		}
 		sb.append(String.format(template, instanceID, typeName, methodName));
