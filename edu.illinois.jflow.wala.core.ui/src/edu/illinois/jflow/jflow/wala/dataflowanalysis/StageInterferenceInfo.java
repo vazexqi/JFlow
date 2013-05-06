@@ -133,7 +133,7 @@ public class StageInterferenceInfo {
 		public String toString() {
 			StringBuilder sb= new StringBuilder();
 
-			String template= "[Stage#%d]%s and [Stage#%d]%s concurrently access:%n";
+			String template= "[Stage#%d]%s %n [Stage#%d]%s %n concurrently access:%n";
 			String currentStageSourceCode= currentStageStmt.getSourceCode().isEmpty() ? currentStageStmt.toString() : currentStageStmt.getSourceCode();
 			String otherStageSourcecode= otherStageStmt.getSourceCode().isEmpty() ? otherStageStmt.toString() : otherStageStmt.getSourceCode();
 			sb.append(String.format(template, pipelineStage.getStageNumber(), currentStageSourceCode, otherStage.getStageNumber(), otherStageSourcecode));
