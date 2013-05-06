@@ -53,8 +53,19 @@ public class StageInterferenceInfo {
 		DelegatingExtendedHeapModel heapModel= pipelineStage.getHeapModel();
 		CGNode cgNode= pipelineStage.getCgNode();
 
-		List<DataDependence> inputDataDependences= pipelineStage.getInputDataDependences();
-		for (DataDependence dDep : inputDataDependences) {
+		List<DataDependence> dataDependencies= new ArrayList<DataDependence>();
+		// XXX: Improve this
+		// Gather all the data that could be produced from any of the other stages
+		// This is a shortcut (it doesn't consider flow). However, it is safe because
+		// flow is implicitly considered through the use of SSAVariables and also the fact
+		// that we only allow straight-line code. A proper, but more expensive, way
+		// would be to consider each combination of possible producer-consumer pairs
+		dataDependencies.addAll(pipelineStage.getOutputDataDependences());
+		for (PipelineStage stage : interferences.keySet()) {
+			dataDependencies.addAll(stage.getOutputDataDependences());
+		}
+
+		for (DataDependence dDep : dataDependencies) {
 			int SSAVariableNumber= dDep.getSSAVariableNumber();
 			if (SSAVariableNumber != DataDependence.DEFAULT_SSAVARIABLENUMBER) {
 				PointerKey ref= heapModel.getPointerKeyForLocal(cgNode, SSAVariableNumber);
