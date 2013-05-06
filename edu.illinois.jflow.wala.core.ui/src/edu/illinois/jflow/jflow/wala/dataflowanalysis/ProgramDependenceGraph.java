@@ -229,7 +229,7 @@ public class ProgramDependenceGraph extends SlowSparseNumberedLabeledGraph<PDGNo
 					Statement useStatement= instruction2Statement.get(use);
 					String variableName= SSAVariableToLocalNameIfPossible(use, SSAVariable, ir);
 					TypeReference variableType= SSAVariableToTypeIfPossible(SSAVariable);
-					addEdge(defStatement, useStatement, new DataDependence(defStatement, useStatement, variableType, variableName));
+					addEdge(defStatement, useStatement, new DataDependence(defStatement, useStatement, variableType, variableName, SSAVariable));
 				}
 			}
 		}

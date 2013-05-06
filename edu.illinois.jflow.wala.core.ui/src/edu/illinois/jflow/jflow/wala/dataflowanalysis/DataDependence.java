@@ -22,11 +22,20 @@ public class DataDependence {
 
 	TypeReference variableType;
 
+	int SSAVariableNumber; // optional, might not be set in all cases, thus, not used for comparison hashcode
+
+	static int DEFAULT_SSAVARIABLENUMBER= -1;
+
 	public DataDependence(PDGNode source, PDGNode dest, TypeReference variableType, String variableName) {
+		this(source, dest, variableType, variableName, DEFAULT_SSAVARIABLENUMBER);
+	}
+
+	public DataDependence(PDGNode source, PDGNode dest, TypeReference variableType, String variableName, int SSAVariableNumber) {
 		this.source= source;
 		this.dest= dest;
 		this.variableName= variableName;
 		this.variableType= variableType;
+		this.SSAVariableNumber= SSAVariableNumber;
 	}
 
 	@Override
@@ -96,6 +105,9 @@ public class DataDependence {
 		StringBuilder sb= new StringBuilder();
 		sb.append(source.getSimplifiedRepresentation());
 		sb.append(" -- ");
+		if (SSAVariableNumber != DEFAULT_SSAVARIABLENUMBER) {
+			sb.append("< v" + SSAVariableNumber + " >");
+		}
 		sb.append(variableType.toString() + " " + variableName);
 		sb.append(" -->");
 		sb.append(dest.getSimplifiedRepresentation());
