@@ -13,6 +13,7 @@ import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
+import com.ibm.wala.util.collections.Pair;
 
 /**
  * This class checks for interferences between different stages.
@@ -105,48 +106,109 @@ public class StageInterferenceInfo {
 		return false;
 	}
 
-	public List<String> getInterferenceMessages() {
-		List<String> interferenceMessages= new ArrayList<String>();
+	Map<Pair<Statement, Statement>, InterferencePair> interferingPairQuickLookUp= new HashMap<Pair<Statement, Statement>, InterferencePair>();
 
+	class InterferencePair {
+		public static final int THRESHOLD= 10; // Number of warnings to display before alerting the user
+
+		PipelineStage otherStage;
+
+		Statement currentStageStmt;
+
+		Statement otherStageStmt;
+
+		List<PointerKey> interferringAccesses= new ArrayList<PointerKey>();
+
+		public InterferencePair(PipelineStage otherStage, Statement currentStageStmt, Statement otherStageStmt) {
+			this.otherStage= otherStage;
+			this.currentStageStmt= currentStageStmt;
+			this.otherStageStmt= otherStageStmt;
+		}
+
+		public void addPointerKey(PointerKey pKey) {
+			interferringAccesses.add(pKey);
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder sb= new StringBuilder();
+
+			String template= "[Stage#%d]%s and [Stage#%d]%s concurrently access:%n";
+			String currentStageSourceCode= currentStageStmt.getSourceCode().isEmpty() ? currentStageStmt.toString() : currentStageStmt.getSourceCode();
+			String otherStageSourcecode= otherStageStmt.getSourceCode().isEmpty() ? otherStageStmt.toString() : otherStageStmt.getSourceCode();
+			sb.append(String.format(template, pipelineStage.getStageNumber(), currentStageSourceCode, otherStage.getStageNumber(), otherStageSourcecode));
+
+			for (int index= 0; index < Math.min(interferringAccesses.size(), THRESHOLD); index++) {
+				PointerKey pKey= interferringAccesses.get(index);
+				sb.append(String.format("%s", PointerKeyPrettyPrinter.prettyPrint(pKey)));
+			}
+
+			if (interferringAccesses.size() > THRESHOLD) {
+				sb.append(String.format("....%n"));
+				sb.append(String.format("Suppressing more than %d concurrent accesses reported. Please inspect manually since these are likely to be spurious.%n", THRESHOLD));
+			}
+
+			return sb.toString();
+		}
+	}
+
+	public void constructInterferenceInformation() {
 		for (PipelineStage otherStage : interferences.keySet()) {
 			Set<PointerKey> pKeys= interferences.get(otherStage);
 			for (PointerKey pKey : pKeys) {
-				StringBuilder sb= new StringBuilder();
-
-				int stageNumber= pipelineStage.getStageNumber();
-				int otherStageNumber= otherStage.getStageNumber();
-
-				// We could have a read-write dependency and/or a write-write dependency
-				// Be sure to add BOTH
-
 				Set<Statement> thisStageRefStatements= pipelineStage.referringStatements(pKey);
 				Set<Statement> thisStageModStatements= pipelineStage.modifyingStatements(pKey);
 
 				Set<Statement> otherStageModStatements= otherStage.modifyingStatements(pKey);
 				Statement otherStageFirstMod= otherStageModStatements.iterator().next();
-				String otherStageWriteStmt= otherStageFirstMod.getSourceCode().isEmpty() ? otherStageFirstMod.toString() : otherStageFirstMod.getSourceCode();
 
 				// Add read-write dependency (if any)
 				if (thisStageRefStatements != null && !thisStageRefStatements.isEmpty()) {
 					Statement firstRef= thisStageRefStatements.iterator().next();
-					String readStmt= firstRef.getSourceCode().isEmpty() ? firstRef.toString() : firstRef.getSourceCode();
-
-					sb.append(String.format("Possible data race between stage #%d and stage #%d through %s", stageNumber, otherStageNumber, PointerKeyPrettyPrinter.prettyPrint(pKey)));
-					sb.append(String.format("Stage #%d reads the value through %s.%n", stageNumber, readStmt));
-					sb.append(String.format("Stage #%d modifies the value through %s.%n", otherStageNumber, otherStageWriteStmt));
-					interferenceMessages.add(sb.toString());
+					addNewInterferencePairRecord(otherStage, firstRef, otherStageFirstMod, pKey);
 				}
 
 				// Add write-write dependency (if any)
 				if (thisStageModStatements != null && !thisStageModStatements.isEmpty()) {
 					Statement firstMod= thisStageModStatements.iterator().next();
-					String writeStmt= firstMod.getSourceCode().isEmpty() ? firstMod.toString() : firstMod.getSourceCode();
-
-					sb.append(String.format("Possible data race between stage #%d and stage #%d through %s", stageNumber, otherStageNumber, PointerKeyPrettyPrinter.prettyPrint(pKey)));
-					sb.append(String.format("Stage #%d modifies the value through %s.%n", stageNumber, writeStmt));
-					sb.append(String.format("Stage #%d modifies the value through %s.%n", otherStageNumber, otherStageWriteStmt));
-					interferenceMessages.add(sb.toString());
+					addNewInterferencePairRecord(otherStage, firstMod, otherStageFirstMod, pKey);
 				}
+			}
+		}
+	}
+
+	public void addNewInterferencePairRecord(PipelineStage otherStage, Statement currentStageStmt, Statement otherStageStmt, PointerKey pKey) {
+		Pair<Statement, Statement> pair= Pair.make(currentStageStmt, otherStageStmt);
+		InterferencePair interferencePair= interferingPairQuickLookUp.get(pair);
+		if (interferencePair == null) {
+			InterferencePair newPair= new InterferencePair(otherStage, currentStageStmt, otherStageStmt);
+			interferingPairQuickLookUp.put(pair, newPair);
+			interferencePair= newPair;
+		}
+		interferencePair.addPointerKey(pKey);
+	}
+
+	public List<String> getInterferenceMessages() {
+		List<String> interferenceMessages= new ArrayList<String>();
+		constructInterferenceInformation();
+
+		Map<PipelineStage, List<InterferencePair>> stage2InterferencePair= new HashMap<PipelineStage, List<InterferencePair>>();
+
+		// Go through and sort the accesses
+		for (InterferencePair pair : interferingPairQuickLookUp.values()) {
+			PipelineStage otherStage= pair.otherStage;
+			List<InterferencePair> list= stage2InterferencePair.get(otherStage);
+			if (list == null) {
+				list= new ArrayList<InterferencePair>();
+				stage2InterferencePair.put(otherStage, list);
+			}
+			list.add(pair);
+		}
+
+		for (PipelineStage stage : stage2InterferencePair.keySet()) {
+			List<InterferencePair> list= stage2InterferencePair.get(stage);
+			for (InterferencePair pair : list) {
+				interferenceMessages.add(pair.toString());
 			}
 		}
 
