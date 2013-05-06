@@ -84,7 +84,8 @@ public class StageInterferenceInfo {
 	private void pruneTransferredObject(PointerKey ref, Set<PointerKey> set) {
 		PointerAnalysis pointerAnalysis= pipelineStage.getPointerAnalysis();
 		for (InstanceKey transferredObject : pointerAnalysis.getPointsToSet(ref)) {
-			for (PointerKey pKey : set) {
+			Set<PointerKey> snapshot= new HashSet<PointerKey>(set); // We are going to remove things so let's snapshot the contents and iterate through that
+			for (PointerKey pKey : snapshot) {
 				if (pKey instanceof InstanceFieldPointerKey) {
 					InstanceFieldPointerKey instanceFieldPointerKey= (InstanceFieldPointerKey)pKey;
 					InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
