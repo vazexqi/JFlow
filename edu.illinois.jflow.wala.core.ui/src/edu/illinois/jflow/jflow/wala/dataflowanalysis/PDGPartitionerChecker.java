@@ -223,7 +223,8 @@ public class PDGPartitionerChecker {
 
 		List<String> ignored= new ArrayList<String>();
 		for (MethodReference mRef : ignoredMethods) {
-			ignored.add(mRef.toString());
+			String template= "Ignored call to method %s in library jars.%n";
+			ignored.add(String.format(template, mRef.getSignature()));
 		}
 		return ignored;
 	}
