@@ -15,8 +15,13 @@ public class ReceiverString implements ContextItem {
 
 	private final InstanceKey instances[];
 
+
 	public ReceiverString(InstanceKey instanceKey) {
 		this.instances= new InstanceKey[] { instanceKey };
+	}
+
+	public InstanceKey[] getInstances() {
+		return instances;
 	}
 
 	ReceiverString(InstanceKey instanceKey, int max_length, ReceiverString base) {
