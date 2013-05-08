@@ -13,6 +13,7 @@ import com.ibm.wala.ipa.modref.ArrayLengthKey;
 import com.ibm.wala.types.FieldReference;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.types.TypeReference;
+import com.ibm.wala.util.debug.Assertions;
 
 /**
  * Takes a set of pointer keys and pretty prints them.
@@ -148,6 +149,7 @@ public class PointerKeyPrettyPrinter {
 	// Default fall-back: this shouldn't happen in our case but it best to be safe
 	static String handle(PointerKey key) {
 		StringBuilder sb= new StringBuilder();
+		Assertions.UNREACHABLE("REACHED A DEFAULT POINTER-KEY");
 		sb.append(String.format("%s%n", key.toString()));
 		return sb.toString();
 	}

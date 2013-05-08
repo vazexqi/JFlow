@@ -680,6 +680,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 	@Override
 	public RefactoringStatus checkFinalConditions(IProgressMonitor pm) throws CoreException {
 		RefactoringStatus result= new RefactoringStatus();
+
+		// Stick it here for now
+		fChecker.checkDataParallel();
+
 		return result;
 	}
 

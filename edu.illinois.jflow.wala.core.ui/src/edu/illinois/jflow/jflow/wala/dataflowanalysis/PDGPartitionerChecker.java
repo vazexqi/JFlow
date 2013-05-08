@@ -52,6 +52,8 @@ public class PDGPartitionerChecker {
 
 	private ArrayList<StageInterferenceInfo> interferenceInfos;
 
+	private List<PipelineStageDataParallelAnalyzer> dataParallelCheckers;
+
 	private HeapExclusions heapExclusions;
 
 	public static PDGPartitionerChecker makePartitionChecker(ProgramDependenceGraph pdg, List<List<Integer>> selections) {
@@ -169,8 +171,6 @@ public class PDGPartitionerChecker {
 	 * @return The stage corresponding to the number
 	 */
 	public PipelineStage getStage(int stageNumber) {
-		if (stageNumber <= 0 || stageNumber >= stages.size())
-			throw new IllegalArgumentException(String.format("We don't have stage %d. Stages are from 0 to %d", stageNumber, stages.size() - 1));
 		return stages.get(stageNumber);
 	}
 
@@ -214,7 +214,15 @@ public class PDGPartitionerChecker {
 		return false;
 	}
 
-	// XXX: Make this human understandable
+	public void checkDataParallel() {
+		dataParallelCheckers= new ArrayList<PipelineStageDataParallelAnalyzer>();
+		for (int stage= 1; stage < stages.size(); stage++) {
+			PipelineStageDataParallelAnalyzer dataAnalyzer= new PipelineStageDataParallelAnalyzer(this, getStage(stage));
+			dataAnalyzer.checkDataParallelizable();
+			dataParallelCheckers.add(dataAnalyzer);
+		}
+	}
+
 	public List<String> getInterferenceMessages() {
 		List<String> interferenceMessages= new ArrayList<String>();
 
