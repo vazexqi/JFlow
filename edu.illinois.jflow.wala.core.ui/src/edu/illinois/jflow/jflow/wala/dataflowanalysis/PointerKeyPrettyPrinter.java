@@ -13,7 +13,6 @@ import com.ibm.wala.ipa.modref.ArrayLengthKey;
 import com.ibm.wala.types.FieldReference;
 import com.ibm.wala.types.MethodReference;
 import com.ibm.wala.types.TypeReference;
-import com.ibm.wala.util.debug.Assertions;
 
 /**
  * Takes a set of pointer keys and pretty prints them.
@@ -104,7 +103,7 @@ public class PointerKeyPrettyPrinter {
 			methodName= methodRef.getSignature();
 
 		} else {
-			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
+			sb.append(String.format("%s.%n", instanceKey));
 		}
 		sb.append(String.format(template, instanceID, typeName, methodName));
 		return sb.toString();
@@ -127,7 +126,7 @@ public class PointerKeyPrettyPrinter {
 			methodName= methodRef.getSignature();
 
 		} else {
-			Assertions.UNREACHABLE(String.format("Found an InstanceKey without a Node. It's type is %s%n and its value is: %s%n ", instanceKey.getClass(), instanceKey));
+			sb.append(String.format("%s.%n", instanceKey));
 		}
 		sb.append(String.format(template, instanceID, typeName, methodName));
 		return sb.toString();
@@ -135,7 +134,7 @@ public class PointerKeyPrettyPrinter {
 
 	static String handle(StaticFieldKey staticFieldKey) {
 		StringBuilder sb= new StringBuilder();
-		String template= "Static field <%s> in class <%s>.";
+		String template= "Static field <%s> in class <%s>.%n";
 		String fieldName= null;
 		String typeName= null;
 
