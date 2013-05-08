@@ -6,10 +6,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.ibm.wala.classLoader.IField;
 import com.ibm.wala.classLoader.NewSiteReference;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.Context;
 import com.ibm.wala.ipa.callgraph.propagation.AllocationSiteInNode;
+import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldPointerKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
@@ -71,8 +73,13 @@ public class PipelineStageDataParallelAnalyzer {
 	}
 
 	private void handle(InstanceFieldPointerKey instanceFieldPointerKey) {
+		if (instanceFieldPointerKey instanceof InstanceFieldKey) {
+			InstanceFieldKey a= (InstanceFieldKey)instanceFieldPointerKey;
+			IField field= a.getField();
+		}
 		InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
 		if (instanceKey instanceof AllocationSiteInNode) {
+			removePointerKeyIfAllocatedByCurrentStage(instanceFieldPointerKey, instanceKey); // Remove from top level
 			AllocationSiteInNode allocNode= (AllocationSiteInNode)instanceKey;
 			Context context= allocNode.getNode().getContext();
 			if (context instanceof ReceiverStringContext) {
@@ -80,7 +87,7 @@ public class PipelineStageDataParallelAnalyzer {
 				ReceiverString contextItem= (ReceiverString)receiverContext.get(JFlowCustomContextSelector.RECEIVER_STRING);
 				InstanceKey[] instances= contextItem.getInstances();
 				for (InstanceKey instance : instances) {
-					removePointerKeyIfAllocatedByCurrentStage(instanceFieldPointerKey, instanceKey);
+					removePointerKeyIfAllocatedByCurrentStage(instanceFieldPointerKey, instance);
 				}
 			}
 		}
@@ -169,7 +176,8 @@ public class PipelineStageDataParallelAnalyzer {
 		for (PointerKey pKey : mods) {
 			Set<Statement> modifyingStatements= stage.modifyingStatements(pKey);
 			for (Statement statement : modifyingStatements) {
-				sb.append(String.format("%s modifies %s.%n", statement, PointerKeyPrettyPrinter.prettyPrint(pKey)));
+				String currentStageSourceCode= statement.getSourceCode().isEmpty() ? statement.toString() : statement.getSourceCode();
+				sb.append(String.format("%s modifies %s", currentStageSourceCode, PointerKeyPrettyPrinter.prettyPrint(pKey)));
 			}
 		}
 		return sb.toString();
