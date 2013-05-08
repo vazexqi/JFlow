@@ -1,5 +1,8 @@
 java\/awt\/.*
+java\/lang\/Shutdown
 javax\/swing\/.*
+java\/security\/.*
+java\/text\/.*
 sun\/awt\/.*
 sun\/swing\/.*
 com\/sun\/.*
