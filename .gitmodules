@@ -13,3 +13,6 @@
 [submodule "eclipse/eclipse.platform.releng"]
 	path = eclipse/eclipse.platform.releng.git
 	url = git@github.com:eclipse/eclipse.platform.releng.git
+[submodule "JFlowBenchmarks"]
+	path = JFlowBenchmarks
+	url = git@github.com:vazexqi/JFlowBenchmarks.git
