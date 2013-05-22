@@ -92,7 +92,7 @@ public class AnnotatedStagesFinder {
 	}
 
 	private Integer locateStageNameIfPossible(String input) {
-		Pattern stagePattern= Pattern.compile("//(?:\\s*)\\b(?:Begin|End)(?:\\s+)Stage(\\d+)");
+		Pattern stagePattern= Pattern.compile("//(?:\\s*)\\b(?:Begin|End)(?:\\s+)(?:Stage|Node)(\\d+)");
 		Matcher matcher= stagePattern.matcher(input);
 		if (matcher.find()) {
 			String group= matcher.group(1);
