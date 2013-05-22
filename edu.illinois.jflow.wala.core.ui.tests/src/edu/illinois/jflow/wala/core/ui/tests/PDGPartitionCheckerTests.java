@@ -374,6 +374,18 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		assertTrue(checker.hasInterference());
 	}
 
+	// There should not be any interference because we are operating on variables that can be transferred
+	@Test
+	public void testProject7_checkHeapInterference() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 13 }, { 15 }, { 19 }, { 23 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+		checker.checkInterference();
+		assertFalse(checker.hasInterference());
+	}
+
 	// This is a test to confirm that even for simple totally independent stages, we have trouble
 	@Test
 	public void testFileAccess_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
