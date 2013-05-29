@@ -362,6 +362,17 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		assertFalse(checker.hasInterference());
 	}
 
+	@Test
+	public void testRecipe_checkHeapInterference() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 7 }, { 9 }, { 12, 13 }, { 18 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+		checker.checkInterference();
+		assertFalse(checker.hasInterference());
+	}
+
 	// There is a shared dependency with the statically allocated variable
 	@Test
 	public void testProject6_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
