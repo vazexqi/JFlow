@@ -109,7 +109,8 @@ public class StageInterferenceInfo {
 							ReceiverString contextItem= (ReceiverString)receiverContext.get(JFlowCustomContextSelector.RECEIVER_STRING);
 							InstanceKey[] instances= contextItem.getInstances();
 							for (InstanceKey instance : instances) {
-								set.remove(pKey);
+								if (instance.equals(transferredObject))
+									set.remove(pKey);
 							}
 						}
 					}
