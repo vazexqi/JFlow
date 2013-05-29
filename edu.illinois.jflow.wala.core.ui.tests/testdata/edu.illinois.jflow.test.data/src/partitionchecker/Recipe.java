@@ -1,4 +1,4 @@
-package example;
+package partitionchecker;
 
 class Recipe {
 	List instructions, photos;
