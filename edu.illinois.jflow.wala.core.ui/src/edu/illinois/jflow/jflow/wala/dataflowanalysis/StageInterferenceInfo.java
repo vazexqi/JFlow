@@ -8,12 +8,18 @@ import java.util.Map;
 import java.util.Set;
 
 import com.ibm.wala.ipa.callgraph.CGNode;
+import com.ibm.wala.ipa.callgraph.Context;
+import com.ibm.wala.ipa.callgraph.propagation.AllocationSiteInNode;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldPointerKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
 import com.ibm.wala.util.collections.Pair;
+
+import edu.illinois.jflow.wala.pointeranalysis.JFlowCustomContextSelector;
+import edu.illinois.jflow.wala.pointeranalysis.ReceiverString;
+import edu.illinois.jflow.wala.pointeranalysis.ReceiverStringContext;
 
 /**
  * This class checks for interferences between different stages.
@@ -59,7 +65,7 @@ public class StageInterferenceInfo {
 		// Gather all the data that could be produced from any of the other stages
 		// This is a shortcut (it doesn't consider flow). However, it is safe because
 		// flow is implicitly considered through the use of SSAVariables and also the fact
-		// that we only allow straight-line code. A proper, but more expensive, way
+		// that we only allow linear pipelines. A proper, but more expensive, way
 		// would be to consider each combination of possible producer-consumer pairs
 		dataDependencies.addAll(pipelineStage.getOutputDataDependences());
 		for (PipelineStage stage : interferences.keySet()) {
@@ -82,16 +88,30 @@ public class StageInterferenceInfo {
 	}
 
 	// We can only transfer non-static objects - all static objects are otherwise shared
-	private void pruneTransferredObject(PointerKey ref, Set<PointerKey> set) {
+	// Also transfer all the other objects that it creates transitively
+	private void pruneTransferredObject(PointerKey root, Set<PointerKey> set) {
 		PointerAnalysis pointerAnalysis= pipelineStage.getPointerAnalysis();
-		for (InstanceKey transferredObject : pointerAnalysis.getPointsToSet(ref)) {
+		for (InstanceKey transferredObject : pointerAnalysis.getPointsToSet(root)) {
 			Set<PointerKey> snapshot= new HashSet<PointerKey>(set); // We are going to remove things so let's snapshot the contents and iterate through that
 			for (PointerKey pKey : snapshot) {
 				if (pKey instanceof InstanceFieldPointerKey) {
 					InstanceFieldPointerKey instanceFieldPointerKey= (InstanceFieldPointerKey)pKey;
 					InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
+
+					// Simple case of equality
 					if (instanceKey.equals(transferredObject)) {
 						set.remove(pKey);
+					} else if (instanceKey instanceof AllocationSiteInNode) {
+						AllocationSiteInNode allocNode= (AllocationSiteInNode)instanceKey;
+						Context context= allocNode.getNode().getContext();
+						if (context instanceof ReceiverStringContext) {
+							ReceiverStringContext receiverContext= (ReceiverStringContext)context;
+							ReceiverString contextItem= (ReceiverString)receiverContext.get(JFlowCustomContextSelector.RECEIVER_STRING);
+							InstanceKey[] instances= contextItem.getInstances();
+							for (InstanceKey instance : instances) {
+								set.remove(pKey);
+							}
+						}
 					}
 				}
 			}
