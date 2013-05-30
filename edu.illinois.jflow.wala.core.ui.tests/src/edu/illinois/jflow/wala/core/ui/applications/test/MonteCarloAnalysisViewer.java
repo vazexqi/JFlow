@@ -2,6 +2,7 @@ package edu.illinois.jflow.wala.core.ui.applications.test;
 
 import java.io.IOException;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
@@ -12,6 +13,7 @@ import com.ibm.wala.util.CancelException;
 import edu.illinois.jflow.wala.core.ui.tests.Activator;
 import edu.illinois.jflow.wala.core.ui.tests.JFlowTest;
 
+@Ignore
 public class MonteCarloAnalysisViewer extends JFlowTest {
 	private static final String PROJECT_NAME= "MonteCarlo";
 

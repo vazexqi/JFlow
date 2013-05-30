@@ -38,13 +38,14 @@ public class PDGPartitionViewer extends JFlowTest {
 	// The name of the method corresponds to the Java class file that we want to test
 	// i.e., testBlah looks for a class Blah
 
-	@Ignore()
+	@Ignore
 	@Test
 	public void testProject5() throws IllegalArgumentException, IOException, CancelException, InterruptedException {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		openShell();
 	}
 
+	@Ignore
 	@Test
 	public void testChordFigure4() throws IllegalArgumentException, IOException, CancelException {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
