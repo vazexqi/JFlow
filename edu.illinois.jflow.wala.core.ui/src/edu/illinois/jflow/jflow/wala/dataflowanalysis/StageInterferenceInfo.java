@@ -63,10 +63,9 @@ public class StageInterferenceInfo {
 		List<DataDependence> dataDependencies= new ArrayList<DataDependence>();
 		// XXX: Improve this
 		// Gather all the data that could be produced from any of the other stages
-		// This is a shortcut (it doesn't consider flow). However, it is safe because
+		// This is a shortcut that is safe because
 		// flow is implicitly considered through the use of SSAVariables and also the fact
-		// that we only allow linear pipelines. A proper, but more expensive, way
-		// would be to consider each combination of possible producer-consumer pairs
+		// that we only allow linear pipelines.
 		dataDependencies.addAll(pipelineStage.getOutputDataDependences());
 		for (PipelineStage stage : interferences.keySet()) {
 			dataDependencies.addAll(stage.getOutputDataDependences());
