@@ -582,7 +582,10 @@ public class ExtractClosureRefactoring extends Refactoring {
 
 	private void initializePDGAnalyzers() throws IOException, CoreException, InvalidClassFileException, IllegalArgumentException, CancelException {
 		fEngine= new EclipseProjectAnalysisEngine(fCUnit.getJavaProject());
+
+		long pointerAnalysisStart= System.currentTimeMillis();
 		fCallGraph= fEngine.buildDefaultCallGraph();
+		System.err.println("Time for pointer analysis: " + (System.currentTimeMillis() - pointerAnalysisStart));
 
 		// Get the IR for the selected method
 		// Since all the stages are going to be in the same method, just use the first ExtractClosureAnalyzer
