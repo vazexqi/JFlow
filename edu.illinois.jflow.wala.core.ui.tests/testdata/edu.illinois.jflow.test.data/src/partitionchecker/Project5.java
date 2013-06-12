@@ -2,7 +2,7 @@ package partitionchecker;
 
 public class Project5 {
 
-	private String field;
+	private String field = new String();
 
 	public Project5(String fieldArg) {
 		this.field = fieldArg;
