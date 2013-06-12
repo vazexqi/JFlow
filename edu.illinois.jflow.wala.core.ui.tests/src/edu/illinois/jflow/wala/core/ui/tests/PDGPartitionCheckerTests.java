@@ -338,7 +338,7 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		Set<PointerKey> stage1Refs= stage1.getRefs();
 		Set<PointerKey> stage1Mods= stage1.getMods();
 		assertEquals(0, stage1Refs.size());
-		assertEquals(1, stage1Mods.size());
+		assertEquals(4, stage1Mods.size());
 
 		// Check stage2
 		PipelineStage stage2= checker.getStage(2);
@@ -435,6 +435,17 @@ public class PDGPartitionCheckerTests extends JFlowTest {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "method", "", "V");
 		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
 		List<List<Integer>> selections= selectionFromArray(new int[][] { { 20 }, { 22, 23 }, { 27, 28 }, { 32 } });
+		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
+		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
+		checker.checkInterference();
+		assertTrue(checker.hasInterference());
+	}
+
+	@Test
+	public void testProject11_checkHeapAnalysis() throws IOException, InvalidClassFileException, CancelException {
+		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "method", "", "V");
+		ProgramDependenceGraph pdg= ProgramDependenceGraph.make(ir, engine.buildClassHierarchy());
+		List<List<Integer>> selections= selectionFromArray(new int[][] { { 16 }, { 18, 19 }, { 23 } });
 		PDGPartitionerChecker checker= PDGPartitionerChecker.makePartitionChecker(pdg, selections);
 		checker.computeHeapDependency(callGraph, engine.getPointerAnalysis());
 		checker.checkInterference();
