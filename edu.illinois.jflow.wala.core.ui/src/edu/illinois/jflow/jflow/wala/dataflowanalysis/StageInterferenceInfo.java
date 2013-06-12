@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ibm.wala.classLoader.NewSiteReference;
 import com.ibm.wala.ipa.callgraph.CGNode;
 import com.ibm.wala.ipa.callgraph.Context;
 import com.ibm.wala.ipa.callgraph.propagation.AllocationSiteInNode;
@@ -15,7 +16,10 @@ import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
 import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
+import com.ibm.wala.ssa.SSAInstruction;
+import com.ibm.wala.ssa.SSANewInstruction;
 import com.ibm.wala.util.collections.Pair;
+import com.ibm.wala.util.debug.Assertions;
 
 import edu.illinois.jflow.wala.pointeranalysis.JFlowCustomContextSelector;
 import edu.illinois.jflow.wala.pointeranalysis.ReceiverString;
@@ -44,6 +48,8 @@ public class StageInterferenceInfo {
 
 	Map<PipelineStage, Set<PointerKey>> interferences;
 
+	private List<NewSiteReference> newSiteRefsInPipeline= new ArrayList<NewSiteReference>(); // Use to keep track of things allocated freshly
+
 	public StageInterferenceInfo(PDGPartitionerChecker pdgPartitionerChecker, PipelineStage pipelineStage) {
 		this.pdgPartitionerChecker= pdgPartitionerChecker;
 		this.pipelineStage= pipelineStage;
@@ -60,16 +66,18 @@ public class StageInterferenceInfo {
 		DelegatingExtendedHeapModel heapModel= pipelineStage.getHeapModel();
 		CGNode cgNode= pipelineStage.getCgNode();
 
-		List<DataDependence> dataDependencies= new ArrayList<DataDependence>();
-		// XXX: Improve this
 		// Gather all the data that could be produced from any of the other stages
 		// This is a shortcut that is safe because
 		// flow is implicitly considered through the use of SSAVariables and also the fact
 		// that we only allow linear pipelines.
+		List<DataDependence> dataDependencies= new ArrayList<DataDependence>();
 		dataDependencies.addAll(pipelineStage.getOutputDataDependences());
 		for (PipelineStage stage : interferences.keySet()) {
 			dataDependencies.addAll(stage.getOutputDataDependences());
 		}
+
+		// Gather all the locally allocated objects from stages
+		getLocallyAllocatedObjects();
 
 		for (DataDependence dDep : dataDependencies) {
 			int SSAVariableNumber= dDep.getSSAVariableNumber();
@@ -86,35 +94,71 @@ public class StageInterferenceInfo {
 		}
 	}
 
+	private void getLocallyAllocatedObjects() {
+		// Get all the stages
+		Set<PipelineStage> stages= pdgPartitionerChecker.getSetOfAllStagesExcluding(pipelineStage);
+		stages.add(pipelineStage);
+
+		for (PipelineStage stage : stages) {
+			List<PDGNode> selectedStatements= stage.getSelectedStatements();
+			for (PDGNode node : selectedStatements) {
+				if (node instanceof Statement) {
+					Statement stmt= (Statement)node;
+					List<SSAInstruction> ssaInstructions= stmt.retrieveAllSSAInstructions();
+					for (SSAInstruction ssaInstruction : ssaInstructions) {
+						if (ssaInstruction instanceof SSANewInstruction) { // We are only interested in new instructions
+							SSANewInstruction newInstruction= (SSANewInstruction)ssaInstruction;
+							newSiteRefsInPipeline.add(newInstruction.getNewSite());
+						}
+					}
+				} else {
+					// This should not happen since we are dealing only with statements
+					Assertions.UNREACHABLE("Found something that was not a Statement node.");
+				}
+			}
+		}
+	}
+
 	// We can only transfer non-static objects - all static objects are otherwise shared
 	// Also transfer all the other objects that it creates transitively
 	private void pruneTransferredObject(PointerKey root, Set<PointerKey> set) {
-		PointerAnalysis pointerAnalysis= pipelineStage.getPointerAnalysis();
-		for (InstanceKey transferredObject : pointerAnalysis.getPointsToSet(root)) {
+		PointerAnalysis pointerAnalysis= getPointerAnalysis();
+		for (InstanceKey possibleTransferredObject : pointerAnalysis.getPointsToSet(root)) {
 			Set<PointerKey> snapshot= new HashSet<PointerKey>(set); // We are going to remove things so let's snapshot the contents and iterate through that
 			for (PointerKey pKey : snapshot) {
 				if (pKey instanceof InstanceFieldPointerKey) {
 					InstanceFieldPointerKey instanceFieldPointerKey= (InstanceFieldPointerKey)pKey;
 					InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
 
-					// Simple case of equality
-					if (instanceKey.equals(transferredObject)) {
-						set.remove(pKey);
-					} else if (instanceKey instanceof AllocationSiteInNode) {
+					if (instanceKey instanceof AllocationSiteInNode) {
 						AllocationSiteInNode allocNode= (AllocationSiteInNode)instanceKey;
 						Context context= allocNode.getNode().getContext();
+						if (newSiteRefsInPipeline.contains(allocNode.getSite())) {
+							set.remove(pKey);
+						}
 						if (context instanceof ReceiverStringContext) {
 							ReceiverStringContext receiverContext= (ReceiverStringContext)context;
 							ReceiverString contextItem= (ReceiverString)receiverContext.get(JFlowCustomContextSelector.RECEIVER_STRING);
 							InstanceKey[] instances= contextItem.getInstances();
 							for (InstanceKey instance : instances) {
-								if (instance.equals(transferredObject))
-									set.remove(pKey);
+								removePointerKeyIfAllocatedLocally(set, pKey, instance);
 							}
 						}
 					}
 				}
 			}
+		}
+	}
+
+	private PointerAnalysis getPointerAnalysis() {
+		return pipelineStage.getPointerAnalysis();
+	}
+
+	private void removePointerKeyIfAllocatedLocally(Set<PointerKey> set, PointerKey pKey, InstanceKey instanceKey) {
+		AllocationSiteInNode allocNode= (AllocationSiteInNode)instanceKey;
+		NewSiteReference site= allocNode.getSite();
+		if (newSiteRefsInPipeline.contains(site)) {
+			set.remove(pKey);
 		}
 	}
 
