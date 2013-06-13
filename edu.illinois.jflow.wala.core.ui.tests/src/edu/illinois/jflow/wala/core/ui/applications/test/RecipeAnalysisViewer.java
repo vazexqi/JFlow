@@ -2,7 +2,7 @@ package edu.illinois.jflow.wala.core.ui.applications.test;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.Ignore;
 
 import com.ibm.wala.ide.tests.util.EclipseTestUtil.ZippedProjectData;
 import com.ibm.wala.shrikeCT.InvalidClassFileException;
@@ -28,7 +28,7 @@ public class RecipeAnalysisViewer extends JFlowTest {
 		return "recipe";
 	}
 
-	@Test
+	@Ignore
 	public void testRecipe() throws IllegalArgumentException, IOException, CancelException, InvalidClassFileException {
 		IR ir= retrieveMethodIR(constructFullyQualifiedClass(), "main", "[Ljava/lang/String;", "V");
 		openShell();
