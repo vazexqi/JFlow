@@ -13,7 +13,6 @@ import com.ibm.wala.ipa.callgraph.Context;
 import com.ibm.wala.ipa.callgraph.propagation.AllocationSiteInNode;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceFieldPointerKey;
 import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
-import com.ibm.wala.ipa.callgraph.propagation.PointerAnalysis;
 import com.ibm.wala.ipa.callgraph.propagation.PointerKey;
 import com.ibm.wala.ipa.modref.DelegatingExtendedHeapModel;
 import com.ibm.wala.ssa.SSAInstruction;
@@ -87,7 +86,7 @@ public class StageInterferenceInfo {
 					// Remove this pointer key from the interference of sets
 					for (PipelineStage stage : interferences.keySet()) {
 						Set<PointerKey> set= interferences.get(stage);
-						pruneTransferredObject(ref, set);
+						pruneTransferredObject(set);
 					}
 				}
 			}
@@ -121,37 +120,30 @@ public class StageInterferenceInfo {
 
 	// We can only transfer non-static objects - all static objects are otherwise shared
 	// Also transfer all the other objects that it creates transitively
-	private void pruneTransferredObject(PointerKey root, Set<PointerKey> set) {
-		PointerAnalysis pointerAnalysis= getPointerAnalysis();
-		for (InstanceKey possibleTransferredObject : pointerAnalysis.getPointsToSet(root)) {
-			Set<PointerKey> snapshot= new HashSet<PointerKey>(set); // We are going to remove things so let's snapshot the contents and iterate through that
-			for (PointerKey pKey : snapshot) {
-				if (pKey instanceof InstanceFieldPointerKey) {
-					InstanceFieldPointerKey instanceFieldPointerKey= (InstanceFieldPointerKey)pKey;
-					InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
+	private void pruneTransferredObject(Set<PointerKey> set) {
+		Set<PointerKey> snapshot= new HashSet<PointerKey>(set); // We are going to remove things so let's snapshot the contents and iterate through that
+		for (PointerKey pKey : snapshot) {
+			if (pKey instanceof InstanceFieldPointerKey) {
+				InstanceFieldPointerKey instanceFieldPointerKey= (InstanceFieldPointerKey)pKey;
+				InstanceKey instanceKey= instanceFieldPointerKey.getInstanceKey();
 
-					if (instanceKey instanceof AllocationSiteInNode) {
-						AllocationSiteInNode allocNode= (AllocationSiteInNode)instanceKey;
-						Context context= allocNode.getNode().getContext();
-						if (newSiteRefsInPipeline.contains(allocNode.getSite())) {
-							set.remove(pKey);
-						}
-						if (context instanceof ReceiverStringContext) {
-							ReceiverStringContext receiverContext= (ReceiverStringContext)context;
-							ReceiverString contextItem= (ReceiverString)receiverContext.get(JFlowCustomContextSelector.RECEIVER_STRING);
-							InstanceKey[] instances= contextItem.getInstances();
-							for (InstanceKey instance : instances) {
-								removePointerKeyIfAllocatedLocally(set, pKey, instance);
-							}
+				if (instanceKey instanceof AllocationSiteInNode) {
+					AllocationSiteInNode allocNode= (AllocationSiteInNode)instanceKey;
+					Context context= allocNode.getNode().getContext();
+					if (newSiteRefsInPipeline.contains(allocNode.getSite())) {
+						set.remove(pKey);
+					}
+					if (context instanceof ReceiverStringContext) {
+						ReceiverStringContext receiverContext= (ReceiverStringContext)context;
+						ReceiverString contextItem= (ReceiverString)receiverContext.get(JFlowCustomContextSelector.RECEIVER_STRING);
+						InstanceKey[] instances= contextItem.getInstances();
+						for (InstanceKey instance : instances) {
+							removePointerKeyIfAllocatedLocally(set, pKey, instance);
 						}
 					}
 				}
 			}
 		}
-	}
-
-	private PointerAnalysis getPointerAnalysis() {
-		return pipelineStage.getPointerAnalysis();
 	}
 
 	private void removePointerKeyIfAllocatedLocally(Set<PointerKey> set, PointerKey pKey, InstanceKey instanceKey) {
