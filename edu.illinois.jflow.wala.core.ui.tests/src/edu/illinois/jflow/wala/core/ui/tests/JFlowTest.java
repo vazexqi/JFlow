@@ -6,6 +6,7 @@ import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -63,14 +64,15 @@ public abstract class JFlowTest extends JDTJavaTest {
 	}
 
 	@Override
-	protected AbstractAnalysisEngine getAnalysisEngine(final String[] mainClassDescriptors, List<String> libs) {
-		return makeAnalysisEngine(mainClassDescriptors, libs, projectName);
+	protected AbstractAnalysisEngine getAnalysisEngine(final String[] mainClassDescriptors, Collection<String> sources,
+			List<String> libs) {
+		return makeAnalysisEngine(mainClassDescriptors, sources, libs, project);
 	}
 
-	static AbstractAnalysisEngine makeAnalysisEngine(final String[] mainClassDescriptors, List<String> libs, String projectName) {
+	static AbstractAnalysisEngine makeAnalysisEngine(final String[] mainClassDescriptors, Collection<String> sources, List<String> libs, ZippedProjectData project) {
 		AbstractAnalysisEngine engine;
 		try {
-			engine= new JDTJavaSourceAnalysisEngine(projectName) {
+			engine= new JDTJavaSourceAnalysisEngine(project.projectName) {
 				@Override
 				protected Iterable<Entrypoint> makeDefaultEntrypoints(AnalysisScope scope, IClassHierarchy cha) {
 					return Util.makeMainEntrypoints(JavaSourceAnalysisScope.SOURCE, cha, mainClassDescriptors);
@@ -112,7 +114,7 @@ public abstract class JFlowTest extends JDTJavaTest {
 
 	protected MethodReference retrieveMethod(String fullyQualifiedClassName, String methodName, String methodParameters, String returnType) throws IOException, IllegalArgumentException,
 			CancelException {
-		engine= getAnalysisEngine(simplePkgTestEntryPoint(getTestPackageName()), rtJar);
+		engine= getAnalysisEngine(simplePkgTestEntryPoint(getTestPackageName()), null, rtJar);
 
 		callGraph= engine.buildDefaultCallGraph();
 
@@ -182,10 +184,10 @@ public abstract class JFlowTest extends JDTJavaTest {
 	protected void printModRefInfo(PipelineStage stage) {
 		System.err.println("<<<REF>>>");
 		System.err.println(stage.getPrettyPrintRefs());
-	
+
 		System.err.println("<<<MOD>>>");
 		System.err.println(stage.getPrettyPrintMods());
-	
+
 		System.err.println("<<IGNORED>>");
 		System.err.println(stage.getPrettyPrintIgnored());
 	}
