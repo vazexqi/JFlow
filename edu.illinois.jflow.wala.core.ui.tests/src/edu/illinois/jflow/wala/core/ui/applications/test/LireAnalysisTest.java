@@ -64,9 +64,9 @@ public class LireAnalysisTest extends JFlowTest {
 		List<DataDependence> stage2Input= stage2.getInputDataDependences();
 		assertEquals(4, stage2Input.size());
 		assertTrue(stage2Input.get(0).getLocalVariableNames().contains("this"));
-		assertTrue(stage2Input.get(1).getLocalVariableNames().contains("bufferedImage"));
-		assertTrue(stage2Input.get(2).getLocalVariableNames().contains("imagePath"));
-		assertTrue(stage2Input.get(3).getLocalVariableNames().contains("docJPEG"));
+		assertTrue(stage2Input.get(1).getLocalVariableNames().contains("imagePath"));
+		assertTrue(stage2Input.get(2).getLocalVariableNames().contains("docJPEG"));
+		assertTrue(stage2Input.get(3).getLocalVariableNames().contains("bufferedImage"));
 		List<DataDependence> stage2Output= stage2.getOutputDataDependences();
 		assertEquals(1, stage2Output.size());
 		assertTrue(stage2Output.get(0).getLocalVariableNames().contains("docTamura"));
@@ -75,8 +75,8 @@ public class LireAnalysisTest extends JFlowTest {
 		List<DataDependence> stage3Input= stage3.getInputDataDependences();
 		assertEquals(4, stage3Input.size());
 		assertTrue(stage3Input.get(0).getLocalVariableNames().contains("this"));
-		assertTrue(stage3Input.get(1).getLocalVariableNames().contains("bufferedImage"));
-		assertTrue(stage3Input.get(2).getLocalVariableNames().contains("imagePath"));
+		assertTrue(stage3Input.get(1).getLocalVariableNames().contains("imagePath"));
+		assertTrue(stage3Input.get(2).getLocalVariableNames().contains("bufferedImage"));
 		assertTrue(stage3Input.get(3).getLocalVariableNames().contains("docTamura"));
 		List<DataDependence> stage3Output= stage3.getOutputDataDependences();
 		assertEquals(1, stage3Output.size());
@@ -86,9 +86,9 @@ public class LireAnalysisTest extends JFlowTest {
 		List<DataDependence> stage4Input= stage4.getInputDataDependences();
 		assertEquals(5, stage4Input.size());
 		assertTrue(stage4Input.get(0).getLocalVariableNames().contains("this"));
-		assertTrue(stage4Input.get(1).getLocalVariableNames().contains("bufferedImage"));
+		assertTrue(stage4Input.get(1).getLocalVariableNames().contains("docColor"));
 		assertTrue(stage4Input.get(2).getLocalVariableNames().contains("imagePath"));
-		assertTrue(stage4Input.get(3).getLocalVariableNames().contains("docColor"));
+		assertTrue(stage4Input.get(3).getLocalVariableNames().contains("bufferedImage"));
 		assertTrue(stage4Input.get(4).getLocalVariableNames().contains("indexWriter"));
 		List<DataDependence> stage4Output= stage4.getOutputDataDependences();
 		assertEquals(0, stage4Output.size());
